@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   Image,
   Animated,
 } from "react-native";
@@ -12,7 +11,7 @@ import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { Ionicons } from "@expo/vector-icons";
 import { auth } from "../../services/firebase";
-   import { styles, PINK } from "../../styles/login.styles";
+import { styles, PINK } from "../../styles/login.styles";
 
 function FloatingInput({
   label,
@@ -123,12 +122,18 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.page}>
+    <View style={styles.page}>
       <View style={styles.card}>
         <View style={styles.content}>
           <View style={styles.logoRow}>
-            <Image source={require("../../../assets/images/logo.png")} style={styles.logoIcon} />
-            <Image source={require("../../../assets/images/wordmark.png")} style={styles.wordmark} />
+            <Image
+              source={require("../../../assets/images/logo.png")}
+              style={styles.logoIcon}
+            />
+            <Image
+              source={require("../../../assets/images/wordmark.png")}
+              style={styles.wordmark}
+            />
           </View>
 
           {(error || emailError || passwordError) ? (
@@ -166,12 +171,22 @@ export default function LoginScreen() {
             showRequired={passwordError}
           />
 
-          <TouchableOpacity onPress={() => router.push("/(auth)/reset-password")} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={() => router.push("/(auth)/reset-password")}
+            activeOpacity={0.7}
+          >
             <Text style={styles.forgotText}>Forgot Password?</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading} activeOpacity={0.8}>
-            <Text style={styles.loginButtonText}>{loading ? "Logging in..." : "Log In"}</Text>
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={handleLogin}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.loginButtonText}>
+              {loading ? "Logging in..." : "Log In"}
+            </Text>
           </TouchableOpacity>
 
           <View style={styles.dividerRow}>
@@ -181,17 +196,24 @@ export default function LoginScreen() {
           </View>
 
           <TouchableOpacity style={styles.googleButton} activeOpacity={0.8}>
+            <Image
+              source={require("../../../assets/images/google-icon.png")}
+              style={styles.googleIcon}
+            />
             <Text style={styles.googleButtonText}>Google</Text>
           </TouchableOpacity>
 
           <View style={styles.signupRow}>
             <Text style={styles.signupText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => router.push("/(auth)/sign-up")} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPress={() => router.push("/(auth)/sign-up")}
+              activeOpacity={0.7}
+            >
               <Text style={styles.signupLink}>Sign Up</Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }

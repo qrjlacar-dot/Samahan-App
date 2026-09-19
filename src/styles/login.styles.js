@@ -119,7 +119,7 @@ export const styles = StyleSheet.create({
     marginTop: 1,
     marginBottom: 18,
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "bold",
   },
 
   loginButton: {
@@ -155,6 +155,7 @@ export const styles = StyleSheet.create({
   },
 
   googleButton: {
+    flexDirection: "row",
     height: 48,
     borderWidth: 1,
     borderColor: "#D8D8D8",
@@ -162,6 +163,12 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#FFFFFF",
+  },
+
+  googleIcon: {
+    width: 18,
+    height: 18,
+    marginRight: 8,
   },
 
   googleButtonText: {
