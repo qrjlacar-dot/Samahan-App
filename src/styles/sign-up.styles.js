@@ -34,37 +34,48 @@ export const styles = StyleSheet.create({
     alignSelf: "center",
   },
 
-  logoRow: {
-    flexDirection: "row",
+  headerRow: {
+    marginBottom: 22,
+  },
+
+  title: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: PINK,
+  },
+
+  subtitle: {
+    fontSize: 15,
+    color: "#666",
+    marginTop: 2,
+  },
+
+  avatarWrapper: {
+    alignSelf: "center",
+    marginBottom: 24,
+  },
+
+  avatarCircle: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: "#F3D9E6",
     alignItems: "center",
     justifyContent: "center",
-    alignSelf: "center",
-    marginBottom: 50,
   },
 
-  logoIcon: {
-    width: 58,
-    height: 58,
-    resizeMode: "contain",
-    marginRight: 2,
-  },
-
-  wordmark: {
-    width: 196,
-    height: 67,
-    resizeMode: "contain",
-  },
-
-  errorText: {
-    color: "#D33",
-    textAlign: "left",
-    marginBottom: 12,
-    fontSize: 14,
-  },
-
-  requiredAsterisk: {
-    color: "#D33",
-    fontWeight: "bold",
+  cameraBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: PINK,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
 
   inputWrapper: {
@@ -113,83 +124,46 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  forgotText: {
-    color: PINK,
-    textAlign: "right",
-    marginTop: 1,
-    marginBottom: 18,
-    fontSize: 13,
+  errorText: {
+    color: "#D33",
+    textAlign: "left",
+    marginBottom: 12,
+    fontSize: 14,
+  },
+
+  requiredAsterisk: {
+    color: "#D33",
     fontWeight: "bold",
   },
 
-  loginButton: {
+  signUpButton: {
     backgroundColor: PINK,
     borderRadius: 8,
     height: 48,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 6,
   },
 
-  loginButtonText: {
+  signUpButtonText: {
     color: "#FFFFFF",
     fontWeight: "bold",
     fontSize: 15,
   },
 
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 18,
-  },
-
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E3E3E3",
-  },
-
-  dividerText: {
-    marginHorizontal: 9,
-    color: "#8F8F8F",
-    fontSize: 12,
-  },
-
-  googleButton: {
-    flexDirection: "row",
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#D8D8D8",
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-  },
-
-  googleIcon: {
-    width: 18,
-    height: 18,
-    marginRight: 8,
-  },
-
-  googleButtonText: {
-    fontWeight: "600",
-    color: "#333",
-    fontSize: 14,
-  },
-
-  signupRow: {
+  loginRow: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 65,
+    marginTop: 40,
   },
 
-  signupText: {
+  loginText: {
     color: "#666",
     fontSize: 13,
   },
 
-  signupLink: {
+  loginLink: {
     color: PINK,
     fontWeight: "bold",
     fontSize: 13,
