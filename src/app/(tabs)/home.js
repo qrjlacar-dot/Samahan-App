@@ -2,12 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   Alert,
   Image,
-  SafeAreaView,
-  ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { styles } from "../../styles/home.styles";
 
 export default function Home() {
@@ -18,11 +17,8 @@ export default function Home() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+   <SafeAreaView style={styles.container} edges={["top"]}>  
+      <View style={styles.scrollContent}>
         {/* Header Greeting */}
         <View style={styles.headerContainer}>
           <Text style={styles.greetingTitle}>Magandang Umaga!</Text>
@@ -59,7 +55,6 @@ export default function Home() {
 
           {/* 3 Circular Actions Container */}
           <View style={styles.emergencyActionsContainer}>
-            {/* Personal Emergency Contact */}
             <TouchableOpacity
               style={styles.contactButton}
               activeOpacity={0.7}
@@ -80,7 +75,6 @@ export default function Home() {
 
             <View style={styles.divider} />
 
-            {/* National Hotline 911 */}
             <TouchableOpacity
               style={styles.contactButton}
               activeOpacity={0.7}
@@ -94,7 +88,6 @@ export default function Home() {
 
             <View style={styles.divider} />
 
-            {/* QC Emergency Hotline 122 */}
             <TouchableOpacity
               style={styles.contactButton}
               activeOpacity={0.7}
@@ -107,7 +100,7 @@ export default function Home() {
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }

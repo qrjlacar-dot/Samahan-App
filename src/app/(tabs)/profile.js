@@ -3,13 +3,14 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
-  SafeAreaView,
   ScrollView,
   Switch,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { COLORS } from "../../constants/theme";
 import { styles } from "../../styles/profile.styles";
 
 export default function Profile() {
@@ -34,18 +35,18 @@ export default function Profile() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.avatarWrapper}>
           <View style={styles.avatarCircle}>
-            <Ionicons name="person" size={64} color="#CA74A6" />
+            <Ionicons name="person" size={50} color={COLORS.pink} />
           </View>
           <TouchableOpacity
             style={styles.editIconButton}
             activeOpacity={0.7}
             onPress={() => router.push("/profile/edit")}
           >
-            <Feather name="edit-2" size={16} color="#CA74A6" />
+            <Feather name="edit-2" size={16} color={COLORS.pink} />
           </TouchableOpacity>
         </View>
 
@@ -58,7 +59,7 @@ export default function Profile() {
             onPress={() => router.push("/profile/edit")}
           >
             <View style={styles.menuLeft}>
-              <Ionicons name="card-outline" size={22} color="#CA74A6" />
+              <Ionicons name="card-outline" size={22} color={COLORS.pink} />
               <Text style={styles.menuText}>Edit Profile Information</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#CCCCCC" />
@@ -66,16 +67,12 @@ export default function Profile() {
 
           <View style={styles.menuItem}>
             <View style={styles.menuLeft}>
-              <Ionicons
-                name="notifications-outline"
-                size={22}
-                color="#CA74A6"
-              />
+              <Ionicons name="notifications-outline" size={22} color={COLORS.pink} />
               <Text style={styles.menuText}>Notifications</Text>
             </View>
             <Switch
               trackColor={{ false: "#E0E0E0", true: "#E8A5C8" }}
-              thumbColor={isNotificationsEnabled ? "#CA74A6" : "#F4F3F4"}
+              thumbColor={isNotificationsEnabled ? COLORS.pink : "#F4F3F4"}
               onValueChange={toggleNotifications}
               value={isNotificationsEnabled}
             />
@@ -87,18 +84,14 @@ export default function Profile() {
             onPress={() => router.push("/profile/reset")}
           >
             <View style={styles.menuLeft}>
-              <Ionicons name="lock-closed-outline" size={22} color="#CA74A6" />
+              <Ionicons name="lock-closed-outline" size={22} color={COLORS.pink} />
               <Text style={styles.menuText}>Reset Password</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#CCCCCC" />
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={styles.signOutButton}
-          activeOpacity={0.7}
-          onPress={handleSignOut}
-        >
+        <TouchableOpacity style={styles.signOutButton} activeOpacity={0.7} onPress={handleSignOut}>
           <Text style={styles.signOutText}>Sign out</Text>
         </TouchableOpacity>
       </ScrollView>

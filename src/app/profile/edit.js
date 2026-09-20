@@ -2,18 +2,19 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-    Alert,
-    Animated,
-    SafeAreaView,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { COLORS } from "../../constants/theme";
 import { editStyles as styles } from "../../styles/editProfile.styles";
 
-function FloatingLabelInput({
+function FloatingInput({
   label,
   value,
   onChangeText,
@@ -21,66 +22,50 @@ function FloatingLabelInput({
   autoCapitalize = "none",
 }) {
   const [isFocused, setIsFocused] = useState(false);
-  const animatedIsFocused = useRef(
-    new Animated.Value(value === "" ? 0 : 1),
-  ).current;
+  const animatedLabel = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   useEffect(() => {
-    Animated.timing(animatedIsFocused, {
-      toValue: isFocused || value !== "" ? 1 : 0,
-      duration: 180,
+    Animated.timing(animatedLabel, {
+      toValue: isFocused || value ? 1 : 0,
+      duration: 150,
       useNativeDriver: false,
     }).start();
   }, [isFocused, value]);
 
   const labelStyle = {
-    position: "absolute",
-    left: 10,
-    top: animatedIsFocused.interpolate({
+    top: animatedLabel.interpolate({ inputRange: [0, 1], outputRange: [13, -8] }),
+    fontSize: animatedLabel.interpolate({ inputRange: [0, 1], outputRange: [16, 12] }),
+    color: animatedLabel.interpolate({
       inputRange: [0, 1],
-      outputRange: [16, -9],
+      outputRange: ["#AA8899", COLORS.pink],
     }),
-    fontSize: animatedIsFocused.interpolate({
-      inputRange: [0, 1],
-      outputRange: [14, 11],
-    }),
-    color: animatedIsFocused.interpolate({
-      inputRange: [0, 1],
-      outputRange: ["#B0B0B0", "#CA74A6"],
-    }),
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 4,
-    zIndex: 2,
-    fontWeight: "500",
   };
 
   return (
-    <View
-      style={[
-        styles.floatingInputContainer,
-        isFocused && styles.floatingInputContainerFocused,
-      ]}
-    >
-      <Animated.Text style={labelStyle} pointerEvents="none">
+    <View style={styles.inputWrapper}>
+      <Animated.Text style={[styles.floatingLabel, labelStyle]}>
         {label}
       </Animated.Text>
-      <View style={styles.inputInnerRow}>
-        <TextInput
-          style={styles.floatingInput}
-          value={value}
-          onChangeText={onChangeText}
-          keyboardType={keyboardType}
-          autoCapitalize={autoCapitalize}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-        />
-      </View>
+
+      <TextInput
+        style={[styles.inputField, isFocused && styles.inputFieldFocused]}
+        value={value}
+        onChangeText={onChangeText}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={false}
+        placeholder={isFocused && !value ? label : undefined}
+        placeholderTextColor="#BFBFBF"
+      />
     </View>
   );
 }
 
 export default function EditProfile() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -92,14 +77,14 @@ export default function EditProfile() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.headerRow}>
+    <View style={styles.container}>
+      <View style={[styles.navbar, { paddingTop: insets.top }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#333333" />
+          <Ionicons name="arrow-back" size={22} color="#333333" />
         </TouchableOpacity>
       </View>
 
@@ -111,21 +96,17 @@ export default function EditProfile() {
 
         <View style={styles.avatarWrapper}>
           <View style={styles.avatarCircle}>
-            <Ionicons name="person" size={64} color="#CA74A6" />
+            <Ionicons name="person" size={50} color={COLORS.pink} />
           </View>
           <View style={styles.avatarEditBadge}>
-            <Feather name="edit-2" size={14} color="#CA74A6" />
+            <Feather name="edit-2" size={14} color={COLORS.pink} />
           </View>
         </View>
 
         <View style={styles.formContainer}>
-          <FloatingLabelInput
-            label="Name"
-            value={name}
-            onChangeText={setName}
-          />
+          <FloatingInput label="Name" value={name} onChangeText={setName} />
 
-          <FloatingLabelInput
+          <FloatingInput
             label="Email Address"
             value={email}
             onChangeText={setEmail}
@@ -133,7 +114,7 @@ export default function EditProfile() {
             autoCapitalize="none"
           />
 
-          <FloatingLabelInput
+          <FloatingInput
             label="Phone Number"
             value={phone}
             onChangeText={setPhone}
@@ -149,6 +130,6 @@ export default function EditProfile() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
