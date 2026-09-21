@@ -2,106 +2,103 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-    Alert,
-    Animated,
-    SafeAreaView,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { scale, scaleFont } from "../../constants/scale";
+import { COLORS, FONT_SIZES } from "../../constants/theme";
 import { editStyles as styles } from "../../styles/editProfile.styles";
 
-function FloatingLabelInput({
+function FloatingInput({
   label,
   value,
   onChangeText,
   secureTextEntry = false,
-  isPassword = false,
-  showPassword = false,
-  onTogglePassword,
+  keyboardType = "default",
+  autoCapitalize = "none",
 }) {
   const [isFocused, setIsFocused] = useState(false);
-  const animatedIsFocused = useRef(
-    new Animated.Value(value === "" ? 0 : 1),
-  ).current;
+  const [showValue, setShowValue] = useState(false);
+
+  const animatedLabel = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   useEffect(() => {
-    Animated.timing(animatedIsFocused, {
-      toValue: isFocused || value !== "" ? 1 : 0,
-      duration: 180,
+    Animated.timing(animatedLabel, {
+      toValue: isFocused || value ? 1 : 0,
+      duration: 150,
       useNativeDriver: false,
     }).start();
   }, [isFocused, value]);
 
   const labelStyle = {
-    position: "absolute",
-    left: 10,
-    top: animatedIsFocused.interpolate({
+    top: animatedLabel.interpolate({
       inputRange: [0, 1],
-      outputRange: [16, -9],
+      outputRange: [scale(13), scale(-8)],
     }),
-    fontSize: animatedIsFocused.interpolate({
+    fontSize: animatedLabel.interpolate({
       inputRange: [0, 1],
-      outputRange: [14, 11],
+      outputRange: [scaleFont(FONT_SIZES.input), scaleFont(FONT_SIZES.small)],
     }),
-    color: animatedIsFocused.interpolate({
+    color: animatedLabel.interpolate({
       inputRange: [0, 1],
-      outputRange: ["#B0B0B0", "#CA74A6"],
+      outputRange: [COLORS.textLight, COLORS.pink],
     }),
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 4,
-    zIndex: 2,
-    fontWeight: "500",
   };
 
   return (
-    <View
-      style={[
-        styles.floatingInputContainer,
-        isFocused && styles.floatingInputContainerFocused,
-      ]}
-    >
-      <Animated.Text style={labelStyle} pointerEvents="none">
+    <View style={styles.inputWrapper}>
+      <Animated.Text style={[styles.floatingLabel, labelStyle]}>
         {label}
       </Animated.Text>
-      <View style={styles.inputInnerRow}>
-        <TextInput
-          style={styles.floatingInput}
-          value={value}
-          onChangeText={onChangeText}
-          secureTextEntry={secureTextEntry}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-        />
-        {isPassword && (
-          <TouchableOpacity
-            onPress={onTogglePassword}
-            style={styles.eyeButton}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={showPassword ? "eye-outline" : "eye-off-outline"}
-              size={18}
-              color="#B0B0B0"
-            />
-          </TouchableOpacity>
-        )}
-      </View>
+
+      <TextInput
+        style={[
+          styles.inputField,
+          secureTextEntry && styles.inputFieldPassword,
+          isFocused && styles.inputFieldFocused,
+        ]}
+        value={value}
+        onChangeText={onChangeText}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        secureTextEntry={secureTextEntry && !showValue}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={false}
+        placeholder={isFocused && !value ? label : undefined}
+        placeholderTextColor={COLORS.placeholder}
+      />
+
+      {secureTextEntry && (
+        <TouchableOpacity
+          style={styles.eyeIcon}
+          onPress={() => setShowValue((current) => !current)}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={showValue ? "eye-off-outline" : "eye-outline"}
+            size={scale(19)}
+            color={COLORS.textLight}
+          />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
 export default function ResetPassword() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleConfirmPasswordChange = () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -119,14 +116,18 @@ export default function ResetPassword() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.headerRow}>
+    <View style={styles.container}>
+      <View style={[styles.navbar, { paddingTop: insets.top }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#333333" />
+          <Ionicons
+            name="arrow-back"
+            size={scale(22)}
+            color={COLORS.textDark}
+          />
         </TouchableOpacity>
       </View>
 
@@ -137,38 +138,25 @@ export default function ResetPassword() {
         <Text style={styles.editTitle}>Reset Password</Text>
 
         <View style={styles.formContainer}>
-          <FloatingLabelInput
+          <FloatingInput
             label="Current Password"
             value={currentPassword}
             onChangeText={setCurrentPassword}
-            secureTextEntry={!showCurrentPassword}
-            isPassword
-            showPassword={showCurrentPassword}
-            onTogglePassword={() =>
-              setShowCurrentPassword(!showCurrentPassword)
-            }
+            secureTextEntry
           />
 
-          <FloatingLabelInput
+          <FloatingInput
             label="New Password"
             value={newPassword}
             onChangeText={setNewPassword}
-            secureTextEntry={!showNewPassword}
-            isPassword
-            showPassword={showNewPassword}
-            onTogglePassword={() => setShowNewPassword(!showNewPassword)}
+            secureTextEntry
           />
 
-          <FloatingLabelInput
+          <FloatingInput
             label="Confirm New Password"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            secureTextEntry={!showConfirmPassword}
-            isPassword
-            showPassword={showConfirmPassword}
-            onTogglePassword={() =>
-              setShowConfirmPassword(!showConfirmPassword)
-            }
+            secureTextEntry
           />
 
           <TouchableOpacity
@@ -180,6 +168,6 @@ export default function ResetPassword() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

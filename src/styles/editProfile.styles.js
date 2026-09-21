@@ -19,7 +19,7 @@ export const editStyles = StyleSheet.create({
 
   content: { paddingHorizontal: scale(24), paddingTop: scale(28), paddingBottom: scale(40), alignItems: "center" },
 
-  editTitle: { fontSize: scaleFont(22), fontWeight: "700", color: COLORS.pink, marginBottom: scale(20), textAlign: "center" },
+  editTitle: { fontSize: scaleFont(27), fontWeight: "bold",  marginBottom: scale(20), color: COLORS.pink, textAlign: "center" },
 
   avatarWrapper: { position: "relative", marginBottom: scale(24) },
   avatarCircle: { width: scale(110), height: scale(110), borderRadius: scale(55), backgroundColor: "#F3E4ED", justifyContent: "center", alignItems: "center" },
@@ -54,6 +54,10 @@ export const editStyles = StyleSheet.create({
   },
   inputFieldFocused: { borderColor: COLORS.pink },
   floatingLabel: { position: "absolute", left: scale(12), backgroundColor: COLORS.cardBg, paddingHorizontal: scale(4), zIndex: 1 },
+
+  // Password fields: leave room for the eye icon
+  inputFieldPassword: { paddingRight: scale(44) },
+  eyeIcon: { position: "absolute", right: scale(11), top: 0, bottom: 0, width: scale(30), justifyContent: "center", alignItems: "center" },
 
   confirmButton: { width: "100%", backgroundColor: COLORS.pink, borderRadius: RADIUS.input, height: scale(48), alignItems: "center", justifyContent: "center", marginTop: scale(10) },
   confirmButtonText: { fontSize: scaleFont(15), color: "#FFFFFF", fontWeight: "bold" },

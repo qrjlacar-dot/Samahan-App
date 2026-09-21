@@ -1,4 +1,4 @@
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -41,13 +41,6 @@ export default function Profile() {
           <View style={styles.avatarCircle}>
             <Ionicons name="person" size={50} color={COLORS.pink} />
           </View>
-          <TouchableOpacity
-            style={styles.editIconButton}
-            activeOpacity={0.7}
-            onPress={() => router.push("/profile/edit")}
-          >
-            <Feather name="edit-2" size={16} color={COLORS.pink} />
-          </TouchableOpacity>
         </View>
 
         <Text style={styles.userName}>Name</Text>
@@ -67,7 +60,11 @@ export default function Profile() {
 
           <View style={styles.menuItem}>
             <View style={styles.menuLeft}>
-              <Ionicons name="notifications-outline" size={22} color={COLORS.pink} />
+              <Ionicons
+                name="notifications-outline"
+                size={22}
+                color={COLORS.pink}
+              />
               <Text style={styles.menuText}>Notifications</Text>
             </View>
             <Switch
@@ -84,14 +81,22 @@ export default function Profile() {
             onPress={() => router.push("/profile/reset")}
           >
             <View style={styles.menuLeft}>
-              <Ionicons name="lock-closed-outline" size={22} color={COLORS.pink} />
+              <Ionicons
+                name="lock-closed-outline"
+                size={22}
+                color={COLORS.pink}
+              />
               <Text style={styles.menuText}>Reset Password</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#CCCCCC" />
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.signOutButton} activeOpacity={0.7} onPress={handleSignOut}>
+        <TouchableOpacity
+          style={styles.signOutButton}
+          activeOpacity={0.7}
+          onPress={handleSignOut}
+        >
           <Text style={styles.signOutText}>Sign out</Text>
         </TouchableOpacity>
       </ScrollView>

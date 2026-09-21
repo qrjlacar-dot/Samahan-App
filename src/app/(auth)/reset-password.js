@@ -1,23 +1,26 @@
-import { useState, useRef, useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
-  View,
+  Animated,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
-  Animated,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { styles, PINK } from "../../styles/reset-password.styles";
+import { scale, scaleFont } from "../../constants/scale";
+import { COLORS, FONT_SIZES } from "../../constants/theme";
+import { styles } from "../../styles/reset-password.styles";
 
 function FloatingInput({
   label,
   value,
   onChangeText,
-  secureTextEntry,
-  keyboardType,
-  autoCapitalize,
+  secureTextEntry = false,
+  keyboardType = "default",
+  autoCapitalize = "none",
 }) {
   const [isFocused, setIsFocused] = useState(false);
   const [showValue, setShowValue] = useState(false);
@@ -33,11 +36,17 @@ function FloatingInput({
   }, [isFocused, value]);
 
   const labelStyle = {
-    top: animatedLabel.interpolate({ inputRange: [0, 1], outputRange: [13, -8] }),
-    fontSize: animatedLabel.interpolate({ inputRange: [0, 1], outputRange: [16, 12] }),
+    top: animatedLabel.interpolate({
+      inputRange: [0, 1],
+      outputRange: [scale(13), scale(-8)],
+    }),
+    fontSize: animatedLabel.interpolate({
+      inputRange: [0, 1],
+      outputRange: [scaleFont(FONT_SIZES.input), scaleFont(FONT_SIZES.small)],
+    }),
     color: animatedLabel.interpolate({
       inputRange: [0, 1],
-      outputRange: ["#AA8899", PINK],
+      outputRange: [COLORS.textLight, COLORS.pink],
     }),
   };
 
@@ -48,7 +57,11 @@ function FloatingInput({
       </Animated.Text>
 
       <TextInput
-        style={[styles.inputField, isFocused && styles.inputFieldFocused]}
+        style={[
+          styles.inputField,
+          secureTextEntry && styles.inputFieldPassword,
+          isFocused && styles.inputFieldFocused,
+        ]}
         value={value}
         onChangeText={onChangeText}
         onFocus={() => setIsFocused(true)}
@@ -58,7 +71,7 @@ function FloatingInput({
         autoCapitalize={autoCapitalize}
         autoCorrect={false}
         placeholder={isFocused && !value ? label : undefined}
-        placeholderTextColor="#BFBFBF"
+        placeholderTextColor={COLORS.placeholder}
       />
 
       {secureTextEntry && (
@@ -69,8 +82,8 @@ function FloatingInput({
         >
           <Ionicons
             name={showValue ? "eye-off-outline" : "eye-outline"}
-            size={19}
-            color="#999"
+            size={scale(19)}
+            color={COLORS.textLight}
           />
         </TouchableOpacity>
       )}
@@ -94,23 +107,30 @@ export default function ResetPasswordScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={22} color="#333" />
+          <Ionicons
+            name="arrow-back"
+            size={scale(22)}
+            color={COLORS.textDark}
+          />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Reset Password</Text>
-          <Text style={styles.subtitle}>
-            Don't worry, we'll help you get back in :{">"}
-          </Text>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.title}>Reset Password</Text>
+        <Text style={styles.subtitle}>
+          Don't worry, we'll help you get back in :{">"}
+        </Text>
 
+        <View style={styles.formContainer}>
           <FloatingInput
             label="Email Address"
             value={email}
             onChangeText={setEmail}
-            autoCapitalize="none"
             keyboardType="email-address"
+            autoCapitalize="none"
           />
 
           <FloatingInput
@@ -127,11 +147,11 @@ export default function ResetPasswordScreen() {
             secureTextEntry
           />
 
-          <TouchableOpacity style={styles.resetButton} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.resetButton} activeOpacity={0.7}>
             <Text style={styles.resetButtonText}>Reset Password</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }

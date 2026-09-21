@@ -3,29 +3,40 @@ import { COLORS } from "../constants/theme";
 import { scale, scaleFont } from "../constants/scale";
 
 export const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.pageBg },
-  content: { paddingHorizontal: scale(24), paddingTop: scale(20), paddingBottom: scale(40), alignItems: "center" },
-  avatarWrapper: { position: "relative", marginBottom: scale(16) },
-  avatarCircle: { width: scale(110), height: scale(110), borderRadius: scale(55), backgroundColor: "#F3E4ED", justifyContent: "center", alignItems: "center" },
-  editIconButton: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: COLORS.cardBg,
-    width: scale(32),
-    height: scale(32),
-    borderRadius: scale(16),
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.pageBg,
+  },
+
+  content: {
+    paddingHorizontal: scale(24),
+    paddingTop: scale(20),
+    paddingBottom: scale(40),
+    alignItems: "center",
+  },
+
+  avatarWrapper: {
+    position: "relative",
+    marginBottom: scale(16),
+  },
+
+  avatarCircle: {
+    width: scale(110),
+    height: scale(110),
+    borderRadius: scale(55),
+    backgroundColor: "#F3E4ED",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: "#F0D6E5",
   },
-  userName: { fontSize: scaleFont(20), fontWeight: "600", color: COLORS.textDark, marginBottom: scale(24) },
+
+  userName: {
+    fontSize: scaleFont(23),
+    fontWeight: "bold",
+    marginBottom: scale(20),
+    color: COLORS.textDark,
+    textAlign: "center",
+  },
+
   menuCard: {
     width: "100%",
     backgroundColor: COLORS.cardBg,
@@ -39,10 +50,45 @@ export const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  menuItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: scale(14), borderBottomWidth: 1, borderBottomColor: "#F5F5F5" },
-  lastMenuItem: { borderBottomWidth: 0 },
-  menuLeft: { flexDirection: "row", alignItems: "center" },
-  menuText: { fontSize: scaleFont(15), color: COLORS.textDark, marginLeft: scale(14), fontWeight: "500" },
-  signOutButton: { width: "100%", backgroundColor: COLORS.cardBg, paddingVertical: scale(14), borderRadius: scale(16), alignItems: "center", borderWidth: 1, borderColor: "#EFEFEF" },
-  signOutText: { fontSize: scaleFont(15), color: "#E57373", fontWeight: "600" },
+
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: scale(14),
+    borderBottomWidth: 1,
+    borderBottomColor: "#F5F5F5",
+  },
+
+  lastMenuItem: {
+    borderBottomWidth: 0,
+  },
+
+  menuLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  menuText: {
+    fontSize: scaleFont(15),
+    color: COLORS.textDark,
+    marginLeft: scale(14),
+    fontWeight: "500",
+  },
+
+  signOutButton: {
+    width: "100%",
+    backgroundColor: COLORS.cardBg,
+    paddingVertical: scale(14),
+    borderRadius: scale(16),
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#EFEFEF",
+  },
+
+  signOutText: {
+    fontSize: scaleFont(15),
+    color: "#E57373",
+    fontWeight: "600",
+  },
 });

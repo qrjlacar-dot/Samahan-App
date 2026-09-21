@@ -9,6 +9,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { scale, scaleFont } from "../../constants/scale";
+import { COLORS, FONT_SIZES, RADIUS, SPACING } from "../../constants/theme";
+
+// Colors with no match in theme.js yet. Candidates to move into COLORS.
+const LOCAL_COLORS = {
+  pinkSoft: "#F7DCEB", // icon badge background
+  success: "#4F9B6D", // "Open" status
+};
+
 const favoriteRoutes = [
   {
     name: "TIP QC",
@@ -44,7 +53,11 @@ export default function FavoritesScreen() {
             <View key={route.name} style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.routeIcon}>
-                  <Ionicons name="location-outline" size={23} color="#CF6FA7" />
+                  <Ionicons
+                    name="location-outline"
+                    size={scale(23)}
+                    color={COLORS.pink}
+                  />
                 </View>
 
                 <View style={styles.routeInfo}>
@@ -52,12 +65,20 @@ export default function FavoritesScreen() {
                   <Text style={styles.distance}>{route.distance}</Text>
                 </View>
 
-                <Ionicons name="heart-outline" size={22} color="#CF6FA7" />
+                <Ionicons
+                  name="heart-outline"
+                  size={scale(22)}
+                  color={COLORS.pink}
+                />
               </View>
 
               <View style={styles.detailsRow}>
                 <View style={styles.scheduleRow}>
-                  <Ionicons name="time-outline" size={13} color="#9B7A8D" />
+                  <Ionicons
+                    name="time-outline"
+                    size={scale(13)}
+                    color={COLORS.textLight}
+                  />
                   <Text style={styles.detailsText}>{route.schedule}</Text>
                 </View>
 
@@ -78,8 +99,6 @@ export default function FavoritesScreen() {
         </View>
       </ScrollView>
 
-  
-
       <Pressable style={styles.addButton} onPress={addFavorite}>
         <Text style={styles.addButtonText}>+</Text>
       </Pressable>
@@ -90,31 +109,33 @@ export default function FavoritesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF9FC",
+    backgroundColor: COLORS.pageBg,
   },
   content: {
-    padding: 22,
-    paddingBottom: 130,
+    padding: SPACING.lg,
+    paddingBottom: scale(130),
   },
   title: {
-    color: "#CF6FA7",
-    fontSize: 24,
-    fontWeight: "800",
-    marginTop: 16,
+    color: COLORS.pink,
+    fontSize: scaleFont(28),
+    fontWeight: "bold",
+    marginTop: SPACING.md,
   },
   subtitle: {
-    color: "#7A5C6D",
-    fontSize: 13,
-    marginTop: 4,
-    marginBottom: 24,
+    color: COLORS.textMuted,
+    fontSize: scaleFont(15),
+    marginTop: scale(2),
+    marginBottom: SPACING.lg,
   },
   routeList: {
-    gap: 16,
+    gap: SPACING.md,
   },
   card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: COLORS.cardBg,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    borderRadius: RADIUS.card,
+    padding: SPACING.md,
     shadowColor: "#000000",
     shadowOpacity: 0.1,
     shadowRadius: 7,
@@ -125,85 +146,85 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   routeIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
-    backgroundColor: "#F7DCEB",
+    width: scale(42),
+    height: scale(42),
+    borderRadius: RADIUS.input,
+    backgroundColor: LOCAL_COLORS.pinkSoft,
     alignItems: "center",
     justifyContent: "center",
   },
   routeInfo: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: SPACING.sm,
   },
   routeName: {
-    color: "#C7649B",
-    fontSize: 16,
+    color: COLORS.pink,
+    fontSize: scaleFont(FONT_SIZES.subtitle),
     fontWeight: "700",
   },
   distance: {
-    color: "#9B7A8D",
-    fontSize: 12,
-    marginTop: 3,
+    color: COLORS.textLight,
+    fontSize: scaleFont(FONT_SIZES.small),
+    marginTop: scale(3),
   },
   detailsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 18,
+    marginTop: SPACING.md,
   },
   scheduleRow: {
     flexDirection: "row",
     alignItems: "center",
   },
   detailsText: {
-    color: "#8B6B7E",
-    fontSize: 11,
-    marginLeft: 4,
+    color: COLORS.textLight,
+    fontSize: scaleFont(FONT_SIZES.small),
+    marginLeft: scale(4),
   },
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
   },
   statusDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: "#4F9B6D",
-    marginRight: 5,
+    width: scale(5),
+    height: scale(5),
+    borderRadius: scale(5) / 2,
+    backgroundColor: LOCAL_COLORS.success,
+    marginRight: scale(5),
   },
   openText: {
-    color: "#4F9B6D",
-    fontSize: 11,
+    color: LOCAL_COLORS.success,
+    fontSize: scaleFont(FONT_SIZES.small),
     fontWeight: "700",
   },
   directionsButton: {
-    backgroundColor: "#BE6398",
-    borderRadius: 7,
-    paddingVertical: 11,
+    backgroundColor: COLORS.pink,
+    borderRadius: RADIUS.input,
+    paddingVertical: SPACING.sm,
     alignItems: "center",
-    marginTop: 15,
+    marginTop: SPACING.sm,
   },
   directionsButtonText: {
-    color: "#FFFFFF",
-    fontSize: 12,
+    color: COLORS.cardBg,
+    fontSize: scaleFont(FONT_SIZES.body),
     fontWeight: "700",
   },
   addButton: {
     position: "absolute",
-    right: 24,
-    bottom: 24,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: "#CF6FA7",
+    right: SPACING.lg,
+    bottom: SPACING.lg,
+    width: scale(54),
+    height: scale(54),
+    borderRadius: scale(54) / 2,
+    backgroundColor: COLORS.pink,
     alignItems: "center",
     justifyContent: "center",
     elevation: 6,
   },
   addButtonText: {
-    color: "#FFFFFF",
-    fontSize: 32,
+    color: COLORS.cardBg,
+    fontSize: scaleFont(FONT_SIZES.titleLarge),
     fontWeight: "300",
-    marginTop: -3,
+    marginTop: -scale(3),
   },
 });
