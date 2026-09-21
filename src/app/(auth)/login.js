@@ -66,7 +66,7 @@ function FloatingInput({
         autoCapitalize={autoCapitalize}
         autoCorrect={false}
         placeholder={isFocused && !value ? label : undefined}
-        placeholderTextColor="#AA8899"
+        placeholderTextColor="#BFBFBF"
       />
 
       {secureTextEntry && (
