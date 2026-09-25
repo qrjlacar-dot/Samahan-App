@@ -124,19 +124,22 @@ export default function LoginScreen() {
   return (
     <View style={styles.page}>
       <View style={styles.card}>
-        <View style={styles.content}>
-          <View style={styles.logoRow}>
-            <Image
-              source={require("../../../assets/images/logo.png")}
-              style={styles.logoIcon}
-            />
-            <Image
-              source={require("../../../assets/images/wordmark.png")}
-              style={styles.wordmark}
-            />
-          </View>
+        {/* Logo is now OUTSIDE the centered/flowing content — 
+            it's absolutely positioned via styles.logoRow, so nothing
+            below it can ever push or shift it. */}
+        <View style={styles.logoRow}>
+          <Image
+            source={require("../../../assets/images/logo.png")}
+            style={styles.logoIcon}
+          />
+          <Image
+            source={require("../../../assets/images/wordmark.png")}
+            style={styles.wordmark}
+          />
+        </View>
 
-          {(error || emailError || passwordError) ? (
+        <View style={styles.content}>
+          <View style={styles.errorContainer}>
             <Text style={styles.errorText}>
               {error ||
                 [
@@ -146,7 +149,7 @@ export default function LoginScreen() {
                   .filter(Boolean)
                   .join("\n")}
             </Text>
-          ) : null}
+          </View>
 
           <FloatingInput
             label="Email Address"

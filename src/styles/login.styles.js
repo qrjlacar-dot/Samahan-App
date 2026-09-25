@@ -28,20 +28,20 @@ export const styles = StyleSheet.create({
     shadowOpacity: 0.07,
     shadowRadius: 10,
     elevation: 3,
-    justifyContent: "center",
+    // no longer centers content — logo is now pinned separately
   },
 
-  content: { width: "100%", 
-    alignSelf: "center" 
-  },
-
+  // Logo is absolutely positioned so it can NEVER move,
+  // no matter what happens in the scrollable/dynamic content below.
   logoRow: {
+    position: "absolute",
+    top: scale(100), // fixed distance from top of card — tweak this one number to reposition
+    left: 0,
+    right: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    alignSelf: "center",
-    marginBottom: scale(50),
-
+    zIndex: 2,
   },
 
   logoIcon: { width: scale(58), 
@@ -55,10 +55,27 @@ export const styles = StyleSheet.create({
     resizeMode: "contain" 
   },
 
-  errorText: { color: COLORS.error, 
-    textAlign: "left", 
-    marginBottom: scale(12), 
-    fontSize: scaleFont(14) 
+  // Everything else now lives in a normal flowing block,
+  // pushed down far enough to clear the fixed logo.
+  content: {
+    width: "100%",
+    alignSelf: "center",
+    flex: 1,
+    justifyContent: "center",
+    paddingTop: scale(110), // must be >= logo top + logo height + desired gap
+  },
+
+  errorContainer: {
+    height: scale(38),
+    justifyContent: "center",
+    marginBottom: scale(12),
+  },
+
+  errorText: {
+    color: COLORS.error,
+    textAlign: "left",
+    fontSize: scaleFont(14),
+    lineHeight: scaleFont(17),
   },
 
   requiredAsterisk: { 
@@ -96,10 +113,10 @@ export const styles = StyleSheet.create({
   floatingLabel: { position: "absolute", left: scale(12), backgroundColor: COLORS.cardBg, paddingHorizontal: scale(4), zIndex: 1 },
 
   eyeIcon: { position: "absolute", right: scale(11), top: 0, bottom: 0, width: scale(30), justifyContent: "center", alignItems: "center" },
-  forgotText: { color: COLORS.pink, textAlign: "right", marginTop: scale(1), marginBottom: scale(18), fontSize: scaleFont(13), fontWeight: "bold" },
+  forgotText: { color: COLORS.pink, textAlign: "right", marginTop: scale(1), marginBottom: scale(20), fontSize: scaleFont(13), fontWeight: "bold" },
   loginButton: { backgroundColor: COLORS.pink, borderRadius: RADIUS.input, height: scale(48), alignItems: "center", justifyContent: "center" },
   loginButtonText: { color: "#FFFFFF", fontWeight: "bold", fontSize: scaleFont(15) },
-  dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: scale(18) },
+  dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: scale(20) },
   dividerLine: { flex: 1, height: 1, backgroundColor: "#E3E3E3" },
   dividerText: { marginHorizontal: scale(9), color: "#8F8F8F", fontSize: scaleFont(12) },
  

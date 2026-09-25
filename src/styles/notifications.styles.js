@@ -1,78 +1,78 @@
 import { StyleSheet } from "react-native";
-
-export const PINK = "#D9679C";
-export const PAGE_BG = "#F7EFF3";
+import { COLORS, SPACING, FONT_SIZES, RADIUS } from "../constants/theme";
+import { scale, scaleFont } from "../constants/scale";
 
 export const styles = StyleSheet.create({
   page: {
     flex: 1,
-    backgroundColor: PAGE_BG,
+    backgroundColor: COLORS.pageBg,
   },
 
   header: {
-    paddingHorizontal: "6.5%",
-    paddingTop: "4%",
-    paddingBottom: "3%",
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.lg,
   },
 
   title: {
-    fontSize: 32,
+    color: COLORS.pink,
+    fontSize: scaleFont(28),
     fontWeight: "bold",
-    color: PINK,
+    marginTop: SPACING.md,
   },
 
   subtitle: {
-    fontSize: 14,
-    color: "#3A2E34",
-    marginTop: 6,
+    color: COLORS.textMuted,
+    fontSize: scaleFont(15),
+    marginTop: scale(2),
   },
 
   pillsRow: {
     paddingHorizontal: "6.5%",
-    paddingBottom: 18,
+    paddingBottom: SPACING.md,
   },
 
   pill: {
-    paddingHorizontal: 18,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: PINK,
+    paddingHorizontal: SPACING.md,
+    height: scale(36),
+    borderRadius: scale(18),
+    backgroundColor: COLORS.pink,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 10,
+    marginRight: SPACING.sm,
   },
 
   pillText: {
-    fontSize: 13,
+    fontSize: scaleFont(FONT_SIZES.small),
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: COLORS.cardBg,
   },
 
   scrollContent: {
     paddingHorizontal: "6.5%",
-    paddingBottom: 24,
+    paddingBottom: SPACING.lg,
   },
 
   section: {
-    marginBottom: 20,
+    marginBottom: SPACING.lg,
   },
 
   sectionHeader: {
-    fontSize: 15,
+    fontSize: scaleFont(FONT_SIZES.subtitle),
     fontWeight: "bold",
-    color: PINK,
+    color: COLORS.pink,
     letterSpacing: 0.3,
-    marginBottom: 12,
+    marginBottom: SPACING.sm,
   },
 
   placeholderRow: {
-    height: 68,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-    marginBottom: 14,
+    height: scale(68),
+    borderRadius: RADIUS.input,
+    backgroundColor: COLORS.cardBg,
+    marginBottom: SPACING.sm,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.md,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
@@ -81,9 +81,9 @@ export const styles = StyleSheet.create({
   },
 
   placeholderIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(18),
     backgroundColor: "#EAD4E1",
   },
 });
