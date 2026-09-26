@@ -115,7 +115,7 @@ export default function LoginScreen() {
       await signInWithEmailAndPassword(auth, email, password);
       router.replace("/(tabs)/home");
     } catch (err) {
-      setError("Incorrect email or password.");
+      setError("* Incorrect email or password.");
     } finally {
       setLoading(false);
     }
