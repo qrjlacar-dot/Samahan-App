@@ -8,7 +8,10 @@
     "scheme": "samahan",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "config": {
+        "googleMapsApiKey": "AIzaSyAqILA5qgbZw_nEwasA2nFxSn6ejEkUIkc"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +20,13 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAqILA5qgbZw_nEwasA2nFxSn6ejEkUIkc"
+        }
+      },
+      "package": "com.jjaahhzz.Samahan"
     },
     "web": {
       "output": "static",
@@ -32,7 +41,8 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
