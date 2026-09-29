@@ -147,8 +147,7 @@ export default function ResetPasswordScreen() {
 
         <Text style={styles.title}>Reset Password</Text>
         <Text style={styles.subtitle}>
-          Enter your email address and we'll send you a link to create a new
-          password.
+          Enter your email address and we'll send you a link to create a new password.
         </Text>
 
         <View style={styles.formContainer}>
