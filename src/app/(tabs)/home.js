@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import {
   Alert,
   Image,
+  Linking,
   Text,
   TouchableOpacity,
   View,
@@ -10,14 +12,19 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { styles } from "../../styles/home.styles";
 
 export default function Home() {
-  const handleEmergencyCall = (title, number) => {
-    Alert.alert("Emergency Contact", `Calling ${title} (${number})...`, [
-      { text: "OK" },
-    ]);
+  const handleEmergencyCall = async (title, number) => {
+    try {
+      await Linking.openURL(`tel:${number}`);
+    } catch (error) {
+      Alert.alert(
+        "Unable to call",
+        `Could not open the dialer for ${title}.`
+      );
+    }
   };
 
   return (
-   <SafeAreaView style={styles.container} edges={["top"]}>  
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.scrollContent}>
         {/* Header Greeting */}
         <View style={styles.headerContainer}>
@@ -58,12 +65,7 @@ export default function Home() {
             <TouchableOpacity
               style={styles.contactButton}
               activeOpacity={0.7}
-              onPress={() =>
-                handleEmergencyCall(
-                  "Personal Emergency Contact",
-                  "Saved Contact",
-                )
-              }
+              onPress={() => router.push("/emergency-contacts")}
             >
               <View style={styles.blueCircle}>
                 <Ionicons name="person" size={22} color="#FFFFFF" />
@@ -78,7 +80,9 @@ export default function Home() {
             <TouchableOpacity
               style={styles.contactButton}
               activeOpacity={0.7}
-              onPress={() => handleEmergencyCall("National Hotline", "911")}
+              onPress={() =>
+                handleEmergencyCall("National Hotline", "911")
+              }
             >
               <View style={styles.redCircle}>
                 <Text style={styles.hotlineText}>911</Text>
@@ -91,12 +95,16 @@ export default function Home() {
             <TouchableOpacity
               style={styles.contactButton}
               activeOpacity={0.7}
-              onPress={() => handleEmergencyCall("QC Emergency Hotline", "122")}
+              onPress={() =>
+                handleEmergencyCall("QC Emergency Hotline", "122")
+              }
             >
               <View style={styles.redCircle}>
                 <Text style={styles.hotlineText}>122</Text>
               </View>
-              <Text style={styles.buttonLabel}>QC Emergency{"\n"}Hotline</Text>
+              <Text style={styles.buttonLabel}>
+                QC Emergency{"\n"}Hotline
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
