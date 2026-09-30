@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   Alert,
   Image,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -33,22 +34,27 @@ export default function Home() {
     });
   };
 
-  const handleEmergencyCall = (title, number) => {
-    Alert.alert("Emergency Contact", `Calling ${title} (${number})...`, [
-      { text: "OK" },
-    ]);
+  const handleEmergencyCall = async (title, number) => {
+    try {
+      await Linking.openURL(`tel:${number}`);
+    } catch {
+      Alert.alert(
+        "Unable to call",
+        `Could not open the dialer for ${title}.`
+      );
+    }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.content}>
+      <View style={styles.scrollContent ?? styles.content}>
         {/* Header Greeting */}
         <View style={styles.headerContainer}>
           <Text style={styles.greetingTitle}>Magandang Umaga!</Text>
           <Text style={styles.subTitle}>Commute tayo, ano tara?!</Text>
         </View>
 
-        {/* Map Preview Card (whole card is tappable) */}
+        {/* Map Preview Card */}
         <Pressable
           onPress={goToDirections}
           style={[
@@ -70,7 +76,6 @@ export default function Home() {
             setMapSize({ width, height });
           }}
         >
-          {/* Map clipped to rounded corners on all 4 sides */}
           {mapSize.width > 0 && mapSize.height > 0 && (
             <View
               style={{
@@ -80,10 +85,6 @@ export default function Home() {
                 width: mapSize.width,
                 height: mapSize.height,
                 borderRadius: 32,
-                borderTopLeftRadius: 32,
-                borderTopRightRadius: 32,
-                borderBottomLeftRadius: 32,
-                borderBottomRightRadius: 32,
                 overflow: "hidden",
                 pointerEvents: "none",
               }}
@@ -107,7 +108,6 @@ export default function Home() {
             </View>
           )}
 
-          {/* Border overlay (keeps the rounded border look) */}
           <View
             style={[
               StyleSheet.absoluteFillObject,
@@ -120,7 +120,6 @@ export default function Home() {
             ]}
           />
 
-          {/* Location Pill Overlay */}
           <View style={[styles.locationPill, { pointerEvents: "none" }]}>
             <View style={styles.locationDot} />
             <Text style={styles.locationText}>Cubao, Quezon City</Text>
@@ -141,17 +140,11 @@ export default function Home() {
             <Text style={styles.emergencyTitle}>Emergency Contacts</Text>
           </View>
 
-          {/* 3 Circular Actions Container */}
           <View style={styles.emergencyActionsContainer}>
             <TouchableOpacity
               style={styles.contactButton}
               activeOpacity={0.7}
-              onPress={() =>
-                handleEmergencyCall(
-                  "Personal Emergency Contact",
-                  "Saved Contact",
-                )
-              }
+              onPress={() => router.push("/emergency-contacts")}
             >
               <View style={styles.blueCircle}>
                 <Ionicons name="person" size={22} color="#FFFFFF" />
@@ -167,7 +160,9 @@ export default function Home() {
             <TouchableOpacity
               style={styles.contactButton}
               activeOpacity={0.7}
-              onPress={() => handleEmergencyCall("National Hotline", "911")}
+              onPress={() =>
+                handleEmergencyCall("National Hotline", "911")
+              }
             >
               <View style={styles.redCircle}>
                 <Text style={styles.hotlineText}>911</Text>
@@ -181,13 +176,17 @@ export default function Home() {
             <TouchableOpacity
               style={styles.contactButton}
               activeOpacity={0.7}
-              onPress={() => handleEmergencyCall("QC Emergency Hotline", "122")}
+              onPress={() =>
+                handleEmergencyCall("QC Emergency Hotline", "122")
+              }
             >
               <View style={styles.redCircle}>
                 <Text style={styles.hotlineText}>122</Text>
               </View>
 
-              <Text style={styles.buttonLabel}>QC Emergency{"\n"}Hotline</Text>
+              <Text style={styles.buttonLabel}>
+                QC Emergency{"\n"}Hotline
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
