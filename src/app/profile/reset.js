@@ -1,7 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  signOut,
+  updatePassword,
+} from "firebase/auth";
 import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   ScrollView,
@@ -13,6 +20,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scale, scaleFont } from "../../constants/scale";
 import { COLORS, FONT_SIZES } from "../../constants/theme";
+import { auth } from "../../services/firebase";
 import { editStyles as styles } from "../../styles/editProfile.styles";
 
 function FloatingInput({
@@ -99,8 +107,15 @@ export default function ResetPassword() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const handleConfirmPasswordChange = () => {
+  const user = auth.currentUser;
+  const isGoogleOnly =
+    !!user &&
+    user.providerData.length > 0 &&
+    user.providerData.every((p) => p.providerId === "google.com");
+
+  const handleConfirmPasswordChange = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       Alert.alert("Error", "Please fill in all password fields.");
       return;
@@ -109,10 +124,55 @@ export default function ResetPassword() {
       Alert.alert("Error", "New passwords do not match.");
       return;
     }
+    if (newPassword.length < 6) {
+      Alert.alert("Error", "New password must be at least 6 characters.");
+      return;
+    }
+    if (!user || !user.email) {
+      Alert.alert("Error", "No signed-in account found.");
+      return;
+    }
 
-    Alert.alert("Success", "Password reset successfully!", [
-      { text: "OK", onPress: () => router.back() },
-    ]);
+    setSaving(true);
+    try {
+      const credential = EmailAuthProvider.credential(
+        user.email,
+        currentPassword,
+      );
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, newPassword);
+
+      Alert.alert("Success", "Password reset successfully!", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } catch (err) {
+      if (
+        err.code === "auth/wrong-password" ||
+        err.code === "auth/invalid-credential"
+      ) {
+        Alert.alert("Error", "Current password is incorrect.");
+      } else if (err.code === "auth/requires-recent-login") {
+        Alert.alert(
+          "Please sign in again",
+          "For security, you need to log in again before changing your password.",
+          [
+            {
+              text: "OK",
+              onPress: async () => {
+                await signOut(auth);
+                router.replace("/(auth)/login");
+              },
+            },
+          ],
+        );
+      } else if (err.code === "auth/weak-password") {
+        Alert.alert("Error", "New password is too weak.");
+      } else {
+        Alert.alert("Error", "Couldn't update password. Please try again.");
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -131,43 +191,66 @@ export default function ResetPassword() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.editTitle}>Reset Password</Text>
-
-        <View style={styles.formContainer}>
-          <FloatingInput
-            label="Current Password"
-            value={currentPassword}
-            onChangeText={setCurrentPassword}
-            secureTextEntry
+      {isGoogleOnly ? (
+        <View style={styles.centerFill}>
+          <Ionicons
+            name="logo-google"
+            size={scale(36)}
+            color={COLORS.textLight}
+            style={{ marginBottom: scale(12) }}
           />
-
-          <FloatingInput
-            label="New Password"
-            value={newPassword}
-            onChangeText={setNewPassword}
-            secureTextEntry
-          />
-
-          <FloatingInput
-            label="Confirm New Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
-
-          <TouchableOpacity
-            style={styles.confirmButton}
-            onPress={handleConfirmPasswordChange}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.confirmButtonText}>Confirm Changes</Text>
-          </TouchableOpacity>
+          <Text style={styles.infoText}>
+            Your account signs in with Google, so there's no password to change
+            here.
+          </Text>
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.editTitle}>Reset Password</Text>
+
+          <View style={styles.formContainer}>
+            <FloatingInput
+              label="Current Password"
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              secureTextEntry
+            />
+
+            <FloatingInput
+              label="New Password"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+            />
+
+            <FloatingInput
+              label="Confirm New Password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+            />
+
+            <TouchableOpacity
+              style={[
+                styles.confirmButton,
+                saving && styles.confirmButtonDisabled,
+              ]}
+              onPress={handleConfirmPasswordChange}
+              activeOpacity={0.7}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.confirmButtonText}>Confirm Changes</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }

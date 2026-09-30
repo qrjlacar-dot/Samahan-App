@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
-import { COLORS } from "../constants/theme";
 import { scale, scaleFont } from "../constants/scale";
+import { COLORS } from "../constants/theme";
 
 export const styles = StyleSheet.create({
   container: {
@@ -13,6 +13,12 @@ export const styles = StyleSheet.create({
     paddingTop: scale(20),
     paddingBottom: scale(40),
     alignItems: "center",
+  },
+
+  centerFill: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   avatarWrapper: {
@@ -29,11 +35,25 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  avatarImage: {
+    width: scale(110),
+    height: scale(110),
+    borderRadius: scale(55),
+    backgroundColor: "#F3E4ED",
+  },
+
   userName: {
     fontSize: scaleFont(23),
     fontWeight: "bold",
-    marginBottom: scale(20),
+    marginBottom: scale(4),
     color: COLORS.textDark,
+    textAlign: "center",
+  },
+
+  userEmail: {
+    fontSize: scaleFont(13),
+    color: COLORS.textLight,
+    marginBottom: scale(20),
     textAlign: "center",
   },
 
