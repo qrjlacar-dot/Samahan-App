@@ -3,16 +3,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    Alert,
-    Linking,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { auth } from "../services/firebase";
 
 const getStorageKey = () => {
@@ -21,6 +22,9 @@ const getStorageKey = () => {
 };
 
 export default function EmergencyContactsScreen() {
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 360;
+
   const [contacts, setContacts] = useState([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -36,7 +40,7 @@ export default function EmergencyContactsScreen() {
       if (savedContacts) {
         setContacts(JSON.parse(savedContacts));
       }
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Could not load emergency contacts.");
     }
   };
@@ -48,7 +52,7 @@ export default function EmergencyContactsScreen() {
         JSON.stringify(updatedContacts)
       );
       setContacts(updatedContacts);
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Could not save emergency contacts.");
     }
   };
@@ -104,20 +108,31 @@ export default function EmergencyContactsScreen() {
   const callNumber = async (number) => {
     try {
       await Linking.openURL(`tel:${number}`);
-    } catch (error) {
+    } catch {
       Alert.alert("Unable to call", "Your device could not open the dialer.");
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[
+          styles.content,
+          { paddingHorizontal: isSmallScreen ? 16 : 22 },
+        ]}
+      >
         <View style={styles.headerRow}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Pressable
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
             <Ionicons name="arrow-back" size={23} color="#CF6FA7" />
           </Pressable>
 
-          <Text style={styles.title}>Emergency Contacts</Text>
+          <Text style={[styles.title, isSmallScreen && styles.smallTitle]}>
+            Emergency Contacts
+          </Text>
         </View>
 
         <Text style={styles.subtitle}>
@@ -145,7 +160,11 @@ export default function EmergencyContactsScreen() {
           />
 
           <Pressable style={styles.addButton} onPress={addContact}>
-            <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
+            <Ionicons
+              name="add-circle-outline"
+              size={20}
+              color="#FFFFFF"
+            />
             <Text style={styles.addButtonText}>Save Contact</Text>
           </Pressable>
         </View>
@@ -198,13 +217,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF8FC",
   },
   content: {
-    padding: 22,
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
     paddingBottom: 40,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 12,
+    marginTop: 22,
   },
   backButton: {
     width: 40,
@@ -214,11 +235,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 10,
+    flexShrink: 0,
   },
   title: {
     color: "#CF6FA7",
     fontSize: 26,
     fontWeight: "800",
+    flexShrink: 1,
+  },
+  smallTitle: {
+    fontSize: 22,
   },
   subtitle: {
     color: "#7A5C6D",
@@ -300,6 +326,7 @@ const styles = StyleSheet.create({
   },
   contactInfo: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 12,
   },
   contactName: {

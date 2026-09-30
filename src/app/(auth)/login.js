@@ -1,15 +1,18 @@
-import { useState, useRef, useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { isRunningInExpoGo } from "expo";
+import { useRouter } from "expo-router";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { useEffect, useRef, useState } from "react";
 import {
-  View,
+  Alert,
+  Animated,
+  Image,
+  Platform,
   Text,
   TextInput,
   TouchableOpacity,
-  Image,
-  Animated,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { Ionicons } from "@expo/vector-icons";
 import { auth } from "../../services/firebase";
 import { styles, PINK } from "../../styles/login.styles";
 
@@ -33,11 +36,17 @@ function FloatingInput({
       duration: 150,
       useNativeDriver: false,
     }).start();
-  }, [isFocused, value]);
+  }, [animatedLabel, isFocused, value]);
 
   const labelStyle = {
-    top: animatedLabel.interpolate({ inputRange: [0, 1], outputRange: [13, -8] }),
-    fontSize: animatedLabel.interpolate({ inputRange: [0, 1], outputRange: [16, 12] }),
+    top: animatedLabel.interpolate({
+      inputRange: [0, 1],
+      outputRange: [13, -8],
+    }),
+    fontSize: animatedLabel.interpolate({
+      inputRange: [0, 1],
+      outputRange: [16, 12],
+    }),
     color: animatedLabel.interpolate({
       inputRange: [0, 1],
       outputRange: ["#AA8899", PINK],
@@ -48,7 +57,9 @@ function FloatingInput({
     <View style={styles.inputWrapper}>
       <Animated.Text style={[styles.floatingLabel, labelStyle]}>
         {label}
-        {showRequired && <Text style={styles.requiredAsterisk}> *</Text>}
+        {showRequired && (
+          <Text style={styles.requiredAsterisk}> *</Text>
+        )}
       </Animated.Text>
 
       <TextInput
@@ -114,19 +125,36 @@ export default function LoginScreen() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.replace("/(tabs)/home");
-    } catch (err) {
+    } catch {
       setError("* Incorrect email or password.");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGooglePress = () => {
+    if (Platform.OS === "ios") {
+      Alert.alert(
+        "Google sign-in unavailable",
+        "Google sign-in is currently unavailable on iPhone. Please log in using your email and password for now."
+      );
+      return;
+    }
+
+    if (isRunningInExpoGo()) {
+      Alert.alert(
+        "Google sign-in unavailable",
+        "Google sign-in does not work in Expo Go. Please use your email and password, or open the Samahan Android build."
+      );
+      return;
+    }
+
+    router.push("/(auth)/google-consent");
+  };
+
   return (
     <View style={styles.page}>
       <View style={styles.card}>
-        {/* Logo is now OUTSIDE the centered/flowing content — 
-            it's absolutely positioned via styles.logoRow, so nothing
-            below it can ever push or shift it. */}
         <View style={styles.logoRow}>
           <Image
             source={require("../../../assets/images/logo.png")}
@@ -200,7 +228,7 @@ export default function LoginScreen() {
 
           <TouchableOpacity
             style={styles.googleButton}
-            onPress={() => router.push("/(auth)/google-consent")}
+            onPress={handleGooglePress}
             activeOpacity={0.8}
           >
             <Image
