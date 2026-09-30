@@ -115,7 +115,7 @@ export default function LoginScreen() {
       await signInWithEmailAndPassword(auth, email, password);
       router.replace("/(tabs)/home");
     } catch (err) {
-      setError("Incorrect email or password.");
+      setError("* Incorrect email or password.");
     } finally {
       setLoading(false);
     }
@@ -198,7 +198,11 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          <TouchableOpacity style={styles.googleButton} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={() => router.push("/(auth)/google-consent")}
+            activeOpacity={0.8}
+          >
             <Image
               source={require("../../../assets/images/google-icon.png")}
               style={styles.googleIcon}

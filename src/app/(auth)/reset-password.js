@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { sendPasswordResetEmail } from "firebase/auth";
 import { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   ScrollView,
   Text,
@@ -12,19 +14,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scale, scaleFont } from "../../constants/scale";
 import { COLORS, FONT_SIZES } from "../../constants/theme";
+import { auth } from "../../services/firebase";
 import { styles } from "../../styles/reset-password.styles";
 
-function FloatingInput({
-  label,
-  value,
-  onChangeText,
-  secureTextEntry = false,
-  keyboardType = "default",
-  autoCapitalize = "none",
-}) {
+function EmailInput({ value, onChangeText, disabled, showRequired }) {
   const [isFocused, setIsFocused] = useState(false);
-  const [showValue, setShowValue] = useState(false);
-
   const animatedLabel = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   useEffect(() => {
@@ -33,7 +27,7 @@ function FloatingInput({
       duration: 150,
       useNativeDriver: false,
     }).start();
-  }, [isFocused, value]);
+  }, [animatedLabel, isFocused, value]);
 
   const labelStyle = {
     top: animatedLabel.interpolate({
@@ -53,40 +47,27 @@ function FloatingInput({
   return (
     <View style={styles.inputWrapper}>
       <Animated.Text style={[styles.floatingLabel, labelStyle]}>
-        {label}
+        Email Address
+        {showRequired && <Text style={styles.requiredAsterisk}> *</Text>}
       </Animated.Text>
 
       <TextInput
         style={[
           styles.inputField,
-          secureTextEntry && styles.inputFieldPassword,
           isFocused && styles.inputFieldFocused,
+          showRequired && styles.inputFieldError,
         ]}
         value={value}
         onChangeText={onChangeText}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        secureTextEntry={secureTextEntry && !showValue}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
+        keyboardType="email-address"
+        autoCapitalize="none"
         autoCorrect={false}
-        placeholder={isFocused && !value ? label : undefined}
+        editable={!disabled}
+        placeholder={isFocused && !value ? "Email Address" : undefined}
         placeholderTextColor={COLORS.placeholder}
       />
-
-      {secureTextEntry && (
-        <TouchableOpacity
-          style={styles.eyeIcon}
-          onPress={() => setShowValue((current) => !current)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={showValue ? "eye-off-outline" : "eye-outline"}
-            size={scale(19)}
-            color={COLORS.textLight}
-          />
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
@@ -96,8 +77,45 @@ export default function ResetPasswordScreen() {
   const insets = useSafeAreaInsets();
 
   const [email, setEmail] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleReset = async () => {
+    if (loading) return;
+
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedEmail) {
+      setEmailError(true);
+      setError("* Please input your email address.");
+      return;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
+      setEmailError(false);
+      setError("* Please enter a valid email address.");
+      return;
+    }
+
+    setEmailError(false);
+    setError("");
+    setLoading(true);
+
+    try {
+      await sendPasswordResetEmail(auth, trimmedEmail);
+
+      Alert.alert(
+        "Check your email",
+        "If this address has an account, you'll receive a password reset link.",
+        [{ text: "OK", onPress: () => router.replace("/(auth)/login") }]
+      );
+    } catch {
+      setError("We couldn't send the email. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.page}>
@@ -119,37 +137,64 @@ export default function ResetPasswordScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.mailIconCircle}>
+          <Ionicons
+            name="mail-outline"
+            size={scale(42)}
+            color={COLORS.pink}
+          />
+        </View>
+
         <Text style={styles.title}>Reset Password</Text>
         <Text style={styles.subtitle}>
-          Don't worry, we'll help you get back in :{">"}
+          Enter your email address and we'll send you a link to create a new password.
         </Text>
 
         <View style={styles.formContainer}>
-          <FloatingInput
-            label="Email Address"
+          {!!error && (
+            <Text
+              style={[
+                styles.errorText,
+                {
+                  position: "absolute",
+                  top: -scale(34),
+                  left: 0,
+                  right: 0,
+                  marginBottom: 0,
+                },
+              ]}
+            >
+              {error}
+            </Text>
+          )}
+
+          <EmailInput
             value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
+            onChangeText={(text) => {
+              setEmail(text);
+              if (text) {
+                setEmailError(false);
+                setError("");
+              }
+            }}
+            disabled={loading}
+            showRequired={emailError}
           />
 
-          <FloatingInput
-            label="New Password"
-            value={newPassword}
-            onChangeText={setNewPassword}
-            secureTextEntry
-          />
-
-          <FloatingInput
-            label="Confirm New Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
-
-          <TouchableOpacity style={styles.resetButton} activeOpacity={0.7}>
-            <Text style={styles.resetButtonText}>Reset Password</Text>
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={handleReset}
+            disabled={loading}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.resetButtonText}>
+              {loading ? "Sending..." : "Send Reset Link"}
+            </Text>
           </TouchableOpacity>
+
+          <Text style={styles.helperText}>
+            Check your inbox and spam folder for the link.
+          </Text>
         </View>
       </ScrollView>
     </View>

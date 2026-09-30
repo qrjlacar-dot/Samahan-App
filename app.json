@@ -11,6 +11,8 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.samahan.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -25,6 +27,15 @@
     },
     "plugins": [
       "expo-router",
+      "react-native-nitro-google-signin",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Samahan to choose a profile photo.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -37,6 +48,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f4519ea7-cbc1-405e-91d5-1c7bbef6cb46"
+      }
     }
   }
 }

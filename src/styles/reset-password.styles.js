@@ -46,13 +46,37 @@ export const styles = StyleSheet.create({
     fontSize: scaleFont(15),
     color: COLORS.textMuted,
     marginTop: scale(6),
-    marginBottom: scale(36),
+    marginBottom: scale(48),
     textAlign: "center",
   },
 
   formContainer: {
     width: "100%",
   },
+
+  mailIconCircle: {
+  width: scale(88),
+  height: scale(88),
+  borderRadius: scale(44),
+  backgroundColor: "#F3D9E6",
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: scale(24),
+},
+
+errorText: {
+  color: COLORS.error,
+  fontSize: scaleFont(14),
+  marginBottom: scale(12),
+},
+
+helperText: {
+  color: COLORS.textMuted,
+  fontSize: scaleFont(13),
+  textAlign: "center",
+  marginTop: scale(20),
+  lineHeight: scaleFont(19),
+},
 
   inputWrapper: {
     height: scale(50),
@@ -81,6 +105,15 @@ export const styles = StyleSheet.create({
 
   inputFieldFocused: {
     borderColor: COLORS.pink,
+  },
+
+  inputFieldError: {
+  borderColor: COLORS.error,
+  },
+
+  requiredAsterisk: {
+    color: COLORS.error,
+    fontWeight: "bold",
   },
 
   floatingLabel: {
