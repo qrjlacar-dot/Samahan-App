@@ -119,7 +119,6 @@ export default function EditProfile() {
   const [email, setEmail] = useState("");
   const [initialEmail, setInitialEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
-  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -309,13 +308,6 @@ export default function EditProfile() {
                 secureTextEntry
               />
             )}
-
-            <FloatingInput
-              label="Phone Number"
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-            />
 
             <TouchableOpacity
               style={[

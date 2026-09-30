@@ -1,7 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
+import { isRunningInExpoGo } from "expo";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,9 +17,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scale } from "../../constants/scale";
 import { COLORS } from "../../constants/theme";
 import { styles } from "../../styles/reset-password.styles";
-import { useState } from "react";
-import { ActivityIndicator, Alert } from "react-native";
-import { signInWithGoogle } from "../../services/google-auth";
 
 export default function GoogleConsentScreen() {
   const router = useRouter();
@@ -24,9 +26,27 @@ export default function GoogleConsentScreen() {
   const handleContinue = async () => {
     if (loading) return;
 
+    if (Platform.OS === "ios") {
+      Alert.alert(
+        "Google sign-in unavailable",
+        "Google sign-in is currently unavailable on iPhone. Please log in using your email and password for now."
+      );
+      return;
+    }
+
+    if (isRunningInExpoGo()) {
+      Alert.alert(
+        "Google sign-in unavailable",
+        "Google sign-in does not work in Expo Go. Please use your email and password, or open the Samahan Android build."
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
+      // Load the native Google sign-in code only on a supported build.
+      const { signInWithGoogle } = require("../../services/google-auth");
       const user = await signInWithGoogle();
 
       if (user) {
@@ -212,16 +232,16 @@ const localStyles = StyleSheet.create({
     textAlign: "center",
   },
   continueButton: {
-  marginTop: scale(28),
-  minHeight: scale(54),
-  borderRadius: scale(12),
-  backgroundColor: COLORS.pink,
-  alignItems: "center",
-  justifyContent: "center",
+    marginTop: scale(28),
+    minHeight: scale(54),
+    borderRadius: scale(12),
+    backgroundColor: COLORS.pink,
+    alignItems: "center",
+    justifyContent: "center",
   },
   continueButtonText: {
-  color: "#FFFFFF",
-  fontSize: scale(16),
-  fontWeight: "bold",
+    color: "#FFFFFF",
+    fontSize: scale(16),
+    fontWeight: "bold",
   },
 });

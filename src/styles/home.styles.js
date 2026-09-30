@@ -1,31 +1,38 @@
 import { StyleSheet } from "react-native";
+import { COLORS } from "../constants/theme";
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAF8F9",
+    backgroundColor: COLORS.pageBg,
   },
+
   content: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 16,
     justifyContent: "space-between",
+    backgroundColor: COLORS.pageBg,
   },
+
   headerContainer: {
     width: "100%",
     marginBottom: 4,
   },
+
   greetingTitle: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#C2538A",
+    color: COLORS.pink,
     marginBottom: 2,
   },
+
   subTitle: {
     fontSize: 14,
-    color: "#4A4A4A",
+    color: COLORS.textDark,
   },
+
   mapCardContainer: {
     flex: 1,
     minHeight: 180,
@@ -35,16 +42,17 @@ export const styles = StyleSheet.create({
     marginVertical: 12,
     position: "relative",
     borderWidth: 1,
-    borderColor: "#E8D8E0",
-    backgroundColor: "#E8D8E0",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.border,
   },
+
   locationPill: {
     position: "absolute",
     bottom: 16,
     left: 16,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.cardBg,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
@@ -55,18 +63,21 @@ export const styles = StyleSheet.create({
     elevation: 3,
     zIndex: 10,
   },
+
   locationDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#C2538A",
+    backgroundColor: COLORS.pink,
     marginRight: 8,
   },
+
   locationText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#333333",
+    color: COLORS.textDark,
   },
+
   emergencyCard: {
     width: "100%",
     backgroundColor: "#FFF0F3",
@@ -76,11 +87,13 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FAD2E1",
   },
+
   emergencyHeader: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
   },
+
   sirenBadge: {
     width: 36,
     height: 36,
@@ -90,28 +103,35 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 10,
   },
+
   sirenIcon: {
     width: 20,
     height: 20,
-    tintColor: "#FFFFFF",
+    tintColor: COLORS.cardBg,
   },
+
   emergencyTitle: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#5A1226",
   },
+
   emergencyActionsContainer: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.cardBg,
     borderRadius: 16,
     paddingVertical: 14,
+    paddingHorizontal: 6,
     alignItems: "center",
-    justifyContent: "space-around",
+    justifyContent: "space-between",
   },
+
   contactButton: {
     flex: 1,
     alignItems: "center",
+    justifyContent: "flex-start",
   },
+
   blueCircle: {
     width: 42,
     height: 42,
@@ -121,6 +141,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 6,
   },
+
   redCircle: {
     width: 42,
     height: 42,
@@ -130,20 +151,27 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 6,
   },
+
   hotlineText: {
-    color: "#FFFFFF",
+    color: COLORS.cardBg,
     fontWeight: "bold",
     fontSize: 14,
   },
+
   buttonLabel: {
     fontSize: 10,
-    color: "#444444",
+    color: COLORS.textDark,
     textAlign: "center",
     fontWeight: "500",
+    lineHeight: 13,
+    height: 28,
+    textAlignVertical: "center",
   },
+
   divider: {
     width: 1,
-    height: 36,
-    backgroundColor: "#E0E0E0",
+    height: 44,
+    backgroundColor: COLORS.cardBorder,
+    alignSelf: "center",
   },
 });

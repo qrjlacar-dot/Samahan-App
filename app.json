@@ -48,7 +48,7 @@
       [
         "react-native-maps",
         {
-          "androidGoogleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+          "androidGoogleMapsApiKey": "AIzaSyAqILA5qgbZw_nEwasA2nFxSn6ejEkUIkc"
         }
       ]
     ],

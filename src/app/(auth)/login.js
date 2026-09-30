@@ -1,13 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { isRunningInExpoGo } from "expo";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useEffect, useRef, useState } from "react";
 import {
-  Alert,
   Animated,
   Image,
-  Platform,
   Text,
   TextInput,
   TouchableOpacity,
@@ -116,9 +113,7 @@ export default function LoginScreen() {
     setEmailError(missingEmail);
     setPasswordError(missingPassword);
 
-    if (missingEmail || missingPassword) {
-      return;
-    }
+    if (missingEmail || missingPassword) return;
 
     setLoading(true);
 
@@ -130,26 +125,6 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGooglePress = () => {
-    if (Platform.OS === "ios") {
-      Alert.alert(
-        "Google sign-in unavailable",
-        "Google sign-in is currently unavailable on iPhone. Please log in using your email and password for now."
-      );
-      return;
-    }
-
-    if (isRunningInExpoGo()) {
-      Alert.alert(
-        "Google sign-in unavailable",
-        "Google sign-in does not work in Expo Go. Please use your email and password, or open the Samahan Android build."
-      );
-      return;
-    }
-
-    router.push("/(auth)/google-consent");
   };
 
   return (
@@ -228,7 +203,7 @@ export default function LoginScreen() {
 
           <TouchableOpacity
             style={styles.googleButton}
-            onPress={handleGooglePress}
+            onPress={() => router.push("/(auth)/google-consent")}
             activeOpacity={0.8}
           >
             <Image
