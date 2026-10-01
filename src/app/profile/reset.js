@@ -33,7 +33,6 @@ function FloatingInput({
 }) {
   const [isFocused, setIsFocused] = useState(false);
   const [showValue, setShowValue] = useState(false);
-
   const animatedLabel = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   useEffect(() => {
@@ -42,7 +41,7 @@ function FloatingInput({
       duration: 150,
       useNativeDriver: false,
     }).start();
-  }, [isFocused, value]);
+  }, [animatedLabel, isFocused, value]);
 
   const labelStyle = {
     top: animatedLabel.interpolate({
@@ -51,7 +50,10 @@ function FloatingInput({
     }),
     fontSize: animatedLabel.interpolate({
       inputRange: [0, 1],
-      outputRange: [scaleFont(FONT_SIZES.input), scaleFont(FONT_SIZES.small)],
+      outputRange: [
+        scaleFont(FONT_SIZES.input),
+        scaleFont(FONT_SIZES.small),
+      ],
     }),
     color: animatedLabel.interpolate({
       inputRange: [0, 1],
@@ -110,35 +112,43 @@ export default function ResetPassword() {
   const [saving, setSaving] = useState(false);
 
   const user = auth.currentUser;
+
   const isGoogleOnly =
     !!user &&
     user.providerData.length > 0 &&
     user.providerData.every((p) => p.providerId === "google.com");
 
   const handleConfirmPasswordChange = async () => {
+    if (saving) return;
+
     if (!currentPassword || !newPassword || !confirmPassword) {
       Alert.alert("Error", "Please fill in all password fields.");
       return;
     }
+
     if (newPassword !== confirmPassword) {
       Alert.alert("Error", "New passwords do not match.");
       return;
     }
+
     if (newPassword.length < 6) {
       Alert.alert("Error", "New password must be at least 6 characters.");
       return;
     }
+
     if (!user || !user.email) {
       Alert.alert("Error", "No signed-in account found.");
       return;
     }
 
     setSaving(true);
+
     try {
       const credential = EmailAuthProvider.credential(
         user.email,
-        currentPassword,
+        currentPassword
       );
+
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, newPassword);
 
@@ -163,7 +173,7 @@ export default function ResetPassword() {
                 router.replace("/(auth)/login");
               },
             },
-          ],
+          ]
         );
       } else if (err.code === "auth/weak-password") {
         Alert.alert("Error", "New password is too weak.");
@@ -199,9 +209,10 @@ export default function ResetPassword() {
             color={COLORS.textLight}
             style={{ marginBottom: scale(12) }}
           />
+
           <Text style={styles.infoText}>
-            Your account signs in with Google, so there's no password to change
-            here.
+            Your account signs in with Google, so there's no password to
+            change here.
           </Text>
         </View>
       ) : (

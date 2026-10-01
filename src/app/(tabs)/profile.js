@@ -1,12 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   ScrollView,
   Switch,
   Text,
@@ -14,62 +13,73 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { scale } from "../../constants/scale";
 import { COLORS } from "../../constants/theme";
 import { auth, db } from "../../services/firebase";
 import { styles } from "../../styles/profile.styles";
 
 export default function Profile() {
   const router = useRouter();
-  const { refresh } = useLocalSearchParams();
+
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
   const [user, setUser] = useState(auth.currentUser);
-  const [profileData, setProfileData] = useState(null); // { name, phone, photoURL }
+  const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const showDefaultProfileMessage = () => {
+    Alert.alert(
+      "Default Profile Picture",
+      "Samahan uses this default icon for all accounts. Profile photo customization is currently unavailable.",
+      [{ text: "OK" }]
+    );
+  };
 
   const toggleNotifications = () => {
     setIsNotificationsEnabled((previousState) => !previousState);
   };
 
-  // Track the signed-in user. If somehow no one is signed in, bounce to Login.
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
+
       if (!firebaseUser) {
         router.replace("/(auth)/login");
       }
     });
+
     return unsubscribe;
-  }, []);
+  }, [router]);
 
   const loadProfile = useCallback(async (uid) => {
     try {
       const snap = await getDoc(doc(db, "users", uid));
+
       if (snap.exists()) {
         const data = snap.data();
+
         setProfileData({
           name: data.name || "",
           phone: data.phone || "",
-          photoURL: data.photoURL || null,
         });
       } else {
-        setProfileData({ name: "", phone: "", photoURL: null });
+        setProfileData({ name: "", phone: "" });
       }
     } catch (err) {
       console.warn("Failed to load profile:", err);
-      setProfileData({ name: "", phone: "", photoURL: null });
+      setProfileData({ name: "", phone: "" });
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Reload whenever the signed-in user changes, or whenever Edit Profile
-  // sends us back with a fresh `refresh` param (see edit.js).
-  useEffect(() => {
-    if (user?.uid) {
-      setLoading(true);
-      loadProfile(user.uid);
-    }
-  }, [user, refresh, loadProfile]);
+  // Reload profile information whenever this screen becomes active.
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.uid) {
+        loadProfile(user.uid);
+      }
+    }, [user?.uid, loadProfile])
+  );
 
   const isGoogleOnly =
     !!user &&
@@ -104,26 +114,38 @@ export default function Profile() {
     );
   }
 
-  const displayName = profileData?.name || user.email?.split("@")[0] || "Name";
+  const displayName =
+    profileData?.name ||
+    user.displayName ||
+    user.email?.split("@")[0] ||
+    "Name";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.avatarWrapper}>
-          {profileData?.photoURL ? (
-            <Image
-              source={{ uri: profileData.photoURL }}
-              style={styles.avatarImage}
+        <TouchableOpacity
+          style={styles.avatarWrapper}
+          onPress={showDefaultProfileMessage}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="About the default profile picture"
+        >
+          <View style={styles.avatarCircle}>
+            <Ionicons
+              name="person"
+              size={scale(50)}
+              color={COLORS.pink}
             />
-          ) : (
-            <View style={styles.avatarCircle}>
-              <Ionicons name="person" size={50} color={COLORS.pink} />
-            </View>
+          </View>
+        </TouchableOpacity>
+
+        <View style={styles.identity}>
+          <Text style={styles.userName}>{displayName}</Text>
+
+          {!!user.email && (
+            <Text style={styles.userEmail}>{user.email}</Text>
           )}
         </View>
-
-        <Text style={styles.userName}>{displayName}</Text>
-        {!!user.email && <Text style={styles.userEmail}>{user.email}</Text>}
 
         <View style={styles.menuCard}>
           <TouchableOpacity
@@ -132,13 +154,29 @@ export default function Profile() {
             onPress={() => router.push("/profile/edit")}
           >
             <View style={styles.menuLeft}>
-              <Ionicons name="card-outline" size={22} color={COLORS.pink} />
-              <Text style={styles.menuText}>Edit Profile Information</Text>
+              <Ionicons
+                name="card-outline"
+                size={22}
+                color={COLORS.pink}
+              />
+              <Text style={styles.menuText}>
+                Edit Profile Information
+              </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#CCCCCC" />
+
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color="#CCCCCC"
+            />
           </TouchableOpacity>
 
-          <View style={styles.menuItem}>
+          <View
+            style={[
+              styles.menuItem,
+              isGoogleOnly && styles.lastMenuItem,
+            ]}
+          >
             <View style={styles.menuLeft}>
               <Ionicons
                 name="notifications-outline"
@@ -147,9 +185,12 @@ export default function Profile() {
               />
               <Text style={styles.menuText}>Notifications</Text>
             </View>
+
             <Switch
               trackColor={{ false: "#E0E0E0", true: "#E8A5C8" }}
-              thumbColor={isNotificationsEnabled ? COLORS.pink : "#F4F3F4"}
+              thumbColor={
+                isNotificationsEnabled ? COLORS.pink : "#F4F3F4"
+              }
               onValueChange={toggleNotifications}
               value={isNotificationsEnabled}
             />
@@ -169,7 +210,12 @@ export default function Profile() {
                 />
                 <Text style={styles.menuText}>Reset Password</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color="#CCCCCC" />
+
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color="#CCCCCC"
+              />
             </TouchableOpacity>
           )}
         </View>

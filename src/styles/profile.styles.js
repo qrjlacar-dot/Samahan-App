@@ -10,7 +10,7 @@ export const styles = StyleSheet.create({
 
   content: {
     paddingHorizontal: scale(24),
-    paddingTop: scale(20),
+    paddingTop: scale(30),
     paddingBottom: scale(40),
     alignItems: "center",
   },
@@ -22,7 +22,7 @@ export const styles = StyleSheet.create({
   },
 
   avatarWrapper: {
-    position: "relative",
+    alignSelf: "center",
     marginBottom: scale(16),
   },
 
@@ -30,30 +30,30 @@ export const styles = StyleSheet.create({
     width: scale(110),
     height: scale(110),
     borderRadius: scale(55),
-    backgroundColor: "#F3E4ED",
-    justifyContent: "center",
+    backgroundColor: "#F3D9E6",
     alignItems: "center",
+    justifyContent: "center",
   },
 
-  avatarImage: {
-    width: scale(110),
-    height: scale(110),
-    borderRadius: scale(55),
-    backgroundColor: "#F3E4ED",
+  identity: {
+    width: "100%",
+    alignItems: "center",
+    marginBottom: scale(28),
   },
 
   userName: {
+    width: "100%",
     fontSize: scaleFont(23),
     fontWeight: "bold",
-    marginBottom: scale(4),
+    marginBottom: scale(6),
     color: COLORS.textDark,
     textAlign: "center",
   },
 
   userEmail: {
+    width: "100%",
     fontSize: scaleFont(13),
     color: COLORS.textLight,
-    marginBottom: scale(20),
     textAlign: "center",
   },
 
@@ -87,9 +87,12 @@ export const styles = StyleSheet.create({
   menuLeft: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
+    marginRight: scale(10),
   },
 
   menuText: {
+    flexShrink: 1,
     fontSize: scaleFont(15),
     color: COLORS.textDark,
     marginLeft: scale(14),

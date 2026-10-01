@@ -12,10 +12,10 @@ export const styles = StyleSheet.create({
   },
 
   scrollContent: {
-  flexGrow: 1,
-  paddingHorizontal: "6%",
-  paddingVertical: "2.5%",
-  justifyContent: "center",
+    flexGrow: 1,
+    paddingHorizontal: "6%",
+    paddingVertical: "2.5%",
+    justifyContent: "center",
   },
 
   card: {
@@ -27,13 +27,13 @@ export const styles = StyleSheet.create({
     borderColor: COLORS.cardBorder,
     paddingHorizontal: "7%",
     paddingTop: scale(40),
+    paddingBottom: scale(30),
     justifyContent: "flex-start",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.07,
     shadowRadius: 10,
     elevation: 3,
-    paddingBottom: scale(30),
   },
 
   content: {
@@ -59,8 +59,7 @@ export const styles = StyleSheet.create({
 
   avatarWrapper: {
     alignSelf: "center",
-    marginTop: scale(2),
-    marginBottom: scale(31),
+    marginBottom: scale(28),
   },
 
   avatarCircle: {
@@ -70,20 +69,6 @@ export const styles = StyleSheet.create({
     backgroundColor: "#F3D9E6",
     alignItems: "center",
     justifyContent: "center",
-  },
-
-  cameraBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: scale(28),
-    height: scale(28),
-    borderRadius: scale(14),
-    backgroundColor: COLORS.pink,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
   },
 
   inputWrapper: {
@@ -104,6 +89,10 @@ export const styles = StyleSheet.create({
     color: COLORS.textDark,
     backgroundColor: COLORS.cardBg,
     textAlignVertical: "center",
+  },
+
+  inputFieldPassword: {
+    paddingRight: scale(44),
   },
 
   inputFieldFocused: {
@@ -163,7 +152,7 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: scale(36),
+    marginTop: scale(40),
   },
 
   loginText: {

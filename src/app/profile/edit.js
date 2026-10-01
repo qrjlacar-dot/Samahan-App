@@ -1,4 +1,4 @@
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
   EmailAuthProvider,
@@ -43,7 +43,7 @@ function FloatingInput({
       duration: 150,
       useNativeDriver: false,
     }).start();
-  }, [isFocused, value]);
+  }, [animatedLabel, isFocused, value]);
 
   const labelStyle = {
     top: animatedLabel.interpolate({
@@ -107,13 +107,9 @@ export default function EditProfile() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  // Navigate back to Profile with a fresh `refresh` param so it reloads
-  // the latest data instead of showing whatever it last had cached.
-  const goToProfile = () =>
-    router.replace({
-      pathname: "/(tabs)/profile",
-      params: { refresh: Date.now().toString() },
-    });
+  const goToProfile = () => {
+    router.back();
+  };
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -123,6 +119,7 @@ export default function EditProfile() {
   const [saving, setSaving] = useState(false);
 
   const user = auth.currentUser;
+
   const isGoogleOnly =
     !!user &&
     user.providerData.length > 0 &&
@@ -143,10 +140,10 @@ export default function EditProfile() {
     (async () => {
       try {
         const snap = await getDoc(doc(db, "users", user.uid));
+
         if (snap.exists()) {
           const data = snap.data();
           setName(data.name || "");
-          // Phone is left untouched for now — not loaded or saved yet.
         }
       } catch (err) {
         Alert.alert("Error", "Couldn't load your profile. Please try again.");
@@ -160,12 +157,12 @@ export default function EditProfile() {
     await setDoc(
       doc(db, "users", user.uid),
       { name: name.trim() },
-      { merge: true },
+      { merge: true }
     );
   };
 
   const handleConfirmChanges = async () => {
-    if (!user) return;
+    if (!user || saving) return;
 
     if (!name.trim()) {
       Alert.alert("Error", "Name can't be empty.");
@@ -177,41 +174,38 @@ export default function EditProfile() {
         Alert.alert("Error", "Please enter a valid email address.");
         return;
       }
+
       if (!currentPassword) {
         Alert.alert(
           "Error",
-          "Enter your current password to confirm the email change.",
+          "Enter your current password to confirm the email change."
         );
         return;
       }
     }
 
     setSaving(true);
+
     try {
-      // Always save the name, whether or not the email is changing.
+      // Save the name whether or not the email is changing.
       await saveName();
 
       if (emailChanged) {
-        // Changing your login email is sensitive — Firebase requires a
-        // recent sign-in, so re-authenticate with the current password first.
         const credential = EmailAuthProvider.credential(
           initialEmail,
-          currentPassword,
+          currentPassword
         );
-        await reauthenticateWithCredential(user, credential);
 
-        // This sends a verification link to the NEW address. The email on
-        // the account only actually changes once the user clicks it — until
-        // then auth.currentUser.email stays the old one.
+        await reauthenticateWithCredential(user, credential);
         await verifyBeforeUpdateEmail(user, email.trim());
 
         setCurrentPassword("");
-        setEmail(initialEmail); // reflect that nothing has changed yet
+        setEmail(initialEmail);
 
         Alert.alert(
           "Verify your new email",
           `We've sent a verification link to ${email.trim()}. Your sign-in email will update once you confirm it — until then, keep using ${initialEmail} to log in.`,
-          [{ text: "OK", onPress: goToProfile }],
+          [{ text: "OK", onPress: goToProfile }]
         );
       } else {
         Alert.alert("Success", "Profile information updated successfully!", [
@@ -227,14 +221,14 @@ export default function EditProfile() {
       } else if (err.code === "auth/email-already-in-use") {
         Alert.alert(
           "Error",
-          "That email is already associated with another account.",
+          "That email is already associated with another account."
         );
       } else if (err.code === "auth/invalid-email") {
         Alert.alert("Error", "Please enter a valid email address.");
       } else if (err.code === "auth/requires-recent-login") {
         Alert.alert(
           "Please sign in again",
-          "For security, you need to log in again before changing your email.",
+          "For security, you need to log in again before changing your email."
         );
       } else {
         Alert.alert("Error", "Couldn't save your changes. Please try again.");
@@ -266,15 +260,6 @@ export default function EditProfile() {
           keyboardShouldPersistTaps="handled"
         >
           <Text style={styles.editTitle}>Edit Profile Information</Text>
-
-          <View style={styles.avatarWrapper}>
-            <View style={styles.avatarCircle}>
-              <Ionicons name="person" size={50} color={COLORS.pink} />
-            </View>
-            <View style={styles.avatarEditBadge}>
-              <Feather name="edit-2" size={14} color={COLORS.pink} />
-            </View>
-          </View>
 
           <View style={styles.formContainer}>
             <FloatingInput

@@ -5,15 +5,12 @@ import {
   signOut,
   updateProfile,
 } from "firebase/auth";
-import { doc, setDoc, updateDoc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadString } from "firebase/storage";
-import * as ImagePicker from "expo-image-picker";
+import { doc, setDoc } from "firebase/firestore";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
   Dimensions,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -22,7 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { auth, db, storage } from "../../services/firebase";
+import { auth, db } from "../../services/firebase";
 import { styles, PINK } from "../../styles/sign-up.styles";
 
 function FloatingInput({
@@ -67,7 +64,11 @@ function FloatingInput({
       </Animated.Text>
 
       <TextInput
-        style={[styles.inputField, isFocused && styles.inputFieldFocused]}
+        style={[
+          styles.inputField,
+          secureTextEntry && styles.inputFieldPassword,
+          isFocused && styles.inputFieldFocused,
+        ]}
         value={value}
         onChangeText={onChangeText}
         onFocus={() => setIsFocused(true)}
@@ -85,6 +86,8 @@ function FloatingInput({
           style={styles.eyeIcon}
           onPress={() => setShowValue((current) => !current)}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={showValue ? "Hide password" : "Show password"}
         >
           <Ionicons
             name={showValue ? "eye-off-outline" : "eye-outline"}
@@ -105,35 +108,13 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [photo, setPhoto] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const pickPhoto = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.65,
-        base64: true,
-      });
-
-      if (!result.canceled && result.assets?.[0]) {
-        setPhoto(result.assets[0]);
-      }
-    } catch {
-      Alert.alert("Photo unavailable", "Please try choosing a photo again.");
-    }
-  };
-
-  const confirmPhotoChoice = () => {
+  const showDefaultProfileMessage = () => {
     Alert.alert(
-      "Choose a profile picture",
-      "Samahan will save the picture you choose as your profile picture when you create your account.",
-      [
-        { text: "Not now", style: "cancel" },
-        { text: "Choose photo", onPress: pickPhoto },
-      ]
+      "Default Profile Picture",
+      "Samahan uses this default icon for all accounts. Profile photo customization is currently unavailable.",
+      [{ text: "OK" }]
     );
   };
 
@@ -172,50 +153,24 @@ export default function SignUpScreen() {
         trimmedEmail,
         password
       );
+
       accountCreated = true;
 
-      await updateProfile(user, { displayName: trimmedName });
+      await updateProfile(user, {
+        displayName: trimmedName,
+      });
 
       await setDoc(doc(db, "users", user.uid), {
         name: trimmedName,
         email: trimmedEmail,
-        photoURL: "",
         phone: "",
       });
 
-      let photoUploadFailed = false;
-
-      if (photo?.base64) {
-        try {
-          const photoRef = ref(
-            storage,
-            `profilePictures/${user.uid}/avatar.jpg`
-          );
-
-          await uploadString(photoRef, photo.base64, "base64", {
-            contentType: "image/jpeg",
-          });
-
-          const photoURL = await getDownloadURL(photoRef);
-          await updateProfile(user, { photoURL });
-          await updateDoc(doc(db, "users", user.uid), { photoURL });
-        } catch {
-          photoUploadFailed = true;
-        }
-      }
-
-      if (photoUploadFailed) {
-        Alert.alert(
-          "Account created",
-          "Your account is ready, but the picture could not be saved. You can add it later.",
-          [{ text: "Continue", onPress: () => router.replace("/(tabs)/home") }]
-        );
-      } else {
-        router.replace("/(tabs)/home");
-      }
+      router.replace("/(tabs)/home");
     } catch (err) {
       if (accountCreated) {
         await signOut(auth).catch(() => {});
+
         Alert.alert(
           "Account created",
           "Your account was created, but its profile could not be saved. Please log in with this email instead of signing up again."
@@ -252,31 +207,17 @@ export default function SignUpScreen() {
               <Text style={styles.subtitle}>Let's get you started!</Text>
             </View>
 
-            <View style={styles.avatarWrapper}>
+            <TouchableOpacity
+              style={styles.avatarWrapper}
+              onPress={showDefaultProfileMessage}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="About the default profile picture"
+            >
               <View style={styles.avatarCircle}>
-                {photo?.uri ? (
-                  <Image
-                    source={{ uri: photo.uri }}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      borderRadius: 999,
-                    }}
-                  />
-                ) : (
-                  <Ionicons name="person" size={50} color={PINK} />
-                )}
+                <Ionicons name="person" size={50} color={PINK} />
               </View>
-
-              <TouchableOpacity
-                style={styles.cameraBadge}
-                onPress={confirmPhotoChoice}
-                accessibilityLabel="Choose profile picture"
-                activeOpacity={0.8}
-              >
-                <Ionicons name="camera" size={14} color="#fff" />
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
 
             <FloatingInput
               label="Name"
@@ -320,6 +261,7 @@ export default function SignUpScreen() {
 
             <View style={styles.loginRow}>
               <Text style={styles.loginText}>Already have an account? </Text>
+
               <TouchableOpacity
                 onPress={() => router.push("/(auth)/login")}
                 activeOpacity={0.7}

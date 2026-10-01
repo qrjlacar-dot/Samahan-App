@@ -3,7 +3,10 @@ import { scale, scaleFont } from "../constants/scale";
 import { COLORS, RADIUS } from "../constants/theme";
 
 export const editStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.pageBg },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.pageBg,
+  },
 
   navbar: {
     height: scale(76),
@@ -30,37 +33,18 @@ export const editStyles = StyleSheet.create({
   },
 
   editTitle: {
-    fontSize: scaleFont(27),
+    width: "100%",
+    fontSize: scaleFont(24),
     fontWeight: "bold",
-    marginBottom: scale(20),
+    marginBottom: scale(24),
     color: COLORS.pink,
     textAlign: "center",
   },
 
-  avatarWrapper: { position: "relative", marginBottom: scale(24) },
-  avatarCircle: {
-    width: scale(110),
-    height: scale(110),
-    borderRadius: scale(55),
-    backgroundColor: "#F3E4ED",
-    justifyContent: "center",
-    alignItems: "center",
+  formContainer: {
+    width: "100%",
+    marginTop: scale(10),
   },
-  avatarEditBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: COLORS.cardBg,
-    width: scale(28),
-    height: scale(28),
-    borderRadius: scale(14),
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: COLORS.pink,
-  },
-
-  formContainer: { width: "100%", marginTop: scale(10) },
 
   inputWrapper: {
     height: scale(50),
@@ -68,6 +52,7 @@ export const editStyles = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
   },
+
   inputField: {
     height: scale(50),
     borderWidth: 1,
@@ -80,8 +65,16 @@ export const editStyles = StyleSheet.create({
     backgroundColor: COLORS.cardBg,
     textAlignVertical: "center",
   },
-  inputFieldFocused: { borderColor: COLORS.pink },
-  inputFieldDisabled: { backgroundColor: "#F5F0F2", color: COLORS.textLight },
+
+  inputFieldFocused: {
+    borderColor: COLORS.pink,
+  },
+
+  inputFieldDisabled: {
+    backgroundColor: "#F5F0F2",
+    color: COLORS.textLight,
+  },
+
   floatingLabel: {
     position: "absolute",
     left: scale(12),
@@ -90,8 +83,10 @@ export const editStyles = StyleSheet.create({
     zIndex: 1,
   },
 
-  // Password fields: leave room for the eye icon
-  inputFieldPassword: { paddingRight: scale(44) },
+  inputFieldPassword: {
+    paddingRight: scale(44),
+  },
+
   eyeIcon: {
     position: "absolute",
     right: scale(11),
@@ -111,14 +106,22 @@ export const editStyles = StyleSheet.create({
     justifyContent: "center",
     marginTop: scale(10),
   },
+
   confirmButtonText: {
     fontSize: scaleFont(15),
     color: "#FFFFFF",
     fontWeight: "bold",
   },
-  confirmButtonDisabled: { opacity: 0.6 },
 
-  centerFill: { flex: 1, alignItems: "center", justifyContent: "center" },
+  confirmButtonDisabled: {
+    opacity: 0.6,
+  },
+
+  centerFill: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   infoText: {
     fontSize: scaleFont(15),
