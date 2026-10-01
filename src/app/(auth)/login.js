@@ -8,9 +8,7 @@ import {
   Animated,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { signInWithEmailAndPassword } from "firebase/auth";
 import { Ionicons } from "@expo/vector-icons";
-import { auth } from "../../services/firebase";
 import { styles, PINK } from "../../styles/login.styles";
 
 function FloatingInput({
@@ -33,11 +31,17 @@ function FloatingInput({
       duration: 150,
       useNativeDriver: false,
     }).start();
-  }, [isFocused, value]);
+  }, [isFocused, value, animatedLabel]);
 
   const labelStyle = {
-    top: animatedLabel.interpolate({ inputRange: [0, 1], outputRange: [13, -8] }),
-    fontSize: animatedLabel.interpolate({ inputRange: [0, 1], outputRange: [16, 12] }),
+    top: animatedLabel.interpolate({
+      inputRange: [0, 1],
+      outputRange: [13, -8],
+    }),
+    fontSize: animatedLabel.interpolate({
+      inputRange: [0, 1],
+      outputRange: [16, 12],
+    }),
     color: animatedLabel.interpolate({
       inputRange: [0, 1],
       outputRange: ["#AA8899", PINK],
@@ -48,14 +52,16 @@ function FloatingInput({
     <View style={styles.inputWrapper}>
       <Animated.Text style={[styles.floatingLabel, labelStyle]}>
         {label}
-        {showRequired && <Text style={styles.requiredAsterisk}> *</Text>}
+        {showRequired && (
+          <Text style={styles.requiredAsterisk}> *</Text>
+        )}
       </Animated.Text>
 
       <TextInput
         style={[
           styles.inputField,
           isFocused && styles.inputFieldFocused,
-          showRequired && !value && styles.inputFieldError,
+          showRequired && !value.trim() && styles.inputFieldError,
         ]}
         value={value}
         onChangeText={onChangeText}
@@ -91,16 +97,13 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    setError("");
-
-    const missingEmail = !email;
-    const missingPassword = !password;
+  // Check required fields, then open Home without Firebase authentication.
+  const handleLogin = () => {
+    const missingEmail = !email.trim();
+    const missingPassword = !password.trim();
 
     setEmailError(missingEmail);
     setPasswordError(missingPassword);
@@ -109,24 +112,12 @@ export default function LoginScreen() {
       return;
     }
 
-    setLoading(true);
-
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.replace("/(tabs)/home");
-    } catch (err) {
-      setError("Incorrect email or password.");
-    } finally {
-      setLoading(false);
-    }
+    router.replace("/(tabs)/home");
   };
 
   return (
     <View style={styles.page}>
       <View style={styles.card}>
-        {/* Logo is now OUTSIDE the centered/flowing content — 
-            it's absolutely positioned via styles.logoRow, so nothing
-            below it can ever push or shift it. */}
         <View style={styles.logoRow}>
           <Image
             source={require("../../../assets/images/logo.png")}
@@ -141,13 +132,12 @@ export default function LoginScreen() {
         <View style={styles.content}>
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>
-              {error ||
-                [
-                  emailError && "* Please input your email address.",
-                  passwordError && "* Please input your password.",
-                ]
-                  .filter(Boolean)
-                  .join("\n")}
+              {[
+                emailError && "* Please input your email address.",
+                passwordError && "* Please input your password.",
+              ]
+                .filter(Boolean)
+                .join("\n")}
             </Text>
           </View>
 
@@ -156,7 +146,7 @@ export default function LoginScreen() {
             value={email}
             onChangeText={(text) => {
               setEmail(text);
-              if (text) setEmailError(false);
+              if (text.trim()) setEmailError(false);
             }}
             autoCapitalize="none"
             keyboardType="email-address"
@@ -168,8 +158,9 @@ export default function LoginScreen() {
             value={password}
             onChangeText={(text) => {
               setPassword(text);
-              if (text) setPasswordError(false);
+              if (text.trim()) setPasswordError(false);
             }}
+            autoCapitalize="none"
             secureTextEntry
             showRequired={passwordError}
           />
@@ -184,12 +175,9 @@ export default function LoginScreen() {
           <TouchableOpacity
             style={styles.loginButton}
             onPress={handleLogin}
-            disabled={loading}
             activeOpacity={0.8}
           >
-            <Text style={styles.loginButtonText}>
-              {loading ? "Logging in..." : "Log In"}
-            </Text>
+            <Text style={styles.loginButtonText}>Log In</Text>
           </TouchableOpacity>
 
           <View style={styles.dividerRow}>
@@ -198,7 +186,10 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          <TouchableOpacity style={styles.googleButton} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.googleButton}
+            activeOpacity={0.8}
+          >
             <Image
               source={require("../../../assets/images/google-icon.png")}
               style={styles.googleIcon}
