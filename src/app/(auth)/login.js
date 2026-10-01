@@ -1,14 +1,14 @@
-import { useState, useRef, useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
-  View,
+  Animated,
+  Image,
   Text,
   TextInput,
   TouchableOpacity,
-  Image,
-  Animated,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { styles, PINK } from "../../styles/login.styles";
 
 function FloatingInput({
@@ -31,7 +31,7 @@ function FloatingInput({
       duration: 150,
       useNativeDriver: false,
     }).start();
-  }, [isFocused, value, animatedLabel]);
+  }, [animatedLabel, isFocused, value]);
 
   const labelStyle = {
     top: animatedLabel.interpolate({
@@ -100,7 +100,7 @@ export default function LoginScreen() {
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
 
-  // Check required fields, then open Home without Firebase authentication.
+  // Check required fields, then open Home without authentication.
   const handleLogin = () => {
     const missingEmail = !email.trim();
     const missingPassword = !password.trim();
@@ -108,9 +108,7 @@ export default function LoginScreen() {
     setEmailError(missingEmail);
     setPasswordError(missingPassword);
 
-    if (missingEmail || missingPassword) {
-      return;
-    }
+    if (missingEmail || missingPassword) return;
 
     router.replace("/(tabs)/home");
   };
@@ -188,6 +186,7 @@ export default function LoginScreen() {
 
           <TouchableOpacity
             style={styles.googleButton}
+            onPress={() => router.push("/(auth)/google-consent")}
             activeOpacity={0.8}
           >
             <Image
@@ -198,7 +197,9 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={styles.signupRow}>
-            <Text style={styles.signupText}>Don't have an account? </Text>
+            <Text style={styles.signupText}>
+              Don't have an account?{" "}
+            </Text>
             <TouchableOpacity
               onPress={() => router.push("/(auth)/sign-up")}
               activeOpacity={0.7}
