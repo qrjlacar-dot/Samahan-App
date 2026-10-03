@@ -55,7 +55,7 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: scale(14),
+    height: scale(56),
     borderBottomWidth: 1,
     borderBottomColor: "#F5F5F5",
   },
