@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
@@ -13,13 +12,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BackButton } from "../components/BackButton";
 import { IMAGES } from "../constants/images";
 import { styles } from "../styles/directions.styles";
 
-import LocationInputCard from "./directions/LocationInputCard";
-import ModeSelector from "./directions/ModeSelector";
-import TicketToggle from "./directions/TicketToggle";
-import TripDetailsCard from "./directions/TripDetailsCard";
+import LocationInputCard from "../components/directions/LocationInputCard";
+import ModeSelector from "../components/directions/ModeSelector";
+import TicketToggle from "../components/directions/TicketToggle";
+import TripDetailsCard from "../components/directions/TripDetailsCard";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 
@@ -132,13 +132,15 @@ export default function Directions() {
       </View>
 
       {/* Back Button */}
-      <TouchableOpacity
+      <BackButton
         style={styles.backButton}
         onPress={() => router.back()}
         activeOpacity={0.8}
-      >
-        <Ionicons name="arrow-back" size={22} color="#333333" />
-      </TouchableOpacity>
+        iconSize={22}
+        iconColor="#333333"
+        useDefaultStyle={false}
+        hitSlop={null}
+      />
 
       {/* Bottom Sheet */}
       <Animated.View

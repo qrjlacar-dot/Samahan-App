@@ -1,6 +1,7 @@
-import { FontAwesome5, Ionicons } from "@expo/vector-icons";
+import TripSummaryBadge from "./TripSummaryBadge";
+import { Ionicons } from "@expo/vector-icons";
 
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 
 import { styles } from "../../styles/directions.styles";
 
@@ -10,95 +11,6 @@ export default function TripDetailsCard({
   isFavorite,
   onToggleFavorite,
 }) {
-  const renderSummaryBadge = () => {
-    switch (selectedMode) {
-      case "jeep":
-        return (
-          <View style={styles.summaryBadgePill}>
-            <Image
-              source={require("../../../assets/images/jeep.png")}
-              style={{
-                width: 16,
-                height: 16,
-                tintColor: "#C76C9B",
-                resizeMode: "contain",
-              }}
-            />
-
-            <Text style={styles.badgeText}>Jeep</Text>
-
-            <Text style={styles.badgeDivider}>|</Text>
-
-            <Text style={styles.badgeDetailText}>1.2 km</Text>
-
-            <Text style={styles.badgeDivider}>|</Text>
-
-            <Text style={styles.badgeDetailText}>12 mins</Text>
-          </View>
-        );
-
-      case "train":
-        return (
-          <View style={styles.summaryBadgePill}>
-            <Image
-              source={require("../../../assets/images/train.png")}
-              style={{
-                width: 16,
-                height: 16,
-                tintColor: "#C76C9B",
-                resizeMode: "contain",
-              }}
-            />
-
-            <Text style={styles.badgeText}>Train</Text>
-
-            <Text style={styles.badgeDivider}>|</Text>
-
-            <Text style={styles.badgeDetailText}>1.2 km</Text>
-
-            <Text style={styles.badgeDivider}>|</Text>
-
-            <Text style={styles.badgeDetailText}>1 min</Text>
-          </View>
-        );
-
-      case "walk":
-        return (
-          <View style={styles.summaryBadgePill}>
-            <FontAwesome5 name="walking" size={14} color="#C76C9B" />
-
-            <Text style={styles.badgeText}>Walk</Text>
-
-            <Text style={styles.badgeDivider}>|</Text>
-
-            <Text style={styles.badgeDetailText}>1.1 km</Text>
-
-            <Text style={styles.badgeDivider}>|</Text>
-
-            <Text style={styles.badgeDetailText}>15 mins</Text>
-          </View>
-        );
-
-      case "bus":
-      default:
-        return (
-          <View style={styles.summaryBadgePill}>
-            <FontAwesome5 name="bus" size={14} color="#C76C9B" />
-
-            <Text style={styles.badgeText}>Bus</Text>
-
-            <Text style={styles.badgeDivider}>|</Text>
-
-            <Text style={styles.badgeDetailText}>1.2 km</Text>
-
-            <Text style={styles.badgeDivider}>|</Text>
-
-            <Text style={styles.badgeDetailText}>10 mins</Text>
-          </View>
-        );
-    }
-  };
-
   const renderTimelineSteps = () => {
     if (selectedMode === "walk") {
       return (
@@ -248,7 +160,7 @@ export default function TripDetailsCard({
         </TouchableOpacity>
       </View>
 
-      {renderSummaryBadge()}
+      <TripSummaryBadge selectedMode={selectedMode} />
       {renderTimelineSteps()}
     </View>
   );

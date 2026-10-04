@@ -9,21 +9,25 @@ export function BackButton({
   onPress,
   style,
   iconColor = COLORS.textDark,
+  iconSize = scale(22),
+  activeOpacity = 0.7,
+  hitSlop = 4,
+  useDefaultStyle = true,
   accessibilityLabel = "Go back"
 }) {
   const router = useRouter();
   return (
     <TouchableOpacity
-      style={[styles.backButton, style]}
+      style={[useDefaultStyle && styles.backButton, style]}
       onPress={onPress ?? (() => router.back())}
-      hitSlop={4}
-      activeOpacity={0.7}
+      hitSlop={hitSlop}
+      activeOpacity={activeOpacity}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
       <Ionicons
         name="arrow-back"
-        size={scale(22)}
+        size={iconSize}
         color={iconColor}
       />
     </TouchableOpacity>
