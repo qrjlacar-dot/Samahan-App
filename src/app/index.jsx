@@ -63,7 +63,7 @@ export default function Index() {
 
         animation.start(({ finished }) => {
           if (finished && !cancelled) {
-            routerRef.current.replace("/(auth)/login");
+            routerRef.current.replace("/onboarding");
           }
         });
       });

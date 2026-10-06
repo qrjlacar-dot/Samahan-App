@@ -26,9 +26,6 @@ export const styles = StyleSheet.create({
     fontSize: scaleFont(28),
     fontWeight: "bold",
     textAlign: "center",
-    textShadowColor: "rgba(0, 0, 0, 0.09)",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 2
   },
 
   subtitle: {
@@ -38,9 +35,6 @@ export const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: scale(2),
     marginBottom: scale(24),
-    textShadowColor: "rgba(0, 0, 0, 0.09)",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 2
   },
 
   addCard: {

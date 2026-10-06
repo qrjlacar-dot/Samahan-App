@@ -16,6 +16,9 @@ export default function RootLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" options={{ animation: "none" }} />
+      <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
+      <Stack.Screen name="onboarding2" />
+      <Stack.Screen name="onboarding3" />
       <Stack.Screen name="(auth)/login" options={{ animation: "fade" }} />
     </Stack>
   );
