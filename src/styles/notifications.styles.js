@@ -5,33 +5,28 @@ import { scale, scaleFont } from "../constants/scale";
 export const styles = StyleSheet.create({
   page: {
     flex: 1,
-    backgroundColor: COLORS.pageBg,
+    backgroundColor: COLORS.pageBg
   },
-
   header: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
-    paddingBottom: SPACING.lg,
+    paddingBottom: SPACING.lg
   },
-
   title: {
     color: COLORS.pink,
     fontSize: scaleFont(28),
     fontWeight: "bold",
-    marginTop: SPACING.md,
+    marginTop: SPACING.md
   },
-
   subtitle: {
     color: COLORS.textMuted,
     fontSize: scaleFont(15),
-    marginTop: scale(2),
+    marginTop: scale(2)
   },
-
   pillsRow: {
     paddingHorizontal: "6.5%",
-    paddingBottom: SPACING.md,
+    paddingBottom: SPACING.md
   },
-
   pill: {
     paddingHorizontal: SPACING.md,
     height: scale(36),
@@ -39,32 +34,27 @@ export const styles = StyleSheet.create({
     backgroundColor: COLORS.pink,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: SPACING.sm,
+    marginRight: SPACING.sm
   },
-
   pillText: {
     fontSize: scaleFont(FONT_SIZES.small),
     fontWeight: "600",
-    color: COLORS.cardBg,
+    color: COLORS.cardBg
   },
-
   scrollContent: {
     paddingHorizontal: "6.5%",
-    paddingBottom: SPACING.lg,
+    paddingBottom: SPACING.lg
   },
-
   section: {
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.lg
   },
-
   sectionHeader: {
     fontSize: scaleFont(FONT_SIZES.subtitle),
     fontWeight: "bold",
     color: COLORS.pink,
     letterSpacing: 0.3,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.sm
   },
-
   placeholderRow: {
     height: scale(68),
     borderRadius: RADIUS.input,
@@ -74,16 +64,18 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: SPACING.md,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {
+      width: 0,
+      height: 1
+    },
     shadowOpacity: 0.03,
     shadowRadius: 4,
-    elevation: 1,
+    elevation: 1
   },
-
   placeholderIcon: {
     width: scale(36),
     height: scale(36),
     borderRadius: scale(18),
-    backgroundColor: "#EAD4E1",
-  },
+    backgroundColor: "#EAD4E1"
+  }
 });

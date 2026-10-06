@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
-import { scale, scaleFont } from "../constants/scale";
 import { COLORS } from "../constants/theme";
+import { scale, scaleFont } from "../constants/scale";
 
 export const styles = StyleSheet.create({
   container: {
@@ -10,19 +10,13 @@ export const styles = StyleSheet.create({
 
   content: {
     paddingHorizontal: scale(24),
-    paddingTop: scale(30),
+    paddingTop: scale(20),
     paddingBottom: scale(40),
     alignItems: "center",
   },
 
-  centerFill: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
   avatarWrapper: {
-    alignSelf: "center",
+    position: "relative",
     marginBottom: scale(16),
   },
 
@@ -30,30 +24,16 @@ export const styles = StyleSheet.create({
     width: scale(110),
     height: scale(110),
     borderRadius: scale(55),
-    backgroundColor: "#F3D9E6",
-    alignItems: "center",
+    backgroundColor: "#F3E4ED",
     justifyContent: "center",
-  },
-
-  identity: {
-    width: "100%",
     alignItems: "center",
-    marginBottom: scale(28),
   },
 
   userName: {
-    width: "100%",
     fontSize: scaleFont(23),
     fontWeight: "bold",
-    marginBottom: scale(6),
+    marginBottom: scale(20),
     color: COLORS.textDark,
-    textAlign: "center",
-  },
-
-  userEmail: {
-    width: "100%",
-    fontSize: scaleFont(13),
-    color: COLORS.textLight,
     textAlign: "center",
   },
 
@@ -75,7 +55,7 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: scale(14),
+    height: scale(56),
     borderBottomWidth: 1,
     borderBottomColor: "#F5F5F5",
   },
@@ -87,12 +67,9 @@ export const styles = StyleSheet.create({
   menuLeft: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
-    marginRight: scale(10),
   },
 
   menuText: {
-    flexShrink: 1,
     fontSize: scaleFont(15),
     color: COLORS.textDark,
     marginLeft: scale(14),

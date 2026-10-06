@@ -1,24 +1,30 @@
 import { StyleSheet } from "react-native";
-import { COLORS, RADIUS } from "../constants/theme";
 import { scale, scaleFont } from "../constants/scale";
-
-export const PINK = COLORS.pink;
-export const PAGE_BG = COLORS.pageBg;
+import { COLORS, RADIUS } from "../constants/theme";
 
 export const styles = StyleSheet.create({
-  page: {
+  screen: {
     flex: 1,
     backgroundColor: COLORS.pageBg,
   },
-
-  scrollContent: {
+  keyboardContainer: {
+    flex: 1,
+  },
+  pageScroll: {
+    flex: 1,
+  },
+  pageScrollContent: {
     flexGrow: 1,
+  },
+  page: {
+    flex: 1,
+    backgroundColor: COLORS.pageBg,
     paddingHorizontal: "6%",
     paddingVertical: "2.5%",
     justifyContent: "center",
   },
-
   card: {
+    height: "82%",
     width: "100%",
     alignSelf: "center",
     backgroundColor: COLORS.cardBg,
@@ -26,42 +32,37 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
     paddingHorizontal: "7%",
-    paddingTop: scale(40),
-    paddingBottom: scale(30),
-    justifyContent: "flex-start",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
     shadowOpacity: 0.07,
     shadowRadius: 10,
     elevation: 3,
+    justifyContent: "center",
   },
-
   content: {
     width: "100%",
     alignSelf: "center",
   },
-
   headerRow: {
-    marginBottom: scale(23),
+    marginBottom: scale(22),
   },
-
   title: {
     fontSize: scaleFont(28),
     fontWeight: "bold",
     color: COLORS.pink,
   },
-
   subtitle: {
     fontSize: scaleFont(15),
     color: COLORS.textMuted,
-    marginTop: scale(2),
+    marginTop: scale(4),
   },
-
   avatarWrapper: {
     alignSelf: "center",
-    marginBottom: scale(28),
+    marginBottom: scale(24),
   },
-
   avatarCircle: {
     width: scale(110),
     height: scale(110),
@@ -70,96 +71,38 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
-  inputWrapper: {
-    height: scale(50),
-    marginBottom: scale(15),
-    justifyContent: "center",
-    position: "relative",
-  },
-
-  inputField: {
-    height: scale(50),
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.input,
-    paddingHorizontal: scale(15),
-    paddingVertical: 0,
-    fontSize: scaleFont(16),
-    color: COLORS.textDark,
-    backgroundColor: COLORS.cardBg,
-    textAlignVertical: "center",
-  },
-
-  inputFieldPassword: {
-    paddingRight: scale(44),
-  },
-
-  inputFieldFocused: {
-    borderColor: COLORS.pink,
-  },
-
-  inputFieldError: {
-    borderColor: COLORS.error,
-  },
-
-  floatingLabel: {
+  cameraBadge: {
     position: "absolute",
-    left: scale(12),
-    backgroundColor: COLORS.cardBg,
-    paddingHorizontal: scale(4),
-    zIndex: 1,
-  },
-
-  eyeIcon: {
-    position: "absolute",
-    right: scale(11),
-    top: 0,
     bottom: 0,
-    width: scale(30),
-    justifyContent: "center",
+    right: 0,
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(14),
+    backgroundColor: COLORS.pink,
     alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
-
   errorText: {
     color: COLORS.error,
     textAlign: "left",
     marginBottom: scale(12),
     fontSize: scaleFont(14),
   },
-
-  requiredAsterisk: {
-    color: COLORS.error,
-    fontWeight: "bold",
-  },
-
   signUpButton: {
-    backgroundColor: COLORS.pink,
-    borderRadius: RADIUS.input,
-    height: scale(48),
-    alignItems: "center",
-    justifyContent: "center",
     marginTop: scale(6),
   },
-
-  signUpButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "bold",
-    fontSize: scaleFont(15),
-  },
-
   loginRow: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: scale(40),
+    marginTop: scale(36),
   },
-
   loginText: {
     color: COLORS.textMuted,
     fontSize: scaleFont(13),
   },
-
   loginLink: {
     color: COLORS.pink,
     fontWeight: "bold",

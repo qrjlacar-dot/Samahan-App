@@ -1,5 +1,25 @@
-   import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { useEffect } from "react";
 
-   export default function RootLayout() {
-     return <Stack screenOptions={{ headerShown: false }} />;
-   }
+SplashScreen.preventAutoHideAsync().catch(console.warn);
+
+export default function RootLayout() {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (pathname !== "/") {
+      SplashScreen.hideAsync().catch(console.warn);
+    }
+  }, [pathname]);
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" options={{ animation: "none" }} />
+      <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
+      <Stack.Screen name="onboarding2" />
+      <Stack.Screen name="onboarding3" />
+      <Stack.Screen name="(auth)/login" options={{ animation: "fade" }} />
+    </Stack>
+  );
+}

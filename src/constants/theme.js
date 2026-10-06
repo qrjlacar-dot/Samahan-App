@@ -8,12 +8,12 @@ export const COLORS = {
   textMuted: "#666666",
   textLight: "#AA8899",
   placeholder: "#BFBFBF",
-  error: "#D33333",
+  error: "#D33333"
 };
 
 export const RADIUS = {
   card: 28,
-  input: 8,
+  input: 8
 };
 
 export const SPACING = {
@@ -21,7 +21,7 @@ export const SPACING = {
   sm: 12,
   md: 18,
   lg: 24,
-  xl: 32,
+  xl: 32
 };
 
 export const FONT_SIZES = {
@@ -30,5 +30,5 @@ export const FONT_SIZES = {
   input: 16,
   subtitle: 15,
   title: 22,
-  titleLarge: 32,
+  titleLarge: 32
 };

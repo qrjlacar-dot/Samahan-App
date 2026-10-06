@@ -1,6 +1,8 @@
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+
 import { TextInput, TouchableOpacity, View } from "react-native";
-import { styles } from "../styles/directions.styles";
+
+import { styles } from "../../styles/directions.styles";
 
 export default function LocationInputCard({
   locationText,
@@ -12,11 +14,12 @@ export default function LocationInputCard({
   return (
     <View style={styles.locationCard}>
       <View style={styles.inputsContainer}>
-        {/* Origin Row */}
+        {/* Origin */}
         <View style={styles.locationRow}>
           <View style={styles.iconColumn}>
             <View style={styles.originDot} />
           </View>
+
           <TextInput
             style={styles.textInput}
             value={locationText}
@@ -26,17 +29,18 @@ export default function LocationInputCard({
           />
         </View>
 
-        {/* Dotted Connector & Line Divider */}
+        {/* Divider */}
         <View style={styles.locationDividerRow}>
           <View style={styles.dottedConnector} />
           <View style={styles.dividerLine} />
         </View>
 
-        {/* Destination Row */}
+        {/* Destination */}
         <View style={styles.locationRow}>
           <View style={styles.iconColumn}>
             <Ionicons name="location" size={18} color="#C76C9B" />
           </View>
+
           <TextInput
             style={styles.textInput}
             value={destinationText}
@@ -47,7 +51,6 @@ export default function LocationInputCard({
         </View>
       </View>
 
-      {/* Swap Button */}
       <TouchableOpacity
         style={styles.swapButton}
         onPress={onSwapLocations}

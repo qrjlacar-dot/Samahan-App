@@ -1,23 +1,25 @@
-import { FontAwesome5 } from "@expo/vector-icons";
-import { Image, TouchableOpacity, View } from "react-native";
-import { styles } from "../styles/directions.styles";
+import TransportIcon from "./TransportIcon";
+
+import { TouchableOpacity, View } from "react-native";
+
+import { styles } from "../../styles/directions.styles";
 
 export default function ModeSelector({ selectedMode, onSelectMode }) {
   return (
     <View style={styles.modeRow}>
-      {/* Bus Tab */}
+      {/* Bus */}
       <TouchableOpacity
         style={[styles.modeTab, selectedMode === "bus" && styles.activeModeTab]}
         onPress={() => onSelectMode("bus")}
       >
-        <FontAwesome5
-          name="bus"
+        <TransportIcon
+          mode="bus"
           size={20}
           color={selectedMode === "bus" ? "#FFFFFF" : "#A28F9E"}
         />
       </TouchableOpacity>
 
-      {/* Jeep Tab */}
+      {/* Jeep */}
       <TouchableOpacity
         style={[
           styles.modeTab,
@@ -25,9 +27,9 @@ export default function ModeSelector({ selectedMode, onSelectMode }) {
         ]}
         onPress={() => onSelectMode("jeep")}
       >
-        <Image
-          source={require("../../assets/images/jeep.png")}
-          style={[
+        <TransportIcon
+          mode="jeep"
+          imageStyle={[
             styles.customModeIcon,
             {
               tintColor: selectedMode === "jeep" ? "#FFFFFF" : "#A28F9E",
@@ -36,7 +38,7 @@ export default function ModeSelector({ selectedMode, onSelectMode }) {
         />
       </TouchableOpacity>
 
-      {/* Train Tab */}
+      {/* Train */}
       <TouchableOpacity
         style={[
           styles.modeTab,
@@ -44,9 +46,9 @@ export default function ModeSelector({ selectedMode, onSelectMode }) {
         ]}
         onPress={() => onSelectMode("train")}
       >
-        <Image
-          source={require("../../assets/images/train.png")}
-          style={[
+        <TransportIcon
+          mode="train"
+          imageStyle={[
             styles.customModeIcon,
             {
               tintColor: selectedMode === "train" ? "#FFFFFF" : "#A28F9E",
@@ -55,7 +57,7 @@ export default function ModeSelector({ selectedMode, onSelectMode }) {
         />
       </TouchableOpacity>
 
-      {/* Walk Tab */}
+      {/* Walk */}
       <TouchableOpacity
         style={[
           styles.modeTab,
@@ -63,8 +65,8 @@ export default function ModeSelector({ selectedMode, onSelectMode }) {
         ]}
         onPress={() => onSelectMode("walk")}
       >
-        <FontAwesome5
-          name="walking"
+        <TransportIcon
+          mode="walk"
           size={20}
           color={selectedMode === "walk" ? "#FFFFFF" : "#A28F9E"}
         />

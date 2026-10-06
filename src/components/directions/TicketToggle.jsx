@@ -1,5 +1,6 @@
 import { Text, TouchableOpacity, View } from "react-native";
-import { styles } from "../styles/directions.styles";
+
+import { styles } from "../../styles/directions.styles";
 
 export default function TicketToggle({ ticketType, onSelectTicketType }) {
   return (

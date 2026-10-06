@@ -1,29 +1,31 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
     Animated,
     Dimensions,
+    Image,
     PanResponder,
-    Platform,
     ScrollView,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
-import MapView, { PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { BackButton } from "../components/BackButton";
+import { IMAGES } from "../constants/images";
 import { styles } from "../styles/directions.styles";
 
-// Modular Imports pointing to src/directions/
-import LocationInputCard from "../directions/LocationInputCard";
-import ModeSelector from "../directions/ModeSelector";
-import TicketToggle from "../directions/TicketToggle";
-import TripDetailsCard from "../directions/TripDetailsCard";
+import LocationInputCard from "../components/directions/LocationInputCard";
+import ModeSelector from "../components/directions/ModeSelector";
+import TicketToggle from "../components/directions/TicketToggle";
+import TripDetailsCard from "../components/directions/TripDetailsCard";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
+
 const EXPANDED_TOP = 90;
 const COLLAPSED_HEADER_HEIGHT = 70;
+
 const MAX_TRANSLATE = SCREEN_HEIGHT - EXPANDED_TOP - COLLAPSED_HEADER_HEIGHT;
 
 export default function Directions() {
@@ -36,6 +38,7 @@ export default function Directions() {
   const [selectedMode, setSelectedMode] = useState("bus");
   const [ticketType, setTicketType] = useState("discounted");
   const [isFavorite, setIsFavorite] = useState(false);
+
   const [locationText, setLocationText] = useState("");
   const [destinationText, setDestinationText] = useState("");
 
@@ -44,23 +47,20 @@ export default function Directions() {
     setDestinationText(locationText);
   };
 
-  const initialRegion = {
-    latitude: 14.6255,
-    longitude: 121.0603,
-    latitudeDelta: 0.0322,
-    longitudeDelta: 0.0321,
-  };
-
-  // Animated Drag Controller
   const translateY = useRef(new Animated.Value(initialY)).current;
+
   const lastAnimatedValue = useRef(initialY);
+
   const [isExpanded, setIsExpanded] = useState(!shouldStartCollapsed);
 
   React.useEffect(() => {
     const id = translateY.addListener(({ value }) => {
       lastAnimatedValue.current = value;
     });
-    return () => translateY.removeListener(id);
+
+    return () => {
+      translateY.removeListener(id);
+    };
   }, [translateY]);
 
   const snapTo = (toValue) => {
@@ -77,31 +77,36 @@ export default function Directions() {
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+
       onMoveShouldSetPanResponder: (_, gestureState) =>
         Math.abs(gestureState.dy) > 3,
+
       onPanResponderGrant: () => {
         translateY.setOffset(lastAnimatedValue.current);
         translateY.setValue(0);
       },
+
       onPanResponderMove: (_, gestureState) => {
         const rawY = lastAnimatedValue.current + gestureState.dy;
+
         const clampedY = Math.max(0, Math.min(MAX_TRANSLATE, rawY));
+
         translateY.setValue(clampedY - lastAnimatedValue.current);
       },
+
       onPanResponderRelease: (_, gestureState) => {
         translateY.flattenOffset();
+
         const currentPos = lastAnimatedValue.current;
 
         if (gestureState.dy > 50 || gestureState.vy > 0.3) {
           snapTo(MAX_TRANSLATE);
         } else if (gestureState.dy < -50 || gestureState.vy < -0.3) {
           snapTo(0);
+        } else if (currentPos > MAX_TRANSLATE / 2) {
+          snapTo(MAX_TRANSLATE);
         } else {
-          if (currentPos > MAX_TRANSLATE / 2) {
-            snapTo(MAX_TRANSLATE);
-          } else {
-            snapTo(0);
-          }
+          snapTo(0);
         }
       },
     }),
@@ -117,25 +122,27 @@ export default function Directions() {
 
   return (
     <View style={styles.container}>
-      {/* Full Screen Live Map */}
+      {/* Static Map Picture */}
       <View style={styles.mapContainer}>
-        <MapView
-          provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+        <Image
+          source={IMAGES.mapPlaceholder}
           style={styles.map}
-          initialRegion={initialRegion}
+          resizeMode="cover"
         />
       </View>
 
-      {/* Back Button Overlay */}
-      <TouchableOpacity
+      {/* Back Button */}
+      <BackButton
         style={styles.backButton}
         onPress={() => router.back()}
         activeOpacity={0.8}
-      >
-        <Ionicons name="arrow-back" size={22} color="#333333" />
-      </TouchableOpacity>
+        iconSize={22}
+        iconColor="#333333"
+        useDefaultStyle={false}
+        hitSlop={null}
+      />
 
-      {/* Swipeable Bottom Sheet Panel */}
+      {/* Bottom Sheet */}
       <Animated.View
         style={[
           styles.bottomSheet,
@@ -144,7 +151,7 @@ export default function Directions() {
           },
         ]}
       >
-        {/* Drag Header Area */}
+        {/* Drag Header */}
         <View {...panResponder.panHandlers}>
           <TouchableOpacity
             activeOpacity={0.9}
@@ -152,11 +159,12 @@ export default function Directions() {
             style={styles.dragHeader}
           >
             <View style={styles.dragHandle} />
+
             <Text style={styles.sheetTitle}>Directions</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Scrollable Sheet Content */}
+        {/* Scrollable Content */}
         <SafeAreaView edges={["bottom"]} style={styles.sheetContent}>
           <ScrollView
             showsVerticalScrollIndicator={false}
