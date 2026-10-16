@@ -12,6 +12,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { IMAGES } from "../../constants/images";
 import { styles } from "../../styles/home.styles";
 
+import { CommuteMap } from "../../components/CommuteMap";
+
 export default function Home() {
   const router = useRouter();
   const handleEmergencyCall = async (title, number) => {
@@ -33,17 +35,18 @@ export default function Home() {
           <Text style={styles.subTitle}>Commute tayo, ano tara?!</Text>
         </View>
 
-        {/* Map Placeholder Card - Clickable to Directions */}
+        {/* Map Preview Card - Clickable to Directions */}
         <TouchableOpacity
           style={styles.mapContainer}
-          onPress={() => router.push("/directions")}
+          onPress={() =>
+            router.push({
+              pathname: "/directions",
+              params: { collapsed: "true" },
+            })
+          }
           activeOpacity={0.9}
         >
-          <Image
-            source={IMAGES.mapPlaceholder}
-            style={styles.mapImage}
-            resizeMode="cover"
-          />
+          <CommuteMap style={styles.mapImage} interactive={false} />
           {/* Location Pill Overlay */}
           <View style={styles.locationPill}>
             <View style={styles.locationDot} />

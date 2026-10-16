@@ -2,11 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Linking, Pressable, Text, View } from "react-native";
 
-import {
-  FloatingInput,
-  PageLayout,
-  PrimaryButton,
-} from "../components/common";
+import { FloatingInput, PageLayout, PrimaryButton } from "../components/common";
 import { scale } from "../constants/scale";
 import { COLORS } from "../constants/theme";
 import {
@@ -17,7 +13,11 @@ import {
 } from "../services/emergencyContacts";
 import { styles } from "../styles/emergency-contacts.styles";
 
+import { useAuth } from "../context/AuthContext";
+
 export default function EmergencyContactsScreen() {
+  const { user } = useAuth();
+  const userId = user?.uid;
   const [contacts, setContacts] = useState([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -31,7 +31,15 @@ export default function EmergencyContactsScreen() {
   useEffect(() => {
     let active = true;
 
-    loadContacts()
+    if (!userId) return;
+    setIsLoaded(false);
+    setLoadFailed(false);
+    contactsRef.current = [];
+    setContacts([]);
+    setName("");
+    setPhone("");
+
+    loadContacts(userId)
       .then((savedContacts) => {
         if (!active) return;
 
@@ -45,14 +53,14 @@ export default function EmergencyContactsScreen() {
         setLoadFailed(true);
         Alert.alert(
           "Error",
-          "Could not load emergency contacts. Please reopen this page to try again."
+          "Could not load emergency contacts. Please reopen this page to try again.",
         );
       });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [userId]);
 
   // Save one change at a time using the latest contact list.
   const persistContacts = async (update) => {
@@ -64,7 +72,7 @@ export default function EmergencyContactsScreen() {
     try {
       const updatedContacts = update(contactsRef.current);
 
-      await saveContacts(updatedContacts);
+      await saveContacts(updatedContacts, userId);
 
       contactsRef.current = updatedContacts;
       setContacts(updatedContacts);
@@ -73,7 +81,7 @@ export default function EmergencyContactsScreen() {
     } catch {
       Alert.alert(
         "Error",
-        "Could not save emergency contacts. Please try again."
+        "Could not save emergency contacts. Please try again.",
       );
 
       return false;
@@ -90,17 +98,14 @@ export default function EmergencyContactsScreen() {
     const cleanedPhone = cleanPhoneNumber(phone);
 
     if (!cleanedName || !cleanedPhone) {
-      Alert.alert(
-        "Missing information",
-        "Enter a name and phone number."
-      );
+      Alert.alert("Missing information", "Enter a name and phone number.");
       return;
     }
 
     if (!isValidPhoneNumber(cleanedPhone)) {
       Alert.alert(
         "Invalid phone number",
-        "Please enter a correct 11-digit mobile number starting with 09."
+        "Please enter a correct 11-digit mobile number starting with 09.",
       );
       return;
     }
@@ -136,10 +141,10 @@ export default function EmergencyContactsScreen() {
           style: "destructive",
           onPress: () =>
             persistContacts((currentContacts) =>
-              currentContacts.filter((item) => item.id !== contact.id)
+              currentContacts.filter((item) => item.id !== contact.id),
             ),
         },
-      ]
+      ],
     );
   };
 
@@ -147,10 +152,7 @@ export default function EmergencyContactsScreen() {
     try {
       await Linking.openURL(`tel:${cleanPhoneNumber(number)}`);
     } catch {
-      Alert.alert(
-        "Unable to call",
-        "Your device could not open the dialer."
-      );
+      Alert.alert("Unable to call", "Your device could not open the dialer.");
     }
   };
 
@@ -215,11 +217,7 @@ export default function EmergencyContactsScreen() {
         contacts.map((contact) => (
           <View key={contact.id} style={styles.contactCard}>
             <View style={styles.avatar}>
-              <Ionicons
-                name="person"
-                size={scale(23)}
-                color={COLORS.pink}
-              />
+              <Ionicons name="person" size={scale(23)} color={COLORS.pink} />
             </View>
 
             <View style={styles.contactInfo}>
@@ -234,11 +232,7 @@ export default function EmergencyContactsScreen() {
               accessibilityLabel={`Call ${contact.name}`}
               hitSlop={4}
             >
-             <Ionicons
-              name="call"
-              size={scale(20)}
-              color={COLORS.cardBg}
-            />
+              <Ionicons name="call" size={scale(20)} color={COLORS.cardBg} />
             </Pressable>
 
             <Pressable

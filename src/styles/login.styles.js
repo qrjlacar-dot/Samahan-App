@@ -3,12 +3,25 @@ import { COLORS, RADIUS } from "../constants/theme";
 import { scale, scaleFont } from "../constants/scale";
 
 export const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: COLORS.pageBg,
+  },
+  keyboardContainer: {
+    flex: 1,
+  },
+  pageScroll: {
+    flex: 1,
+  },
+  pageScrollContent: {
+    flexGrow: 1,
+  },
   page: {
     flex: 1,
     backgroundColor: COLORS.pageBg,
     paddingHorizontal: "6%",
     paddingVertical: "2.5%",
-    justifyContent: "center"
+    justifyContent: "center",
   },
   card: {
     height: "82%",
@@ -22,11 +35,11 @@ export const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 4
+      height: 4,
     },
     shadowOpacity: 0.07,
     shadowRadius: 10,
-    elevation: 3
+    elevation: 3,
   },
   logoRow: {
     position: "absolute",
@@ -36,36 +49,36 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 2
+    zIndex: 2,
   },
   logoIcon: {
     width: scale(58),
     height: scale(58),
     resizeMode: "contain",
-    marginRight: scale(2)
+    marginRight: scale(2),
   },
   wordmark: {
     width: scale(196),
     height: scale(67),
-    resizeMode: "contain"
+    resizeMode: "contain",
   },
   content: {
     width: "100%",
     alignSelf: "center",
     flex: 1,
     justifyContent: "center",
-    paddingTop: scale(110)
+    paddingTop: scale(110),
   },
   errorContainer: {
     height: scale(38),
     justifyContent: "center",
-    marginBottom: scale(12)
+    marginBottom: scale(12),
   },
   errorText: {
     color: COLORS.error,
     textAlign: "left",
     fontSize: scaleFont(14),
-    lineHeight: scaleFont(17)
+    lineHeight: scaleFont(17),
   },
   forgotText: {
     color: COLORS.pink,
@@ -73,22 +86,22 @@ export const styles = StyleSheet.create({
     marginTop: scale(1),
     marginBottom: scale(20),
     fontSize: scaleFont(13),
-    fontWeight: "bold"
+    fontWeight: "bold",
   },
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: scale(20)
+    marginVertical: scale(20),
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#E3E3E3"
+    backgroundColor: "#E3E3E3",
   },
   dividerText: {
     marginHorizontal: scale(9),
     color: "#8F8F8F",
-    fontSize: scaleFont(12)
+    fontSize: scaleFont(12),
   },
   googleButton: {
     flexDirection: "row",
@@ -98,31 +111,31 @@ export const styles = StyleSheet.create({
     borderRadius: RADIUS.input,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: COLORS.cardBg
+    backgroundColor: COLORS.cardBg,
   },
   googleIcon: {
     width: scale(18),
     height: scale(18),
-    marginRight: scale(8)
+    marginRight: scale(8),
   },
   googleButtonText: {
     fontWeight: "600",
     color: "#333",
-    fontSize: scaleFont(14)
+    fontSize: scaleFont(14),
   },
   signupRow: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: scale(65)
+    marginTop: scale(65),
   },
   signupText: {
     color: COLORS.textMuted,
-    fontSize: scaleFont(13)
+    fontSize: scaleFont(13),
   },
   signupLink: {
     color: COLORS.pink,
     fontWeight: "bold",
-    fontSize: scaleFont(13)
-  }
+    fontSize: scaleFont(13),
+  },
 });

@@ -1,51 +1,95 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ProfileAvatar } from "../../components/ProfileAvatar";
+import { useAuth } from "../../context/AuthContext";
 import { COLORS } from "../../constants/theme";
+import {
+  accountErrorMessage,
+  signOutAccount,
+} from "../../services/account";
 import { styles } from "../../styles/profile.styles";
 
 export default function Profile() {
   const router = useRouter();
-  const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
+  const { identity, isGoogle } = useAuth();
+
+  const [signingOut, setSigningOut] = useState(false);
+  const [isNotificationsEnabled, setIsNotificationsEnabled] =
+    useState(true);
+
   const toggleNotifications = () => {
-    setIsNotificationsEnabled(previousState => !previousState);
+    setIsNotificationsEnabled((previous) => !previous);
   };
+
   const handleSignOut = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [{
-      text: "Cancel",
-      style: "cancel"
-    }, {
-      text: "Sign Out",
-      style: "destructive",
-      onPress: () => {
-        router.replace("/(auth)/login");
-      }
-    }]);
+    if (signingOut) return;
+
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to sign out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Sign Out",
+          style: "destructive",
+          onPress: async () => {
+            setSigningOut(true);
+
+            try {
+              await signOutAccount();
+              router.replace("/(auth)/login");
+            } catch (error) {
+              setSigningOut(false);
+              Alert.alert("Error", accountErrorMessage(error));
+            }
+          },
+        },
+      ],
+    );
   };
+
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={["top"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.avatarWrapper}>
-          <View style={styles.avatarCircle}>
-            <Ionicons
-              name="person"
-              size={50}
-              color={COLORS.pink}
-            />
-          </View>
+          <ProfileAvatar
+            name={identity.name}
+            photoURL={identity.photoURL}
+            style={styles.avatarCircle}
+          />
         </View>
-        <Text style={styles.userName}>
-          Name
-        </Text>
+
+        <View style={styles.identity}>
+          <Text style={styles.userName}>
+            {identity.name}
+          </Text>
+
+          {!!identity.email && (
+            <Text style={styles.userEmail} selectable>
+              {identity.email}
+            </Text>
+          )}
+        </View>
+
         <View style={styles.menuCard}>
           <TouchableOpacity
             style={styles.menuItem}
             activeOpacity={0.6}
+            disabled={signingOut}
             onPress={() => router.push("/profile/edit")}
           >
             <View style={styles.menuLeft}>
@@ -54,64 +98,98 @@ export default function Profile() {
                 size={22}
                 color={COLORS.pink}
               />
+
               <Text style={styles.menuText}>
                 Edit Profile Information
               </Text>
             </View>
+
             <Ionicons
               name="chevron-forward"
               size={18}
               color="#CCCCCC"
             />
           </TouchableOpacity>
-          <View style={styles.menuItem}>
+
+          <View
+            style={[
+              styles.menuItem,
+              isGoogle && styles.lastMenuItem,
+            ]}
+          >
             <View style={styles.menuLeft}>
               <Ionicons
                 name="notifications-outline"
                 size={22}
                 color={COLORS.pink}
               />
+
               <Text style={styles.menuText}>
                 Notifications
               </Text>
             </View>
+
             <Switch
               trackColor={{
                 false: "#E0E0E0",
-                true: "#E8A5C8"
+                true: "#E8A5C8",
               }}
-              thumbColor={isNotificationsEnabled ? COLORS.pink : "#F4F3F4"}
+              thumbColor={
+                isNotificationsEnabled ? COLORS.pink : "#F4F3F4"
+              }
+              disabled={signingOut}
               onValueChange={toggleNotifications}
               value={isNotificationsEnabled}
             />
           </View>
-          <TouchableOpacity
-            style={[styles.menuItem, styles.lastMenuItem]}
-            activeOpacity={0.6}
-            onPress={() => router.push("/profile/reset")}
-          >
-            <View style={styles.menuLeft}>
+
+          {!isGoogle && (
+            <TouchableOpacity
+              style={[styles.menuItem, styles.lastMenuItem]}
+              activeOpacity={0.6}
+              disabled={signingOut}
+              onPress={() => router.push("/profile/reset")}
+            >
+              <View style={styles.menuLeft}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={22}
+                  color={COLORS.pink}
+                />
+
+                <Text style={styles.menuText}>
+                  Reset Password
+                </Text>
+              </View>
+
               <Ionicons
-                name="lock-closed-outline"
-                size={22}
-                color={COLORS.pink}
+                name="chevron-forward"
+                size={18}
+                color="#CCCCCC"
               />
-              <Text style={styles.menuText}>
-                Reset Password
-              </Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color="#CCCCCC"
-            />
-          </TouchableOpacity>
+            </TouchableOpacity>
+          )}
         </View>
+
         <TouchableOpacity
           style={styles.signOutButton}
           activeOpacity={0.7}
           onPress={handleSignOut}
+          disabled={signingOut}
+          accessibilityRole="button"
+          accessibilityState={{
+            disabled: signingOut,
+            busy: signingOut,
+          }}
         >
+          {signingOut && (
+            <ActivityIndicator
+              size="small"
+              color="#E57373"
+              style={styles.signOutIndicator}
+            />
+          )}
+
           <Text style={styles.signOutText}>
             Sign out
           </Text>

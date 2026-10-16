@@ -10,6 +10,8 @@ import { scale } from "../../constants/scale";
 import { COLORS } from "../../constants/theme";
 import { styles } from "../../styles/reset-password.styles";
 
+import { accountErrorMessage, sendResetLink } from "../../services/account";
+
 export default function ResetPasswordScreen() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -21,7 +23,10 @@ export default function ResetPasswordScreen() {
     setError("");
   };
 
-  const handleReset = () => {
+  const [loading, setLoading] = useState(false);
+
+  const handleReset = async () => {
+    if (loading) return;
     const trimmedEmail = email.trim().toLowerCase();
 
     if (!trimmedEmail) {
@@ -39,20 +44,31 @@ export default function ResetPasswordScreen() {
     setEmailError(false);
     setError("");
 
-    Alert.alert(
-      "Reset Password Preview",
-      "Your email address is valid. Sending reset links is not connected yet."
-    );
+    setLoading(true);
+    try {
+      await sendResetLink(trimmedEmail);
+      Alert.alert(
+        "Reset Password",
+        "If an email/password account exists for this address, a reset link has been sent. Check your inbox and spam folder.",
+      );
+    } catch (error) {
+      if (error.code === "auth/user-not-found") {
+        Alert.alert(
+          "Reset Password",
+          "If an email/password account exists for this address, a reset link has been sent. Check your inbox and spam folder.",
+        );
+      } else {
+        setError(accountErrorMessage(error));
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <PageLayout contentStyle={styles.content}>
       <View style={styles.mailIconCircle}>
-        <Ionicons
-          name="mail-outline"
-          size={scale(42)}
-          color={COLORS.pink}
-        />
+        <Ionicons name="mail-outline" size={scale(42)} color={COLORS.pink} />
       </View>
 
       <Text style={styles.title}>Reset Password</Text>
@@ -62,9 +78,7 @@ export default function ResetPasswordScreen() {
       </Text>
 
       <View style={styles.formContainer}>
-        {!!error && (
-          <Text style={styles.errorText}>{error}</Text>
-        )}
+        {!!error && <Text style={styles.errorText}>{error}</Text>}
 
         <FloatingInput
           label="Email Address"
@@ -78,6 +92,7 @@ export default function ResetPasswordScreen() {
         <PrimaryButton
           title="Send Reset Link"
           onPress={handleReset}
+          disabled={loading}
           style={styles.resetButton}
           textStyle={styles.resetButtonText}
           activeOpacity={0.7}

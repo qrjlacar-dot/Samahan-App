@@ -1,19 +1,18 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
-    Animated,
-    Dimensions,
-    Image,
-    PanResponder,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  PanResponder,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BackButton } from "../components/BackButton";
-import { IMAGES } from "../constants/images";
+import { CommuteMap } from "../components/CommuteMap";
 import { styles } from "../styles/directions.styles";
 
 import LocationInputCard from "../components/directions/LocationInputCard";
@@ -122,13 +121,9 @@ export default function Directions() {
 
   return (
     <View style={styles.container}>
-      {/* Static Map Picture */}
+      {/* Map */}
       <View style={styles.mapContainer}>
-        <Image
-          source={IMAGES.mapPlaceholder}
-          style={styles.map}
-          resizeMode="cover"
-        />
+        <CommuteMap style={styles.map} />
       </View>
 
       {/* Back Button */}

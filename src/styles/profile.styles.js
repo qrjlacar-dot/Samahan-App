@@ -7,19 +7,16 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.pageBg,
   },
-
   content: {
     paddingHorizontal: scale(24),
     paddingTop: scale(20),
     paddingBottom: scale(40),
     alignItems: "center",
   },
-
   avatarWrapper: {
     position: "relative",
     marginBottom: scale(16),
   },
-
   avatarCircle: {
     width: scale(110),
     height: scale(110),
@@ -28,15 +25,23 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
+  identity: {
+    width: "100%",
+    alignItems: "center",
+    marginBottom: scale(20),
+  },
   userName: {
     fontSize: scaleFont(23),
     fontWeight: "bold",
-    marginBottom: scale(20),
     color: COLORS.textDark,
     textAlign: "center",
   },
-
+  userEmail: {
+    fontSize: scaleFont(14),
+    color: COLORS.textMuted,
+    textAlign: "center",
+    marginTop: scale(4),
+  },
   menuCard: {
     width: "100%",
     backgroundColor: COLORS.cardBg,
@@ -45,12 +50,14 @@ export const styles = StyleSheet.create({
     paddingHorizontal: scale(16),
     marginBottom: scale(24),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
-
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -59,24 +66,22 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F5F5F5",
   },
-
   lastMenuItem: {
     borderBottomWidth: 0,
   },
-
   menuLeft: {
     flexDirection: "row",
     alignItems: "center",
   },
-
   menuText: {
     fontSize: scaleFont(15),
     color: COLORS.textDark,
     marginLeft: scale(14),
     fontWeight: "500",
   },
-
   signOutButton: {
+    flexDirection: "row",
+    justifyContent: "center",
     width: "100%",
     backgroundColor: COLORS.cardBg,
     paddingVertical: scale(14),
@@ -85,7 +90,9 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#EFEFEF",
   },
-
+  signOutIndicator: {
+    marginRight: scale(8),
+  },
   signOutText: {
     fontSize: scaleFont(15),
     color: "#E57373",

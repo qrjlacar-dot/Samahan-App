@@ -3,12 +3,29 @@ import { styles as localStyles } from "../../styles/google-consent.styles";
 import { PrimaryButton, PageLayout } from "../../components/common";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Image, Text, TouchableOpacity, View } from "react-native";
 import { scale } from "../../constants/scale";
 import { COLORS } from "../../constants/theme";
 
+import { useState } from "react";
+import { signInWithGoogle } from "../../services/google-auth";
+import { accountErrorMessage } from "../../services/account";
+
 export default function GoogleConsentScreen() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const handleGoogleSignIn = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const user = await signInWithGoogle();
+      if (user) router.replace("/(tabs)/home");
+    } catch (error) {
+      Alert.alert("Google Sign In failed", accountErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <PageLayout contentStyle={localStyles.content}>
       <Image
@@ -32,9 +49,7 @@ export default function GoogleConsentScreen() {
             color={COLORS.pink}
           />
           <View style={localStyles.linkText}>
-            <Text style={localStyles.linkTitle}>
-              Privacy Policy
-            </Text>
+            <Text style={localStyles.linkTitle}>Privacy Policy</Text>
             <Text style={localStyles.linkDescription}>
               See how your information is handled
             </Text>
@@ -56,9 +71,7 @@ export default function GoogleConsentScreen() {
             color={COLORS.pink}
           />
           <View style={localStyles.linkText}>
-            <Text style={localStyles.linkTitle}>
-              Terms of Service
-            </Text>
+            <Text style={localStyles.linkTitle}>Terms of Service</Text>
             <Text style={localStyles.linkDescription}>
               Read the current app guidelines
             </Text>
@@ -77,7 +90,8 @@ export default function GoogleConsentScreen() {
         title="Continue with Google"
         style={localStyles.continueButton}
         textStyle={localStyles.continueButtonText}
-        onPress={() => router.replace("/(tabs)/home")}
+        onPress={handleGoogleSignIn}
+        disabled={loading}
         activeOpacity={0.8}
       />
     </PageLayout>

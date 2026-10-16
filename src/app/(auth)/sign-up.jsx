@@ -1,7 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -10,7 +10,8 @@ import {
   View,
 } from "react-native";
 import { FloatingInput, PrimaryButton } from "../../components/common";
-import { COLORS } from "../../constants/theme";
+import { ProfileAvatar } from "../../components/ProfileAvatar";
+import { accountErrorMessage, registerWithEmail } from "../../services/account";
 import { styles } from "../../styles/sign-up.styles";
 
 export default function SignUpScreen() {
@@ -21,6 +22,42 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [loading, setLoading] = useState(false);
+
+  const handleSignUp = async () => {
+    if (loading) return;
+    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
+      Alert.alert("Missing details", "Please fill in all fields.");
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      Alert.alert("Invalid email", "Please enter a valid email address.");
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert("Short password", "Use at least 6 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert("Passwords don't match", "Please check both passwords.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await registerWithEmail(name, email, password);
+      router.replace("/(tabs)/home");
+    } catch (error) {
+      Alert.alert(
+        "Sign Up failed",
+        error.code === "account/profile-incomplete"
+          ? error.message
+          : accountErrorMessage(error),
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLayout = (event) => {
     const height = event.nativeEvent.layout.height;
@@ -62,16 +99,7 @@ export default function SignUpScreen() {
                 </View>
 
                 <View style={styles.avatarWrapper}>
-                  <View style={styles.avatarCircle}>
-                    <Ionicons name="person" size={50} color={COLORS.pink} />
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.cameraBadge}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="camera" size={14} color="#fff" />
-                  </TouchableOpacity>
+                  <ProfileAvatar name={name} style={styles.avatarCircle} />
                 </View>
 
                 <FloatingInput
@@ -105,6 +133,8 @@ export default function SignUpScreen() {
 
                 <PrimaryButton
                   title="Sign Up"
+                  onPress={handleSignUp}
+                  disabled={loading}
                   style={styles.signUpButton}
                   activeOpacity={0.8}
                 />
