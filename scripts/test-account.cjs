@@ -55,6 +55,7 @@ function accountFixture(user, overrides = {}) {
     reauthenticateWithCredential: async (...args) => {
       calls.push(["reauth", ...args]);
     },
+    getAdditionalUserInfo: () => ({ profile: {} }),
     verifyBeforeUpdateEmail: async (...args) => {
       calls.push(["verify", ...args]);
     },
@@ -95,6 +96,7 @@ const emailUser = () => ({
 });
 const googleUser = () => ({
   uid: "google-user",
+  getIdToken: async () => "mock-refreshed-token",
   email: "google@example.com",
   displayName: "Auth name",
   photoURL: "auth-photo",
