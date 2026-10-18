@@ -353,6 +353,7 @@ export function createLocationTracker(onSnapshot) {
   async function refresh() {
     if (disposed) return snapshot;
     const token = ++refreshToken;
+    const previous = snapshot;
     if (snapshot.status !== LOCATION_STATUS.READY) {
       emit({
         ...snapshot,
@@ -360,8 +361,16 @@ export function createLocationTracker(onSnapshot) {
         label: LOCATION_LABELS.finding,
       });
     }
-    const next = await requestForegroundLocation();
+    let next = await requestForegroundLocation();
     if (disposed || token !== refreshToken) return snapshot;
+    // A weak-signal reading must not erase a good earlier position.
+    if (
+      next.status === LOCATION_STATUS.UNAVAILABLE &&
+      next.label === LOCATION_LABELS.weakSignal &&
+      previous.position
+    ) {
+      next = previous;
+    }
     emit(next);
     if (
       next.status === LOCATION_STATUS.DENIED ||

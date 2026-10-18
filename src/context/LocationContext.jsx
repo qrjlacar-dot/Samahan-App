@@ -48,7 +48,10 @@ export function LocationProvider({ children, signedIn = true }) {
   const wasInBackgroundRef = useRef(false);
   const [snapshot, setSnapshot] = useState(createInitialSnapshot);
 
-  signedInRef.current = signedIn;
+  // Keep the latest sign-in value readable from callbacks.
+  useEffect(() => {
+    signedInRef.current = signedIn;
+  }, [signedIn]);
 
   // One tracker per mounted provider. Cleanup removes the subscription.
   useEffect(() => {
