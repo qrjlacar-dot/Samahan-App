@@ -43,7 +43,7 @@ export const styles = StyleSheet.create({
     top: 90,
     left: 0,
     right: 0,
-    height: SCREEN_HEIGHT + 500,
+    height: SCREEN_HEIGHT - 90,
     backgroundColor: "#FAF8FA",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
@@ -89,7 +89,60 @@ export const styles = StyleSheet.create({
 
   scrollContainerStyle: {
     paddingTop: 10,
-    paddingBottom: 600,
+    paddingBottom: 40,
+  },
+
+  searchResults: {
+    marginTop: -8,
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#DED4DA",
+  },
+  searchResultHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  searchResult: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EFE6EB",
+  },
+  searchHint: { fontSize: 12, lineHeight: 18, color: "#654255", flexShrink: 1 },
+  routeError: {
+    color: "#A23454",
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  findRouteButton: {
+    backgroundColor: "#C76C9B",
+    padding: 14,
+    borderRadius: 16,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  findRouteText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
+  disabledButton: { opacity: 0.5 },
+  walkingNote: { fontSize: 12, color: "#654255", marginBottom: 16 },
+  routeEndpoints: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#654255",
+    marginBottom: 16,
+  },
+  fitRouteButton: {
+    position: "absolute",
+    top: 106,
+    right: 16,
+    backgroundColor: "#C76C9B",
+    padding: 12,
+    borderRadius: 14,
+    zIndex: 20,
   },
 
   modeRow: {
