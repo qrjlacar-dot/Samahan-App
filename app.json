@@ -42,6 +42,12 @@
         {
           "androidGoogleMapsApiKey": "AIzaSyAqILA5qgbZw_nEwasA2nFxSn6ejEkUIkc"
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "SAMAHAN uses your location to show where you are and to guide your commute."
+        }
       ]
     ],
     "experiments": {

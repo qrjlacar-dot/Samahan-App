@@ -9,13 +9,47 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LOCATION_STATUS } from "../../constants/commute";
 import { IMAGES } from "../../constants/images";
+import { useLocation } from "../../context/LocationContext";
 import { styles } from "../../styles/home.styles";
 
 import { CommuteMap } from "../../components/CommuteMap";
 
 export default function Home() {
   const router = useRouter();
+  const { snapshot, refreshLocation } = useLocation();
+
+  const hasFix =
+    snapshot.status === LOCATION_STATUS.READY ||
+    snapshot.status === LOCATION_STATUS.OUTSIDE_AREA;
+  // Only denied/unavailable states can be retried by tapping the label.
+  const canRetryLocation =
+    snapshot.status === LOCATION_STATUS.DENIED ||
+    snapshot.status === LOCATION_STATUS.UNAVAILABLE;
+  const LocationPill = canRetryLocation ? TouchableOpacity : View;
+
+  const handleLocationPress = () => {
+    if (snapshot.status === LOCATION_STATUS.DENIED) {
+      Alert.alert(
+        "Location access is off",
+        "Turn on location for SAMAHAN in your phone settings, or try again.",
+        [
+          {
+            text: "Open settings",
+            onPress: () => {
+              Linking.openSettings().catch(() => {});
+            },
+          },
+          { text: "Try again", onPress: () => refreshLocation() },
+          { text: "Cancel", style: "cancel" },
+        ],
+      );
+      return;
+    }
+    refreshLocation();
+  };
+
   const handleEmergencyCall = async (title, number) => {
     try {
       await Linking.openURL(`tel:${number}`);
@@ -46,12 +80,28 @@ export default function Home() {
           }
           activeOpacity={0.9}
         >
-          <CommuteMap style={styles.mapImage} interactive={false} />
-          {/* Location Pill Overlay */}
-          <View style={styles.locationPill}>
-            <View style={styles.locationDot} />
-            <Text style={styles.locationText}>Cubao, Quezon City</Text>
-          </View>
+          {/*
+            userPosition is the actual device position from the shared
+            location state. Member 1 owns CommuteMap: confirm this prop name
+            with them before the map draws the marker.
+          */}
+          <CommuteMap
+            style={styles.mapImage}
+            interactive={false}
+            userPosition={snapshot.position}
+          />
+          {/* Location Pill Overlay - label comes from the real position */}
+          <LocationPill
+            style={styles.locationPill}
+            {...(canRetryLocation
+              ? { onPress: handleLocationPress, activeOpacity: 0.8 }
+              : {})}
+          >
+            <View
+              style={[styles.locationDot, !hasFix && styles.locationDotMuted]}
+            />
+            <Text style={styles.locationText}>{snapshot.label}</Text>
+          </LocationPill>
         </TouchableOpacity>
 
         {/* Emergency Contacts Card */}
