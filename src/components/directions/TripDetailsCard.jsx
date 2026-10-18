@@ -1,167 +1,80 @@
-import TripSummaryBadge from "./TripSummaryBadge";
 import { Ionicons } from "@expo/vector-icons";
-
 import { Text, TouchableOpacity, View } from "react-native";
-
 import { styles } from "../../styles/directions.styles";
+import TripSummaryBadge, {
+  formatDistance,
+  formatDuration,
+} from "./TripSummaryBadge";
+import ProviderAttribution from "./ProviderAttribution";
 
 export default function TripDetailsCard({
+  route,
   selectedMode,
-  ticketType,
   isFavorite,
   onToggleFavorite,
 }) {
-  const renderTimelineSteps = () => {
-    if (selectedMode === "walk") {
-      return (
-        <View style={styles.timelineContainer}>
-          <View style={styles.timelineItem}>
-            <View style={styles.verticalDottedConnector} />
-
-            <View style={styles.timelineIconColumn}>
-              <View style={styles.solidDot} />
-            </View>
-
-            <View style={styles.timelineContent}>
-              <Text style={styles.stopTitle}>TIP QC</Text>
-
-              <Text style={styles.stopSubtitle}>Walk (20m)</Text>
-            </View>
-          </View>
-
-          <View style={styles.timelineItem}>
-            <View style={styles.verticalDottedConnector} />
-
-            <View style={styles.timelineIconColumn}>
-              <View style={styles.hollowCircle} />
-            </View>
-
-            <View style={styles.timelineContent}>
-              <Text style={styles.stopTitle}>Walk along Aurora Blvd</Text>
-
-              <Text style={styles.stopSubtitle}>Walk (950 m)</Text>
-            </View>
-          </View>
-
-          <View style={styles.timelineItem}>
-            <View style={styles.timelineIconColumn}>
-              <Ionicons name="location" size={22} color="#D180AA" />
-            </View>
-
-            <View style={styles.timelineContent}>
-              <Text style={styles.stopTitle}>Arrive at Gateway Mall</Text>
-
-              <Text style={styles.stopSubtitle}>
-                You have reached your destination
-              </Text>
-            </View>
-          </View>
-        </View>
-      );
-    }
-
-    const modeData = {
-      bus: {
-        title: "Ride Cubao/Stopshop",
-        fare: ticketType === "discounted" ? "₱ 10.50" : "₱ 13.00",
-      },
-
-      jeep: {
-        title: "Ride Cubao Jeepney",
-        fare: ticketType === "discounted" ? "₱ 11.00" : "₱ 13.00",
-      },
-
-      train: {
-        title: "Take LRT-2 Anonas to Cubao",
-        fare: ticketType === "discounted" ? "₱ 12.00" : "₱ 15.00",
-      },
-    };
-
-    const currentMode = modeData[selectedMode] || modeData.bus;
-
-    return (
-      <View style={styles.timelineContainer}>
-        <View style={styles.timelineItem}>
-          <View style={styles.verticalDottedConnector} />
-
-          <View style={styles.timelineIconColumn}>
-            <View style={styles.solidDot} />
-          </View>
-
-          <View style={styles.timelineContent}>
-            <Text style={styles.stopTitle}>TIP QC</Text>
-
-            <Text style={styles.stopSubtitle}>Walk (20m)</Text>
-          </View>
-        </View>
-
-        <View style={styles.timelineItem}>
-          <View style={styles.verticalDottedConnector} />
-
-          <View style={styles.timelineIconColumn}>
-            <View style={styles.hollowCircle} />
-          </View>
-
-          <View style={styles.timelineContent}>
-            <View style={styles.stopTitleRow}>
-              <Text style={styles.stopTitle}>{currentMode.title}</Text>
-
-              <View style={styles.farePill}>
-                <Text style={styles.fareText}>{currentMode.fare}</Text>
-              </View>
-            </View>
-
-            <Text style={styles.stopSubtitle}>Ride (1.5 km)</Text>
-          </View>
-        </View>
-
-        <View style={styles.timelineItem}>
-          <View style={styles.verticalDottedConnector} />
-
-          <View style={styles.timelineIconColumn}>
-            <View style={styles.hollowCircle} />
-          </View>
-
-          <View style={styles.timelineContent}>
-            <Text style={styles.stopTitle}>Cross to Araneta City</Text>
-
-            <Text style={styles.stopSubtitle}>Walk (150 m)</Text>
-          </View>
-        </View>
-
-        <View style={styles.timelineItem}>
-          <View style={styles.timelineIconColumn}>
-            <Ionicons name="location" size={22} color="#D180AA" />
-          </View>
-
-          <View style={styles.timelineContent}>
-            <Text style={styles.stopTitle}>Arrive at Gateway Mall</Text>
-
-            <Text style={styles.stopSubtitle}>
-              You have reached your destination
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
-  };
-
   return (
     <View style={styles.tripCard}>
       <View style={styles.tripHeader}>
         <Text style={styles.tripTitle}>Trip Details</Text>
-
-        <TouchableOpacity onPress={onToggleFavorite}>
-          <Ionicons
-            name={isFavorite ? "heart" : "heart-outline"}
-            size={22}
-            color={isFavorite ? "#C76C9B" : "#333333"}
-          />
-        </TouchableOpacity>
+        {route && onToggleFavorite && (
+          <TouchableOpacity
+            onPress={onToggleFavorite}
+            accessibilityLabel="Toggle favorite"
+          >
+            <Ionicons
+              name={isFavorite ? "heart" : "heart-outline"}
+              size={22}
+              color="#C76C9B"
+            />
+          </TouchableOpacity>
+        )}
       </View>
-
-      <TripSummaryBadge selectedMode={selectedMode} />
-      {renderTimelineSteps()}
+      {!route ? (
+        <Text style={styles.searchHint}>
+          {selectedMode === "walk"
+            ? "Select your starting point and destination, then tap Find walking route."
+            : "Bus, jeepney, and train routes are not connected yet. Choose Walk to test a real route."}
+        </Text>
+      ) : (
+        <>
+          <TripSummaryBadge route={route} />
+          <Text style={styles.routeEndpoints}>
+            {route.origin.name} → {route.destination.name}
+          </Text>
+          <View style={styles.timelineContainer}>
+            {route.steps.map((step, index) => (
+              <View key={step.id} style={styles.timelineItem}>
+                {index < route.steps.length - 1 && (
+                  <View style={styles.verticalDottedConnector} />
+                )}
+                <View style={styles.timelineIconColumn}>
+                  <View
+                    style={index === 0 ? styles.solidDot : styles.hollowCircle}
+                  />
+                </View>
+                <View style={styles.timelineContent}>
+                  <Text style={styles.stopTitle}>{step.instruction}</Text>
+                  <Text style={styles.stopSubtitle}>
+                    {formatDistance(step.distanceMeters)} ·{" "}
+                    {formatDuration(step.durationSeconds)}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+          <Text style={styles.searchHint}>
+            Estimated walking time. Live journey tracking will be connected
+            separately.
+          </Text>
+          {route.warnings.map((warning, index) => (
+            <Text key={index} style={styles.searchHint}>
+              {warning}
+            </Text>
+          ))}
+          <ProviderAttribution />
+        </>
+      )}
     </View>
   );
 }

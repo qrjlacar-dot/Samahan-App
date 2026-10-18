@@ -31,7 +31,7 @@ export interface Place {
   name: string;
   address: string;
   coordinate: Coordinate;
-  source: "google" | "verified-local" | "device";
+  source: "google" | "geoapify" | "verified-local" | "device";
 }
 
 export interface RouteRequest {
@@ -67,7 +67,7 @@ export interface CommuteRoute {
   durationSeconds: number | null;
   polyline: Coordinate[];
   steps: RouteStep[];
-  source: "google" | "verified-local";
+  source: "google" | "geoapify" | "verified-local";
   calculatedAt: string;
   warnings: string[];
 }

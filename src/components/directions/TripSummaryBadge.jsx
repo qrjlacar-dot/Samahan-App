@@ -2,35 +2,36 @@ import { Text, View } from "react-native";
 import { styles } from "../../styles/directions.styles";
 import TransportIcon from "./TransportIcon";
 
-const SUMMARIES = {
-  bus: { label: "Bus", distance: "1.2 km", duration: "10 mins" },
-  jeep: { label: "Jeep", distance: "1.2 km", duration: "12 mins" },
-  train: { label: "Train", distance: "1.2 km", duration: "1 min" },
-  walk: { label: "Walk", distance: "1.1 km", duration: "15 mins" },
-};
+export function formatDistance(meters) {
+  if (!Number.isFinite(meters)) return "Distance unavailable";
+  return meters >= 1000
+    ? `${(meters / 1000).toFixed(1)} km`
+    : `${Math.round(meters)} m`;
+}
 
-export default function TripSummaryBadge({ selectedMode }) {
-  const mode = SUMMARIES[selectedMode] ? selectedMode : "bus";
-  const summary = SUMMARIES[mode];
+export function formatDuration(seconds) {
+  if (!Number.isFinite(seconds)) return "Time unavailable";
+  if (seconds === 0) return "0 min";
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  return minutes >= 60
+    ? `${Math.floor(minutes / 60)} hr${minutes % 60 ? ` ${minutes % 60} min` : ""}`
+    : `${minutes} min`;
+}
 
+export default function TripSummaryBadge({ route }) {
+  if (!route) return null;
   return (
-    <View style={styles.summaryBadgePill}>
-      <TransportIcon
-        mode={mode}
-        size={14}
-        color="#C76C9B"
-        imageStyle={{
-          width: 16,
-          height: 16,
-          tintColor: "#C76C9B",
-          resizeMode: "contain",
-        }}
-      />
-      <Text style={styles.badgeText}>{summary.label}</Text>
+    <View style={[styles.summaryBadgePill, { flexWrap: "wrap" }]}>
+      <TransportIcon mode="walk" size={14} color="#C76C9B" />
+      <Text style={styles.badgeText}>Walk</Text>
       <Text style={styles.badgeDivider}>|</Text>
-      <Text style={styles.badgeDetailText}>{summary.distance}</Text>
+      <Text style={styles.badgeDetailText}>
+        {formatDistance(route.distanceMeters)}
+      </Text>
       <Text style={styles.badgeDivider}>|</Text>
-      <Text style={styles.badgeDetailText}>{summary.duration}</Text>
+      <Text style={styles.badgeDetailText}>
+        {formatDuration(route.durationSeconds)}
+      </Text>
     </View>
   );
 }
