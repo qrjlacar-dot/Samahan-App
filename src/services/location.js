@@ -397,6 +397,10 @@ export function createLocationTracker(onSnapshot) {
 
     await refresh(options);
     if (disposed || token !== watchToken) return;
+    if (snapshot.status !== LOCATION_STATUS.READY || !snapshot.inServiceArea) {
+      starting = false;
+      return;
+    }
 
     const onUpdate = (next) => {
       if (disposed || token !== watchToken) return;

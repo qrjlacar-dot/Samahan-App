@@ -95,9 +95,9 @@ export function LocationProvider({ children, signedIn = true }) {
     return tracker ? tracker.refresh() : Promise.resolve(null);
   }, []);
 
-  const startTracking = useCallback(async () => {
+  const startTracking = useCallback(async (options) => {
     const tracker = trackerRef.current;
-    if (tracker && signedInRef.current) await tracker.start();
+    if (tracker && signedInRef.current) await tracker.start(options);
   }, []);
 
   const stopTracking = useCallback(() => {
@@ -134,7 +134,7 @@ export function AuthenticatedLocationProvider({ children }) {
  * @returns {{
  *   snapshot: import('../types/commute').LocationSnapshot,
  *   refreshLocation: () => Promise<import('../types/commute').LocationSnapshot | null>,
- *   startTracking: () => Promise<void>,
+ *   startTracking: (options?: { requestPermission?: boolean }) => Promise<void>,
  *   stopTracking: () => void,
  * }}
  */

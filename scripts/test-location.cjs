@@ -648,6 +648,39 @@ test("resuming a trip after permission is revoked does not prompt or restart its
   tracker.dispose();
 });
 
+test("map focus: revoked permission never prompts or starts a watch", async () => {
+  const native = makeNative({ permission: "denied" });
+  useNative(native);
+  const { tracker, last } = newTracker();
+  await tracker.start({ requestPermission: false });
+  assert.equal(native.calls.permission, 0);
+  assert.equal(native.calls.watch, 0);
+  assert.equal(last().status, LOCATION_STATUS.DENIED);
+  tracker.dispose();
+});
+
+test("map focus: location services off never starts a watch", async () => {
+  const native = makeNative({ servicesEnabled: false });
+  useNative(native);
+  const { tracker, last } = newTracker();
+  await tracker.start({ requestPermission: false });
+  assert.equal(native.calls.watch, 0);
+  assert.equal(tracker.isTracking(), false);
+  assert.equal(last().status, LOCATION_STATUS.UNAVAILABLE);
+  tracker.dispose();
+});
+
+test("map focus: failed first fix never starts a watch", async () => {
+  const native = makeNative({ getCurrent: async () => { throw new Error("No fix"); } });
+  useNative(native);
+  const { tracker, last } = newTracker();
+  await tracker.start({ requestPermission: false });
+  assert.equal(native.calls.watch, 0);
+  assert.equal(tracker.isTracking(), false);
+  assert.equal(last().status, LOCATION_STATUS.UNAVAILABLE);
+  tracker.dispose();
+});
+
 test("initial snapshot is idle with a finding label", () => {
   const s = createInitialSnapshot();
   assert.equal(s.status, LOCATION_STATUS.IDLE);

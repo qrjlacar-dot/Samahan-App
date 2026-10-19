@@ -11,14 +11,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LOCATION_STATUS } from "../../constants/commute";
 import { IMAGES } from "../../constants/images";
-import { useLocation } from "../../context/LocationContext";
+import { useMapLocation } from "../../hooks/useMapLocation";
 import { styles } from "../../styles/home.styles";
 
 import { CommuteMap } from "../../components/CommuteMap";
 
 export default function Home() {
   const router = useRouter();
-  const { snapshot, refreshLocation } = useLocation();
+  const { snapshot, refreshLocation } = useMapLocation();
 
   const hasFix =
     snapshot.status === LOCATION_STATUS.READY ||
@@ -80,11 +80,6 @@ export default function Home() {
           }
           activeOpacity={0.9}
         >
-          {/*
-            userPosition is the actual device position from the shared
-            location state. Member 1 owns CommuteMap: confirm this prop name
-            with them before the map draws the marker.
-          */}
           <CommuteMap
             style={styles.mapImage}
             interactive={false}

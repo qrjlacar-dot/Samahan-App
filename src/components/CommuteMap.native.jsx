@@ -13,6 +13,7 @@ const CUBAO_REGION = {
 export function CommuteMap({
   style,
   interactive = true,
+  userPosition = null,
   origin = null,
   destination = null,
   route = null,
@@ -22,6 +23,36 @@ export function CommuteMap({
   const mapRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [laidOut, setLaidOut] = useState(false);
+  const centeredOnUser = useRef(false);
+  const latitude = userPosition?.latitude;
+  const longitude = userPosition?.longitude;
+  const hasUserPosition =
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    Math.abs(latitude) <= 90 &&
+    Math.abs(longitude) <= 180;
+  const hasRouteSelection = Boolean(origin || destination || route);
+
+  useEffect(() => {
+    if (
+      !ready ||
+      !laidOut ||
+      !hasUserPosition ||
+      hasRouteSelection ||
+      centeredOnUser.current
+    ) return;
+
+    centeredOnUser.current = true;
+    mapRef.current?.animateToRegion(
+      {
+        latitude,
+        longitude,
+        latitudeDelta: 0.012,
+        longitudeDelta: 0.012,
+      },
+      400,
+    );
+  }, [ready, laidOut, hasUserPosition, hasRouteSelection, latitude, longitude]);
 
   useEffect(() => {
     if (!ready || !laidOut) return;
@@ -86,6 +117,16 @@ export function CommuteMap({
         pitchEnabled={interactive}
         toolbarEnabled={false}
       >
+        {hasUserPosition && (
+          <Marker
+            coordinate={{ latitude, longitude }}
+            title="Your location"
+            description="Latest reported phone location"
+            pinColor="#C76C9B"
+            zIndex={10}
+          />
+        )}
+
         {origin && (
           <Marker
             coordinate={origin.coordinate}

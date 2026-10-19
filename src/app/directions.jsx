@@ -18,6 +18,7 @@ import LocationInputCard from "../components/directions/LocationInputCard";
 import ModeSelector from "../components/directions/ModeSelector";
 import TicketToggle from "../components/directions/TicketToggle";
 import TripDetailsCard from "../components/directions/TripDetailsCard";
+import { useMapLocation } from "../hooks/useMapLocation";
 import { getRoutes } from "../services/routes";
 import { styles } from "../styles/directions.styles";
 
@@ -26,6 +27,7 @@ const MAX_TRANSLATE = Math.max(0, SCREEN_HEIGHT - 90 - 90);
 
 export default function Directions() {
   const router = useRouter();
+  const { snapshot } = useMapLocation();
   const { collapsed } = useLocalSearchParams();
   const initialY = collapsed === "true" ? MAX_TRANSLATE : 0;
   const translateY = useRef(new Animated.Value(initialY)).current;
@@ -178,6 +180,7 @@ export default function Directions() {
       <View style={styles.mapContainer}>
         <CommuteMap
           style={styles.map}
+          userPosition={snapshot.position}
           origin={origin}
           destination={destination}
           route={route}
