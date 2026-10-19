@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,18 +18,65 @@ import {
   accountErrorMessage,
   signOutAccount,
 } from "../../services/account";
+import {
+  getNotificationPreferences,
+  setNotificationPreferences,
+} from "../../services/notifications";
 import { styles } from "../../styles/profile.styles";
 
 export default function Profile() {
   const router = useRouter();
-  const { identity, isGoogle } = useAuth();
+  const { identity, isGoogle, user } = useAuth();
+  const uid = user?.uid;
 
   const [signingOut, setSigningOut] = useState(false);
   const [isNotificationsEnabled, setIsNotificationsEnabled] =
     useState(true);
 
-  const toggleNotifications = () => {
-    setIsNotificationsEnabled((previous) => !previous);
+  const [preferencesLoading, setPreferencesLoading] = useState(true);
+  const savingPreference = useRef(false);
+
+  // Load the saved choice for the signed-in account (defaults to on).
+  useEffect(() => {
+    if (!uid) return;
+
+    let active = true;
+    setPreferencesLoading(true);
+
+    getNotificationPreferences(uid)
+      .then((preferences) => {
+        if (active) setIsNotificationsEnabled(preferences.enabled);
+      })
+      .catch(() => {
+        // Keep the default; the switch still works.
+      })
+      .finally(() => {
+        if (active) setPreferencesLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [uid]);
+
+  const toggleNotifications = async (nextValue) => {
+    if (!uid || savingPreference.current) return;
+
+    savingPreference.current = true;
+    const previousValue = isNotificationsEnabled;
+    setIsNotificationsEnabled(nextValue);
+
+    try {
+      await setNotificationPreferences(uid, { enabled: nextValue });
+    } catch {
+      setIsNotificationsEnabled(previousValue);
+      Alert.alert(
+        "Could not save",
+        "Your notification setting was not changed. Please try again.",
+      );
+    } finally {
+      savingPreference.current = false;
+    }
   };
 
   const handleSignOut = () => {
@@ -137,7 +184,7 @@ export default function Profile() {
               thumbColor={
                 isNotificationsEnabled ? COLORS.pink : "#F4F3F4"
               }
-              disabled={signingOut}
+              disabled={signingOut || preferencesLoading}
               onValueChange={toggleNotifications}
               value={isNotificationsEnabled}
             />

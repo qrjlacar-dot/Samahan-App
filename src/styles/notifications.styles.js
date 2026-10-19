@@ -41,6 +41,14 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.cardBg
   },
+  pillInactive: {
+    backgroundColor: COLORS.cardBg,
+    borderWidth: 1,
+    borderColor: COLORS.border
+  },
+  pillTextInactive: {
+    color: COLORS.pink
+  },
   scrollContent: {
     paddingHorizontal: "6.5%",
     paddingBottom: SPACING.lg
@@ -55,14 +63,15 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.3,
     marginBottom: SPACING.sm
   },
-  placeholderRow: {
-    height: scale(68),
+  row: {
+    minHeight: scale(68),
     borderRadius: RADIUS.input,
     backgroundColor: COLORS.cardBg,
     marginBottom: SPACING.sm,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -72,10 +81,64 @@ export const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1
   },
-  placeholderIcon: {
+  rowIcon: {
     width: scale(36),
     height: scale(36),
     borderRadius: scale(18),
-    backgroundColor: "#EAD4E1"
+    backgroundColor: "#EAD4E1",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  rowText: {
+    flex: 1,
+    marginLeft: SPACING.sm
+  },
+  rowTitle: {
+    color: COLORS.textDark,
+    fontSize: scaleFont(FONT_SIZES.subtitle),
+    fontWeight: "500"
+  },
+  rowTitleUnread: {
+    color: COLORS.pink,
+    fontWeight: "700"
+  },
+  rowBody: {
+    color: COLORS.textMuted,
+    fontSize: scaleFont(FONT_SIZES.small),
+    marginTop: scale(2)
+  },
+  rowTime: {
+    color: COLORS.textLight,
+    fontSize: scaleFont(FONT_SIZES.small),
+    marginTop: scale(3)
+  },
+  unreadDot: {
+    width: scale(8),
+    height: scale(8),
+    borderRadius: scale(4),
+    backgroundColor: COLORS.pink,
+    marginLeft: SPACING.xs
+  },
+  deleteButton: {
+    marginLeft: SPACING.xs,
+    padding: SPACING.xs
+  },
+  stateBox: {
+    alignItems: "center",
+    paddingVertical: SPACING.lg
+  },
+  stateText: {
+    color: COLORS.textMuted,
+    fontSize: scaleFont(FONT_SIZES.subtitle),
+    textAlign: "center",
+    marginBottom: SPACING.sm
+  },
+  retryButton: {
+    alignSelf: "stretch"
+  },
+  offNotice: {
+    color: COLORS.textLight,
+    fontSize: scaleFont(FONT_SIZES.small),
+    marginBottom: SPACING.md
   }
 });
