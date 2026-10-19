@@ -1,11 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Platform, StyleSheet } from "react-native";
 import MapView, {
+  Circle,
   Marker,
+  Polygon,
   Polyline,
   PROVIDER_GOOGLE,
 } from "react-native-maps";
 import ProviderAttribution from "./directions/ProviderAttribution";
+import { useDeviceHeading } from "../hooks/useDeviceHeading";
+import { headingBeam } from "../services/deviceLocation";
 
 const CUBAO_REGION = {
   latitude: 14.6255,
@@ -14,7 +24,39 @@ const CUBAO_REGION = {
   longitudeDelta: 0.0421,
 };
 
-export function CommuteMap({
+export function CommuteMap(props) {
+  const [session, setSession] = useState({
+    version: 0,
+    visible: false,
+  });
+
+  useFocusEffect(
+    useCallback(() => {
+      setSession((previous) => ({
+        version: previous.version + 1,
+        visible: true,
+      }));
+
+      return () => {
+        setSession((previous) => ({
+          ...previous,
+          visible: false,
+        }));
+      };
+    }, []),
+  );
+
+  if (!session.visible) return null;
+
+  return (
+    <CommuteMapContent
+      key={session.version}
+      {...props}
+    />
+  );
+}
+
+function CommuteMapContent({
   style,
   interactive = true,
   userPosition = null,
@@ -24,12 +66,20 @@ export function CommuteMap({
   fitRequest = 0,
   contentBottomInset = 0,
   followUser = false,
+  followZoom = 17,
   recenterRequest = 0,
   onUserPan,
 }) {
   const mapRef = useRef(null);
+
   const [ready, setReady] = useState(false);
   const [laidOut, setLaidOut] = useState(false);
+  const [mapHeight, setMapHeight] = useState(0);
+
+  const [latitudeDelta, setLatitudeDelta] = useState(
+    CUBAO_REGION.latitudeDelta,
+  );
+
   const centeredOnUser = useRef(false);
   const followingRef = useRef(followUser);
   const lastRecenter = useRef(recenterRequest);
@@ -44,6 +94,25 @@ export function CommuteMap({
     Number.isFinite(longitude) &&
     Math.abs(latitude) <= 90 &&
     Math.abs(longitude) <= 180;
+
+  const heading = useDeviceHeading(hasUserPosition);
+
+  const beamRadius =
+    mapHeight > 0
+      ? Math.max(
+          2,
+          Math.min(
+            10000,
+            ((latitudeDelta * 111195) / mapHeight) * 42,
+          ),
+        )
+      : 140;
+
+  const beam = headingBeam(
+    userPosition,
+    heading,
+    beamRadius,
+  );
 
   const hasRouteSelection = Boolean(
     origin || destination || route,
@@ -83,7 +152,13 @@ export function CommuteMap({
   ]);
 
   useEffect(() => {
-    if (!ready || !laidOut || followingRef.current) return;
+    if (
+      !ready ||
+      !laidOut ||
+      followingRef.current
+    ) {
+      return;
+    }
 
     const coordinates = [
       ...(route?.polyline ?? []),
@@ -92,15 +167,18 @@ export function CommuteMap({
     ].filter(Boolean);
 
     if (coordinates.length > 1) {
-      mapRef.current?.fitToCoordinates(coordinates, {
-        edgePadding: {
-          top: 110,
-          right: 45,
-          bottom: contentBottomInset + 45,
-          left: 45,
+      mapRef.current?.fitToCoordinates(
+        coordinates,
+        {
+          edgePadding: {
+            top: 110,
+            right: 45,
+            bottom: contentBottomInset + 45,
+            left: 45,
+          },
+          animated: true,
         },
-        animated: true,
-      });
+      );
     } else if (coordinates.length === 1) {
       mapRef.current?.animateToRegion(
         {
@@ -122,7 +200,13 @@ export function CommuteMap({
   ]);
 
   useEffect(() => {
-    if (!ready || !laidOut || !hasUserPosition) return;
+    if (
+      !ready ||
+      !laidOut ||
+      !hasUserPosition
+    ) {
+      return;
+    }
 
     const requested =
       recenterRequest !== lastRecenter.current;
@@ -134,12 +218,17 @@ export function CommuteMap({
 
     mapRef.current?.animateCamera(
       {
-        center: { latitude, longitude },
-        zoom: 17,
+        center: {
+          latitude,
+          longitude,
+        },
+        zoom: followZoom,
         pitch: 0,
         heading: 0,
       },
-      { duration: 400 },
+      {
+        duration: 400,
+      },
     );
   }, [
     ready,
@@ -148,6 +237,7 @@ export function CommuteMap({
     latitude,
     longitude,
     followUser,
+    followZoom,
     recenterRequest,
   ]);
 
@@ -160,7 +250,10 @@ export function CommuteMap({
     <>
       <MapView
         ref={mapRef}
-        style={[StyleSheet.absoluteFillObject, style]}
+        style={[
+          StyleSheet.absoluteFillObject,
+          style,
+        ]}
         provider={
           Platform.OS === "android"
             ? PROVIDER_GOOGLE
@@ -169,26 +262,54 @@ export function CommuteMap({
         initialRegion={CUBAO_REGION}
         onMapReady={() => setReady(true)}
         onLayout={({ nativeEvent }) => {
-          const { width, height } = nativeEvent.layout;
+          const { width, height } =
+            nativeEvent.layout;
+
           setLaidOut(width > 0 && height > 0);
+          setMapHeight(height > 0 ? height : 0);
         }}
-        pointerEvents={interactive ? "auto" : "none"}
+        pointerEvents={
+          interactive ? "auto" : "none"
+        }
         zoomEnabled={interactive}
         scrollEnabled={interactive}
         rotateEnabled={interactive}
         pitchEnabled={interactive}
         toolbarEnabled={false}
         onPanDrag={() => onUserPan?.()}
-        onRegionChangeComplete={(_, details) => {
-          if (details?.isGesture) onUserPan?.();
+        onRegionChangeComplete={(region, details) => {
+          if (
+            Number.isFinite(region?.latitudeDelta) &&
+            region.latitudeDelta > 0
+          ) {
+            setLatitudeDelta(region.latitudeDelta);
+          }
+
+          if (details?.isGesture) {
+            onUserPan?.();
+          }
         }}
       >
+        {beam.length > 2 && (
+          <Polygon
+            coordinates={beam}
+            fillColor="rgba(199, 108, 155, 0.25)"
+            strokeColor="rgba(199, 108, 155, 0.08)"
+            strokeWidth={1}
+            zIndex={5}
+          />
+        )}
+
         {hasUserPosition && (
-          <Marker
-            coordinate={{ latitude, longitude }}
-            title="Your location"
-            description="Latest reported phone location"
-            pinColor="#C76C9B"
+          <Circle
+            center={{
+              latitude,
+              longitude,
+            }}
+            radius={beamRadius * (9.5 / 42)}
+            fillColor="#C76C9B"
+            strokeColor="#FFFFFF"
+            strokeWidth={3}
             zIndex={10}
           />
         )}

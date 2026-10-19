@@ -438,7 +438,7 @@ export default function Directions() {
         <TouchableOpacity
           style={[
             styles.fitRouteButton,
-            { top: 164 },
+            { top: route ? 164 : 106 },
           ]}
           accessibilityRole="button"
           accessibilityLabel="Recenter on your location"
@@ -643,11 +643,7 @@ export default function Directions() {
               </View>
             )}
 
-            {selectedMode === "walk" ? (
-              <Text style={styles.walkingNote}>
-                Walking has no transport fare.
-              </Text>
-            ) : (
+            {selectedMode !== "walk" && (
               <TicketToggle
                 ticketType={ticketType}
                 onSelectTicketType={setTicketType}
