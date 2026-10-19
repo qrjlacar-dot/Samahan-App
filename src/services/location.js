@@ -224,12 +224,19 @@ function withTimeout(promise, ms) {
  * Never throws: failures become a snapshot with a clear status.
  * @returns {Promise<import('../types/commute').LocationSnapshot>}
  */
-export async function requestForegroundLocation() {
+export async function requestForegroundLocation({ requestPermission = true } = {}) {
   const native = getNativeLocation();
   if (!native) return unavailableSnapshot();
 
   try {
-    const permission = await native.requestForegroundPermissionsAsync();
+    let permission = await native.getForegroundPermissionsAsync();
+    if (
+      permission?.status !== "granted" &&
+      requestPermission &&
+      permission?.canAskAgain !== false
+    ) {
+      permission = await native.requestForegroundPermissionsAsync();
+    }
     if (!permission || permission.status !== "granted") {
       return deniedSnapshot();
     }
@@ -350,7 +357,7 @@ export function createLocationTracker(onSnapshot) {
     }
   }
 
-  async function refresh() {
+  async function refresh(options) {
     if (disposed) return snapshot;
     const token = ++refreshToken;
     const previous = snapshot;
@@ -361,7 +368,7 @@ export function createLocationTracker(onSnapshot) {
         label: LOCATION_LABELS.finding,
       });
     }
-    let next = await requestForegroundLocation();
+    let next = await requestForegroundLocation(options);
     if (disposed || token !== refreshToken) return snapshot;
     // A weak-signal reading must not erase a good earlier position.
     if (
@@ -381,14 +388,14 @@ export function createLocationTracker(onSnapshot) {
     return next;
   }
 
-  async function start() {
+  async function start(options) {
     if (disposed) return;
     wantsTracking = true;
     if (handle || starting) return;
     starting = true;
     const token = ++watchToken;
 
-    await refresh();
+    await refresh(options);
     if (disposed || token !== watchToken) return;
 
     const onUpdate = (next) => {
@@ -432,11 +439,12 @@ export function createLocationTracker(onSnapshot) {
 
   async function resume() {
     if (disposed) return snapshot;
+    const options = { requestPermission: false };
     if (wantsTracking) {
-      await start();
+      await start(options);
       return snapshot;
     }
-    return refresh();
+    return refresh(options);
   }
 
   function reset() {
@@ -464,3 +472,4 @@ export function createLocationTracker(onSnapshot) {
     getSnapshot: () => snapshot,
   };
 }
+

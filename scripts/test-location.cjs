@@ -109,11 +109,18 @@ function fix(coordinate, accuracy = 10, heading = 90) {
 }
 
 function makeNative(options = {}) {
-  const calls = { watch: 0, removes: 0, permission: 0 };
+  const calls = { watch: 0, removes: 0, permission: 0, permissionChecks: 0 };
   const native = {
     Accuracy: { Balanced: 3 },
     calls,
     callbacks: [],
+    getForegroundPermissionsAsync: async () => {
+      calls.permissionChecks += 1;
+      return {
+        status: options.permission || "granted",
+        canAskAgain: options.canAskAgain !== false,
+      };
+    },
     requestForegroundPermissionsAsync: async () => {
       calls.permission += 1;
       return { status: options.permission || "granted" };
@@ -559,6 +566,88 @@ test("tracker: newest refresh wins over a slow older one", async () => {
   tracker.dispose();
 });
 
+test("granted permission is checked without opening another permission request", async () => {
+  const native = makeNative();
+  useNative(native);
+  const result = await requestForegroundLocation();
+  assert.equal(result.status, LOCATION_STATUS.READY);
+  assert.equal(native.calls.permissionChecks, 1);
+  assert.equal(native.calls.permission, 0);
+});
+
+test("permission that cannot be requested again stays denied", async () => {
+  const native = makeNative({ permission: "denied", canAskAgain: false });
+  useNative(native);
+  const result = await requestForegroundLocation();
+  assert.equal(result.status, LOCATION_STATUS.DENIED);
+  assert.equal(native.calls.permission, 0);
+});
+
+test("permission activity returning to the app cannot create a request loop", async () => {
+  const options = { permission: "undetermined" };
+  const native = makeNative(options);
+  useNative(native);
+  const { tracker, last } = newTracker();
+  let returning;
+  native.requestForegroundPermissionsAsync = async () => {
+    native.calls.permission += 1;
+    assert.equal(native.calls.permission, 1);
+    tracker.suspend();
+    options.permission = "granted";
+    returning = tracker.resume();
+    return { status: "granted", canAskAgain: true };
+  };
+  await tracker.refresh();
+  await returning;
+  assert.equal(last().status, LOCATION_STATUS.READY);
+  for (let i = 0; i < 5; i += 1) {
+    tracker.suspend();
+    await tracker.resume();
+  }
+  assert.equal(native.calls.permission, 1);
+  assert.equal(last().status, LOCATION_STATUS.READY);
+  tracker.dispose();
+});
+
+test("returning after denying permission does not ask again", async () => {
+  const options = { permission: "undetermined" };
+  const native = makeNative(options);
+  useNative(native);
+  const { tracker, last } = newTracker();
+  let returning;
+  native.requestForegroundPermissionsAsync = async () => {
+    native.calls.permission += 1;
+    assert.equal(native.calls.permission, 1);
+    tracker.suspend();
+    options.permission = "denied";
+    returning = tracker.resume();
+    return { status: "denied", canAskAgain: true };
+  };
+  await tracker.refresh();
+  await returning;
+  assert.equal(last().status, LOCATION_STATUS.DENIED);
+  tracker.suspend();
+  await tracker.resume();
+  assert.equal(native.calls.permission, 1);
+  tracker.dispose();
+});
+
+test("resuming a trip after permission is revoked does not prompt or restart its watch", async () => {
+  const options = { permission: "granted" };
+  const native = makeNative(options);
+  useNative(native);
+  const { tracker, last } = newTracker();
+  await tracker.start();
+  tracker.suspend();
+  options.permission = "denied";
+  await tracker.resume();
+  assert.equal(last().status, LOCATION_STATUS.DENIED);
+  assert.equal(native.calls.watch, 1);
+  assert.equal(native.calls.permission, 0);
+  assert.equal(tracker.isTracking(), false);
+  tracker.dispose();
+});
+
 test("initial snapshot is idle with a finding label", () => {
   const s = createInitialSnapshot();
   assert.equal(s.status, LOCATION_STATUS.IDLE);
@@ -587,3 +676,4 @@ test("initial snapshot is idle with a finding label", () => {
   );
   process.exit(failed ? 1 : 0);
 })();
+
