@@ -1,5 +1,12 @@
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { useEffect, useRef, useState } from "react";
+import {
+  Ionicons,
+  MaterialIcons,
+} from "@expo/vector-icons";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Keyboard,
@@ -9,6 +16,10 @@ import {
   View,
 } from "react-native";
 import { searchPlaces } from "../../services/routes";
+import { useLocation } from "../../context/LocationContext";
+import {
+  currentLocationPlace,
+} from "../../services/deviceLocation";
 import { styles } from "../../styles/directions.styles";
 import ProviderAttribution from "./ProviderAttribution";
 
@@ -20,57 +31,189 @@ export default function LocationInputCard({
   onSwapLocations,
   onSelectPlace,
 }) {
-  const [activeField, setActiveField] = useState(null);
-  const [suggestions, setSuggestions] = useState([]);
+  const { refreshLocation } = useLocation();
+
+  const [gettingCurrent, setGettingCurrent] =
+    useState(false);
+
+  const [currentError, setCurrentError] =
+    useState("");
+
+  const currentToken = useRef(0);
+  const currentPending = useRef(false);
+  const searchToken = useRef(0);
+
+  const [activeField, setActiveField] =
+    useState(null);
+
+  const [suggestions, setSuggestions] =
+    useState([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searched, setSearched] = useState(false);
   const [retry, setRetry] = useState(0);
+
   const requestRef = useRef(null);
-  const query = activeField === "origin" ? locationText : destinationText;
+
+  const query =
+    activeField === "origin"
+      ? locationText
+      : destinationText;
 
   useEffect(() => {
     setSuggestions([]);
     setError("");
     setSearched(false);
     setLoading(false);
-    if (!activeField || query.trim().length < 3) return;
+
+    if (
+      !activeField ||
+      gettingCurrent ||
+      query.trim().length < 3 ||
+      query === "Current location"
+    ) {
+      return;
+    }
+
+    const token = ++searchToken.current;
     const controller = new AbortController();
+
     requestRef.current = controller;
+
     let cancelled = false;
+
     const timer = setTimeout(async () => {
       setLoading(true);
+
       try {
         const results = await searchPlaces(query, {
           signal: controller.signal,
         });
-        if (!cancelled) {
+
+        if (
+          !cancelled &&
+          token === searchToken.current
+        ) {
           setSuggestions(results);
           setSearched(true);
         }
       } catch (e) {
-        if (!cancelled && e.name !== "AbortError") setError(e.message);
+        if (
+          !cancelled &&
+          token === searchToken.current &&
+          e.name !== "AbortError"
+        ) {
+          setError(e.message);
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (
+          !cancelled &&
+          token === searchToken.current
+        ) {
+          setLoading(false);
+        }
       }
     }, 450);
+
     return () => {
       cancelled = true;
       clearTimeout(timer);
       controller.abort();
     };
-  }, [activeField, query, retry]);
+  }, [
+    activeField,
+    query,
+    retry,
+    gettingCurrent,
+  ]);
+
+  useEffect(
+    () => () => {
+      currentToken.current += 1;
+      searchToken.current += 1;
+      requestRef.current?.abort();
+    },
+    [],
+  );
+
+  const cancelRequests = () => {
+    currentToken.current += 1;
+    currentPending.current = false;
+    searchToken.current += 1;
+    requestRef.current?.abort();
+    setGettingCurrent(false);
+    setCurrentError("");
+  };
+
+  const focusField = (field) => {
+    cancelRequests();
+    setActiveField(field);
+    setRetry((value) => value + 1);
+  };
 
   const edit = (field, value) => {
-    requestRef.current?.abort();
+    cancelRequests();
     setActiveField(field);
-    (field === "origin" ? setLocationText : setDestinationText)(value);
+
+    (
+      field === "origin"
+        ? setLocationText
+        : setDestinationText
+    )(value);
   };
+
   const select = (place) => {
-    requestRef.current?.abort();
+    cancelRequests();
     onSelectPlace(activeField, place);
     setActiveField(null);
     Keyboard.dismiss();
+  };
+
+  const selectCurrentLocation = async () => {
+    const field = activeField;
+
+    if (!field || currentPending.current) return;
+
+    cancelRequests();
+    currentPending.current = true;
+
+    const token = ++currentToken.current;
+
+    setGettingCurrent(true);
+    setSuggestions([]);
+    setError("");
+
+    (
+      field === "origin"
+        ? setLocationText
+        : setDestinationText
+    )("");
+
+    Keyboard.dismiss();
+
+    try {
+      const snapshot = await refreshLocation();
+
+      if (token !== currentToken.current) return;
+
+      const place = currentLocationPlace(snapshot);
+
+      onSelectPlace(field, place);
+      setActiveField(null);
+    } catch (error) {
+      if (token === currentToken.current) {
+        setCurrentError(
+          error.message ||
+          "Could not read your location. Please try again.",
+        );
+      }
+    } finally {
+      if (token === currentToken.current) {
+        currentPending.current = false;
+        setGettingCurrent(false);
+      }
+    }
   };
 
   return (
@@ -81,30 +224,46 @@ export default function LocationInputCard({
             <View style={styles.iconColumn}>
               <View style={styles.originDot} />
             </View>
+
             <TextInput
               style={styles.textInput}
               value={locationText}
-              onChangeText={(v) => edit("origin", v)}
-              onFocus={() => setActiveField("origin")}
+              onChangeText={(value) =>
+                edit("origin", value)
+              }
+              onFocus={() =>
+                focusField("origin")
+              }
               placeholder="Starting point"
               placeholderTextColor="#777777"
               accessibilityLabel="Starting point"
               autoCorrect={false}
             />
           </View>
+
           <View style={styles.locationDividerRow}>
             <View style={styles.dottedConnector} />
             <View style={styles.dividerLine} />
           </View>
+
           <View style={styles.locationRow}>
             <View style={styles.iconColumn}>
-              <Ionicons name="location" size={18} color="#C76C9B" />
+              <Ionicons
+                name="location"
+                size={18}
+                color="#C76C9B"
+              />
             </View>
+
             <TextInput
               style={styles.textInput}
               value={destinationText}
-              onChangeText={(v) => edit("destination", v)}
-              onFocus={() => setActiveField("destination")}
+              onChangeText={(value) =>
+                edit("destination", value)
+              }
+              onFocus={() =>
+                focusField("destination")
+              }
               placeholder="Destination"
               placeholderTextColor="#777777"
               accessibilityLabel="Destination"
@@ -112,51 +271,134 @@ export default function LocationInputCard({
             />
           </View>
         </View>
+
         <TouchableOpacity
           style={styles.swapButton}
           accessibilityLabel="Swap starting point and destination"
           onPress={() => {
-            requestRef.current?.abort();
+            cancelRequests();
             setActiveField(null);
             Keyboard.dismiss();
             onSwapLocations();
           }}
           activeOpacity={0.7}
         >
-          <MaterialIcons name="swap-vert" size={24} color="#555555" />
+          <MaterialIcons
+            name="swap-vert"
+            size={24}
+            color="#555555"
+          />
         </TouchableOpacity>
       </View>
+
       {activeField && (
         <View style={styles.searchResults}>
           <View style={styles.searchResultHeader}>
             <Text style={styles.searchHint}>
               Select a{" "}
-              {activeField === "origin" ? "starting point" : "destination"}
+              {activeField === "origin"
+                ? "starting point"
+                : "destination"}
             </Text>
+
             <TouchableOpacity
               onPress={() => {
+                cancelRequests();
                 setActiveField(null);
                 Keyboard.dismiss();
               }}
               accessibilityLabel="Close search suggestions"
             >
-              <Ionicons name="close" size={20} color="#654255" />
+              <Ionicons
+                name="close"
+                size={20}
+                color="#654255"
+              />
             </TouchableOpacity>
           </View>
-          {query.trim().length < 3 && (
-            <Text style={styles.searchHint}>Type at least 3 characters.</Text>
-          )}
-          {loading && <ActivityIndicator color="#C76C9B" />}
-          {!!error && (
-            <TouchableOpacity onPress={() => setRetry((v) => v + 1)}>
-              <Text style={styles.routeError}>{error} Tap to retry.</Text>
-            </TouchableOpacity>
-          )}
-          {searched && !loading && !error && !suggestions.length && (
-            <Text style={styles.searchHint}>
-              No places found. Try the full name and city, or a nearby street.
+
+          <TouchableOpacity
+            style={[
+              styles.searchResult,
+              {
+                borderBottomWidth: suggestions.length > 0 ? 1 : 0,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Use current location"
+            disabled={gettingCurrent}
+            onPress={selectCurrentLocation}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+              }}
+            >
+              <Ionicons
+                name="locate"
+                size={20}
+                color="#C76C9B"
+              />
+
+              <View
+                style={{
+                  flex: 1,
+                  marginLeft: 10,
+                }}
+              >
+                <Text style={styles.stopTitle}>
+                  Current location
+                </Text>
+
+                <Text style={styles.stopSubtitle}>
+                  {gettingCurrent
+                    ? "Getting your location..."
+                    : "Use your phone's latest location"}
+                </Text>
+              </View>
+
+              {gettingCurrent && (
+                <ActivityIndicator color="#C76C9B" />
+              )}
+            </View>
+          </TouchableOpacity>
+
+          {!!currentError && (
+            <Text
+              style={styles.routeError}
+              accessibilityLiveRegion="polite"
+            >
+              {currentError}
             </Text>
           )}
+
+          {loading && (
+            <ActivityIndicator color="#C76C9B" />
+          )}
+
+          {!!error && (
+            <TouchableOpacity
+              onPress={() =>
+                setRetry((value) => value + 1)
+              }
+            >
+              <Text style={styles.routeError}>
+                {error} Tap to retry.
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {searched &&
+            !loading &&
+            !error &&
+            !suggestions.length && (
+              <Text style={styles.searchHint}>
+                No places found. Try the full name
+                and city, or a nearby street.
+              </Text>
+            )}
+
           {suggestions.map((place) => (
             <TouchableOpacity
               key={place.id}
@@ -164,11 +406,19 @@ export default function LocationInputCard({
               onPress={() => select(place)}
               accessibilityRole="button"
             >
-              <Text style={styles.stopTitle}>{place.name}</Text>
-              <Text style={styles.stopSubtitle}>{place.address}</Text>
+              <Text style={styles.stopTitle}>
+                {place.name}
+              </Text>
+
+              <Text style={styles.stopSubtitle}>
+                {place.address}
+              </Text>
             </TouchableOpacity>
           ))}
-          {!!suggestions.length && <ProviderAttribution />}
+
+          {!!suggestions.length && (
+            <ProviderAttribution />
+          )}
         </View>
       )}
     </View>
