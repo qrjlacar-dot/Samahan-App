@@ -270,11 +270,14 @@ export async function requestForegroundLocation(
     }
 
     const accuracy = native.Accuracy
-      ? native.Accuracy.Balanced
+      ? native.Accuracy.High
       : undefined;
 
     const fix = await withTimeout(
-      native.getCurrentPositionAsync({ accuracy }),
+      native.getCurrentPositionAsync({
+        accuracy,
+        mayShowUserSettingsDialog: false,
+      }),
       fixTimeoutMs,
     );
 
@@ -314,11 +317,11 @@ export async function watchForegroundLocation(onUpdate, onError) {
   const labelFor = createLabelCache();
 
   const accuracy = native.Accuracy
-    ? native.Accuracy.Balanced
+    ? native.Accuracy.High
     : undefined;
 
   const subscription = await native.watchPositionAsync(
-    { accuracy, ...WATCH_OPTIONS },
+    { accuracy, ...WATCH_OPTIONS, mayShowUserSettingsDialog: false },
     async (fix) => {
       if (removed) return;
 
