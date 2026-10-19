@@ -9,27 +9,43 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { CommuteMap } from "../../components/CommuteMap";
 import { LOCATION_STATUS } from "../../constants/commute";
 import { IMAGES } from "../../constants/images";
 import { useMapLocation } from "../../hooks/useMapLocation";
+import { LOCATION_LABELS } from "../../services/location";
 import { styles } from "../../styles/home.styles";
-
-import { CommuteMap } from "../../components/CommuteMap";
 
 export default function Home() {
   const router = useRouter();
-  const { snapshot, refreshLocation } = useMapLocation();
+
+  const {
+    snapshot,
+    refreshLocation,
+    requestEnableLocation,
+  } = useMapLocation();
 
   const hasFix =
     snapshot.status === LOCATION_STATUS.READY ||
     snapshot.status === LOCATION_STATUS.OUTSIDE_AREA;
-  // Only denied/unavailable states can be retried by tapping the label.
+
   const canRetryLocation =
     snapshot.status === LOCATION_STATUS.DENIED ||
     snapshot.status === LOCATION_STATUS.UNAVAILABLE;
-  const LocationPill = canRetryLocation ? TouchableOpacity : View;
+
+  const LocationPill = canRetryLocation
+    ? TouchableOpacity
+    : View;
 
   const handleLocationPress = () => {
+    if (
+      snapshot.status === LOCATION_STATUS.UNAVAILABLE &&
+      snapshot.label === LOCATION_LABELS.servicesOff
+    ) {
+      requestEnableLocation();
+      return;
+    }
+
     if (snapshot.status === LOCATION_STATUS.DENIED) {
       Alert.alert(
         "Location access is off",
@@ -41,12 +57,20 @@ export default function Home() {
               Linking.openSettings().catch(() => {});
             },
           },
-          { text: "Try again", onPress: () => refreshLocation() },
-          { text: "Cancel", style: "cancel" },
+          {
+            text: "Try again",
+            onPress: () => refreshLocation(),
+          },
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
         ],
       );
+
       return;
     }
+
     refreshLocation();
   };
 
@@ -60,16 +84,23 @@ export default function Home() {
       );
     }
   };
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView
+      style={styles.container}
+      edges={["top"]}
+    >
       <View style={styles.scrollContent}>
-        {/* Header Greeting */}
         <View style={styles.headerContainer}>
-          <Text style={styles.greetingTitle}>Magandang Umaga!</Text>
-          <Text style={styles.subTitle}>Commute tayo, ano tara?!</Text>
+          <Text style={styles.greetingTitle}>
+            Magandang Umaga!
+          </Text>
+
+          <Text style={styles.subTitle}>
+            Commute tayo, ano tara?!
+          </Text>
         </View>
 
-        {/* Map Preview Card - Clickable to Directions */}
         <TouchableOpacity
           style={styles.mapContainer}
           onPress={() =>
@@ -85,21 +116,29 @@ export default function Home() {
             interactive={false}
             userPosition={snapshot.position}
           />
-          {/* Location Pill Overlay - label comes from the real position */}
+
           <LocationPill
             style={styles.locationPill}
             {...(canRetryLocation
-              ? { onPress: handleLocationPress, activeOpacity: 0.8 }
+              ? {
+                  onPress: handleLocationPress,
+                  activeOpacity: 0.8,
+                }
               : {})}
           >
             <View
-              style={[styles.locationDot, !hasFix && styles.locationDotMuted]}
+              style={[
+                styles.locationDot,
+                !hasFix && styles.locationDotMuted,
+              ]}
             />
-            <Text style={styles.locationText}>{snapshot.label}</Text>
+
+            <Text style={styles.locationText}>
+              {snapshot.label}
+            </Text>
           </LocationPill>
         </TouchableOpacity>
 
-        {/* Emergency Contacts Card */}
         <View style={styles.emergencyCard}>
           <View style={styles.emergencyHeader}>
             <View style={styles.sirenBadge}>
@@ -109,44 +148,76 @@ export default function Home() {
                 resizeMode="contain"
               />
             </View>
-            <Text style={styles.emergencyTitle}>Emergency Contacts</Text>
+
+            <Text style={styles.emergencyTitle}>
+              Emergency Contacts
+            </Text>
           </View>
-          {/* 3 Circular Actions Container */}
+
           <View style={styles.emergencyActionsContainer}>
             <TouchableOpacity
               style={styles.contactButton}
               activeOpacity={0.7}
-              onPress={() => router.push("/emergency-contacts")}
+              onPress={() =>
+                router.push("/emergency-contacts")
+              }
             >
               <View style={styles.blueCircle}>
-                <Ionicons name="person" size={22} color="#FFFFFF" />
+                <Ionicons
+                  name="person"
+                  size={22}
+                  color="#FFFFFF"
+                />
               </View>
+
               <Text style={styles.buttonLabel}>
                 Personal Emergency
                 {"\n"}
                 Contact
               </Text>
             </TouchableOpacity>
+
             <View style={styles.divider} />
+
             <TouchableOpacity
               style={styles.contactButton}
               activeOpacity={0.7}
-              onPress={() => handleEmergencyCall("National Hotline", "911")}
+              onPress={() =>
+                handleEmergencyCall(
+                  "National Hotline",
+                  "911",
+                )
+              }
             >
               <View style={styles.redCircle}>
-                <Text style={styles.hotlineText}>911</Text>
+                <Text style={styles.hotlineText}>
+                  911
+                </Text>
               </View>
-              <Text style={styles.buttonLabel}>National Hotline</Text>
+
+              <Text style={styles.buttonLabel}>
+                National Hotline
+              </Text>
             </TouchableOpacity>
+
             <View style={styles.divider} />
+
             <TouchableOpacity
               style={styles.contactButton}
               activeOpacity={0.7}
-              onPress={() => handleEmergencyCall("QC Emergency Hotline", "122")}
+              onPress={() =>
+                handleEmergencyCall(
+                  "QC Emergency Hotline",
+                  "122",
+                )
+              }
             >
               <View style={styles.redCircle}>
-                <Text style={styles.hotlineText}>122</Text>
+                <Text style={styles.hotlineText}>
+                  122
+                </Text>
               </View>
+
               <Text style={styles.buttonLabel}>
                 QC Emergency
                 {"\n"}
