@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, {
+  Marker,
+  Polyline,
+  PROVIDER_GOOGLE,
+} from "react-native-maps";
 import ProviderAttribution from "./directions/ProviderAttribution";
 
 const CUBAO_REGION = {
@@ -19,30 +23,46 @@ export function CommuteMap({
   route = null,
   fitRequest = 0,
   contentBottomInset = 0,
+  followUser = false,
+  recenterRequest = 0,
+  onUserPan,
 }) {
   const mapRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [laidOut, setLaidOut] = useState(false);
   const centeredOnUser = useRef(false);
+  const followingRef = useRef(followUser);
+  const lastRecenter = useRef(recenterRequest);
+
+  followingRef.current = followUser;
+
   const latitude = userPosition?.latitude;
   const longitude = userPosition?.longitude;
+
   const hasUserPosition =
     Number.isFinite(latitude) &&
     Number.isFinite(longitude) &&
     Math.abs(latitude) <= 90 &&
     Math.abs(longitude) <= 180;
-  const hasRouteSelection = Boolean(origin || destination || route);
+
+  const hasRouteSelection = Boolean(
+    origin || destination || route,
+  );
 
   useEffect(() => {
     if (
       !ready ||
       !laidOut ||
       !hasUserPosition ||
+      followUser ||
       hasRouteSelection ||
       centeredOnUser.current
-    ) return;
+    ) {
+      return;
+    }
 
     centeredOnUser.current = true;
+
     mapRef.current?.animateToRegion(
       {
         latitude,
@@ -52,10 +72,18 @@ export function CommuteMap({
       },
       400,
     );
-  }, [ready, laidOut, hasUserPosition, hasRouteSelection, latitude, longitude]);
+  }, [
+    ready,
+    laidOut,
+    hasUserPosition,
+    hasRouteSelection,
+    latitude,
+    longitude,
+    followUser,
+  ]);
 
   useEffect(() => {
-    if (!ready || !laidOut) return;
+    if (!ready || !laidOut || followingRef.current) return;
 
     const coordinates = [
       ...(route?.polyline ?? []),
@@ -93,6 +121,36 @@ export function CommuteMap({
     contentBottomInset,
   ]);
 
+  useEffect(() => {
+    if (!ready || !laidOut || !hasUserPosition) return;
+
+    const requested =
+      recenterRequest !== lastRecenter.current;
+
+    if (!followUser && !requested) return;
+
+    lastRecenter.current = recenterRequest;
+    centeredOnUser.current = true;
+
+    mapRef.current?.animateCamera(
+      {
+        center: { latitude, longitude },
+        zoom: 17,
+        pitch: 0,
+        heading: 0,
+      },
+      { duration: 400 },
+    );
+  }, [
+    ready,
+    laidOut,
+    hasUserPosition,
+    latitude,
+    longitude,
+    followUser,
+    recenterRequest,
+  ]);
+
   const showAttribution =
     route?.source === "geoapify" ||
     origin?.source === "geoapify" ||
@@ -103,7 +161,11 @@ export function CommuteMap({
       <MapView
         ref={mapRef}
         style={[StyleSheet.absoluteFillObject, style]}
-        provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+        provider={
+          Platform.OS === "android"
+            ? PROVIDER_GOOGLE
+            : undefined
+        }
         initialRegion={CUBAO_REGION}
         onMapReady={() => setReady(true)}
         onLayout={({ nativeEvent }) => {
@@ -116,6 +178,10 @@ export function CommuteMap({
         rotateEnabled={interactive}
         pitchEnabled={interactive}
         toolbarEnabled={false}
+        onPanDrag={() => onUserPan?.()}
+        onRegionChangeComplete={(_, details) => {
+          if (details?.isGesture) onUserPan?.();
+        }}
       >
         {hasUserPosition && (
           <Marker

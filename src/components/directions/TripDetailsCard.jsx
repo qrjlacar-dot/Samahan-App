@@ -1,5 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Text, TouchableOpacity, View } from "react-native";
+import {
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { styles } from "../../styles/directions.styles";
 import TripSummaryBadge, {
   formatDistance,
@@ -16,20 +20,28 @@ export default function TripDetailsCard({
   return (
     <View style={styles.tripCard}>
       <View style={styles.tripHeader}>
-        <Text style={styles.tripTitle}>Trip Details</Text>
+        <Text style={styles.tripTitle}>
+          Trip Details
+        </Text>
+
         {route && onToggleFavorite && (
           <TouchableOpacity
             onPress={onToggleFavorite}
             accessibilityLabel="Toggle favorite"
           >
             <Ionicons
-              name={isFavorite ? "heart" : "heart-outline"}
+              name={
+                isFavorite
+                  ? "heart"
+                  : "heart-outline"
+              }
               size={22}
               color="#C76C9B"
             />
           </TouchableOpacity>
         )}
       </View>
+
       {!route ? (
         <Text style={styles.searchHint}>
           {selectedMode === "walk"
@@ -39,39 +51,62 @@ export default function TripDetailsCard({
       ) : (
         <>
           <TripSummaryBadge route={route} />
+
           <Text style={styles.routeEndpoints}>
             {route.origin.name} → {route.destination.name}
           </Text>
+
           <View style={styles.timelineContainer}>
             {route.steps.map((step, index) => (
-              <View key={step.id} style={styles.timelineItem}>
+              <View
+                key={step.id}
+                style={styles.timelineItem}
+              >
                 {index < route.steps.length - 1 && (
-                  <View style={styles.verticalDottedConnector} />
+                  <View
+                    style={styles.verticalDottedConnector}
+                  />
                 )}
+
                 <View style={styles.timelineIconColumn}>
                   <View
-                    style={index === 0 ? styles.solidDot : styles.hollowCircle}
+                    style={
+                      index === 0
+                        ? styles.solidDot
+                        : styles.hollowCircle
+                    }
                   />
                 </View>
+
                 <View style={styles.timelineContent}>
-                  <Text style={styles.stopTitle}>{step.instruction}</Text>
+                  <Text style={styles.stopTitle}>
+                    {step.instruction}
+                  </Text>
+
                   <Text style={styles.stopSubtitle}>
-                    {formatDistance(step.distanceMeters)} ·{" "}
+                    {formatDistance(step.distanceMeters)}
+                    {" · "}
                     {formatDuration(step.durationSeconds)}
                   </Text>
                 </View>
               </View>
             ))}
           </View>
+
           <Text style={styles.searchHint}>
-            Estimated walking time. Live journey tracking will be connected
-            separately.
+            Walking times are estimates. Keep Location
+            turned on during your trip.
           </Text>
+
           {route.warnings.map((warning, index) => (
-            <Text key={index} style={styles.searchHint}>
+            <Text
+              key={index}
+              style={styles.searchHint}
+            >
               {warning}
             </Text>
           ))}
+
           <ProviderAttribution />
         </>
       )}
