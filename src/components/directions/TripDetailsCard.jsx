@@ -16,7 +16,19 @@ export default function TripDetailsCard({
   selectedMode,
   isFavorite,
   onToggleFavorite,
+  tripState = "idle",
+  progress = null,
 }) {
+  const summaryRoute = progress
+    ? {
+        ...route,
+        distanceMeters:
+          progress.remainingDistanceMeters,
+        durationSeconds:
+          progress.remainingDurationSeconds,
+      }
+    : route;
+
   return (
     <View style={styles.tripCard}>
       <View style={styles.tripHeader}>
@@ -50,10 +62,27 @@ export default function TripDetailsCard({
         </Text>
       ) : (
         <>
-          <TripSummaryBadge route={route} />
+          <TripSummaryBadge route={summaryRoute} />
+
+          {progress && (
+            <Text
+              style={[
+                styles.searchHint,
+                { marginBottom: 12 },
+              ]}
+            >
+              {tripState === "paused"
+                ? "Paused · Last estimate"
+                : "Remaining"}
+              {" · "}
+              Step {progress.stepIndex + 1} of{" "}
+              {progress.stepCount}
+            </Text>
+          )}
 
           <Text style={styles.routeEndpoints}>
-            {route.origin.name} → {route.destination.name}
+            {route.origin.name} →{" "}
+            {route.destination.name}
           </Text>
 
           <View style={styles.timelineContainer}>
@@ -64,29 +93,56 @@ export default function TripDetailsCard({
               >
                 {index < route.steps.length - 1 && (
                   <View
-                    style={styles.verticalDottedConnector}
+                    style={
+                      styles.verticalDottedConnector
+                    }
                   />
                 )}
 
-                <View style={styles.timelineIconColumn}>
+                <View
+                  style={styles.timelineIconColumn}
+                >
                   <View
                     style={
-                      index === 0
+                      index ===
+                      (progress?.stepIndex ?? 0)
                         ? styles.solidDot
                         : styles.hollowCircle
                     }
                   />
                 </View>
 
-                <View style={styles.timelineContent}>
-                  <Text style={styles.stopTitle}>
+                <View
+                  style={[
+                    styles.timelineContent,
+                    progress &&
+                      index < progress.stepIndex && {
+                        opacity: 0.45,
+                      },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.stopTitle,
+                      progress &&
+                        index ===
+                          progress.stepIndex && {
+                          color: "#C76C9B",
+                          fontWeight: "700",
+                        },
+                    ]}
+                  >
                     {step.instruction}
                   </Text>
 
                   <Text style={styles.stopSubtitle}>
-                    {formatDistance(step.distanceMeters)}
+                    {formatDistance(
+                      step.distanceMeters,
+                    )}
                     {" · "}
-                    {formatDuration(step.durationSeconds)}
+                    {formatDuration(
+                      step.durationSeconds,
+                    )}
                   </Text>
                 </View>
               </View>

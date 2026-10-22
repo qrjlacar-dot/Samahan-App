@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import {
   useFocusEffect,
   useLocalSearchParams,
@@ -29,10 +30,16 @@ import LocationInputCard from "../components/directions/LocationInputCard";
 import ModeSelector from "../components/directions/ModeSelector";
 import TicketToggle from "../components/directions/TicketToggle";
 import TripDetailsCard from "../components/directions/TripDetailsCard";
+import WalkingNavigationBanner from "../components/directions/WalkingNavigationBanner";
+import { COLORS } from "../constants/theme";
 import { useMapLocation } from "../hooks/useMapLocation";
+import { useWalkingProgress } from "../hooks/useWalkingProgress";
 import { getRoutes } from "../services/routes";
 import { getTripIssue } from "../services/trips";
 import { styles } from "../styles/directions.styles";
+import {
+  styles as navigationStyles,
+} from "../styles/walking-navigation.styles";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 const MAX_TRANSLATE = Math.max(0, SCREEN_HEIGHT - 90 - 90);
@@ -42,20 +49,12 @@ export default function Directions() {
   const { snapshot, refreshLocation } = useMapLocation();
   const { collapsed } = useLocalSearchParams();
 
-  const initialY =
-    collapsed === "true" ? MAX_TRANSLATE : 0;
-
-  const translateY = useRef(
-    new Animated.Value(initialY),
-  ).current;
-
+  const initialY = collapsed === "true" ? MAX_TRANSLATE : 0;
+  const translateY = useRef(new Animated.Value(initialY)).current;
   const lastY = useRef(initialY);
   const dragStart = useRef(initialY);
 
-  const [isExpanded, setIsExpanded] = useState(
-    collapsed !== "true",
-  );
-
+  const [isExpanded, setIsExpanded] = useState(collapsed !== "true");
   const [selectedMode, setSelectedMode] = useState("walk");
   const [ticketType, setTicketType] = useState("discounted");
   const [isFavorite, setIsFavorite] = useState(false);
@@ -77,8 +76,11 @@ export default function Directions() {
   const [tripMessage, setTripMessage] = useState("");
   const [following, setFollowing] = useState(false);
   const [recenterRequest, setRecenterRequest] = useState(0);
+  const [mapControlsOpen, setMapControlsOpen] = useState(false);
 
   const tripOpen = tripState !== "idle";
+  const progress = useWalkingProgress(route, snapshot, tripState);
+  const showNavigation = tripOpen && progress !== null;
 
   const liveIssue = tripOpen
     ? getTripIssue(route, snapshot, {
@@ -93,10 +95,15 @@ export default function Directions() {
       setFollowing(false);
       setTripMessage(liveIssue.message);
     }
-  }, [tripState, liveIssue?.code, liveIssue?.message]);
+  }, [
+    tripState,
+    liveIssue?.code,
+    liveIssue?.message,
+  ]);
 
   const endTrip = useCallback(() => {
     startRequest.current += 1;
+    setMapControlsOpen(false);
     setTripState("idle");
     setStartingTrip(false);
     setFollowing(false);
@@ -119,7 +126,9 @@ export default function Directions() {
             onPress: () => {
               endTrip();
 
-              if (leaveScreen) router.back();
+              if (leaveScreen) {
+                router.back();
+              }
             },
           },
         ],
@@ -130,18 +139,23 @@ export default function Directions() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!tripOpen) return;
+      if (!tripOpen && !mapControlsOpen) return;
 
       const subscription = BackHandler.addEventListener(
         "hardwareBackPress",
         () => {
+          if (mapControlsOpen) {
+            setMapControlsOpen(false);
+            return true;
+          }
+
           confirmEndTrip(true);
           return true;
         },
       );
 
       return () => subscription.remove();
-    }, [tripOpen, confirmEndTrip]),
+    }, [tripOpen, mapControlsOpen, confirmEndTrip]),
   );
 
   const startTrip = async () => {
@@ -187,9 +201,7 @@ export default function Directions() {
   useEffect(() => {
     const shown = Keyboard.addListener(
       "keyboardDidShow",
-      (event) => setKeyboardHeight(
-        event.endCoordinates.height,
-      ),
+      (event) => setKeyboardHeight(event.endCoordinates.height),
     );
 
     const hidden = Keyboard.addListener(
@@ -217,6 +229,7 @@ export default function Directions() {
   }, [translateY]);
 
   const snapTo = (toValue) => {
+    setMapControlsOpen(false);
     setIsExpanded(toValue === 0);
 
     Animated.spring(translateY, {
@@ -235,6 +248,7 @@ export default function Directions() {
         Math.abs(gesture.dy) > 3,
 
       onPanResponderGrant: () => {
+        setMapControlsOpen(false);
         translateY.stopAnimation();
         dragStart.current = lastY.current;
       },
@@ -266,9 +280,7 @@ export default function Directions() {
           snapTo(0);
         } else {
           snapTo(
-            position > MAX_TRANSLATE / 2
-              ? MAX_TRANSLATE
-              : 0,
+            position > MAX_TRANSLATE / 2 ? MAX_TRANSLATE : 0,
           );
         }
       },
@@ -348,7 +360,9 @@ export default function Directions() {
           destination,
           preferredMode: selectedMode,
         },
-        { signal: controller.signal },
+        {
+          signal: controller.signal,
+        },
       );
 
       if (
@@ -400,17 +414,21 @@ export default function Directions() {
             following &&
             !liveIssue
           }
+          followHeading={tripState === "active"}
+          followZoom={18}
           recenterRequest={recenterRequest}
-          onUserPan={() => setFollowing(false)}
+          onMapPress={() => setMapControlsOpen(false)}
+          onUserPan={() => {
+            setFollowing(false);
+            setMapControlsOpen(false);
+          }}
         />
       </View>
 
       <BackButton
         style={styles.backButton}
         onPress={() =>
-          tripOpen
-            ? confirmEndTrip(true)
-            : router.back()
+          tripOpen ? confirmEndTrip(true) : router.back()
         }
         activeOpacity={0.8}
         iconSize={22}
@@ -419,40 +437,117 @@ export default function Directions() {
         hitSlop={null}
       />
 
-      {route && !isExpanded && (
-        <TouchableOpacity
-          style={styles.fitRouteButton}
-          accessibilityLabel="Show entire route"
-          onPress={() => {
-            setFollowing(false);
-            setFitRequest((value) => value + 1);
-          }}
+      {!isExpanded && showNavigation && (
+        <View
+          pointerEvents="box-none"
+          style={navigationStyles.overlay}
         >
-          <Text style={styles.findRouteText}>
-            Fit route
-          </Text>
-        </TouchableOpacity>
+          <WalkingNavigationBanner
+            route={route}
+            progress={progress}
+            tripState={tripState}
+          />
+        </View>
       )}
 
-      {!isExpanded && snapshot.position && (
-        <TouchableOpacity
-          style={[
-            styles.fitRouteButton,
-            { top: route ? 164 : 106 },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Recenter on your location"
-          onPress={() => {
-            setFollowing(
-              tripState === "active" && !liveIssue,
-            );
-            setRecenterRequest((value) => value + 1);
-          }}
+      {!isExpanded && (
+        <View
+          pointerEvents="box-none"
+          style={navigationStyles.controlsOverlay}
         >
-          <Text style={styles.findRouteText}>
-            Recenter
-          </Text>
-        </TouchableOpacity>
+          {(route || snapshot.position) && (
+            <View
+              pointerEvents="box-none"
+              style={navigationStyles.mapControls}
+            >
+              <TouchableOpacity
+                style={[
+                  navigationStyles.mapControlsToggle,
+                  mapControlsOpen &&
+                    navigationStyles.mapControlsToggleOpen,
+                ]}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Map controls"
+                accessibilityHint="Show or hide Fit route and Recenter"
+                accessibilityState={{ expanded: mapControlsOpen }}
+                onPress={() =>
+                  setMapControlsOpen((value) => !value)
+                }
+              >
+                <Ionicons
+                  name={
+                    mapControlsOpen ? "close" : "options-outline"
+                  }
+                  size={23}
+                  color={
+                    mapControlsOpen ? COLORS.cardBg : COLORS.pink
+                  }
+                />
+              </TouchableOpacity>
+
+              {mapControlsOpen && (
+                <View style={navigationStyles.mapControlsMenu}>
+                  {route && (
+                    <TouchableOpacity
+                      style={navigationStyles.mapControlAction}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Show entire route"
+                      onPress={() => {
+                        setMapControlsOpen(false);
+                        setFollowing(false);
+                        setFitRequest((value) => value + 1);
+                      }}
+                    >
+                      <Ionicons
+                        name="expand-outline"
+                        size={20}
+                        color={COLORS.pink}
+                      />
+
+                      <Text style={navigationStyles.mapControlText}>
+                        Fit route
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {route && snapshot.position && (
+                    <View
+                      style={navigationStyles.mapControlDivider}
+                    />
+                  )}
+
+                  {snapshot.position && (
+                    <TouchableOpacity
+                      style={navigationStyles.mapControlAction}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Recenter on your location"
+                      onPress={() => {
+                        setMapControlsOpen(false);
+                        setFollowing(
+                          tripState === "active" && !liveIssue,
+                        );
+                        setRecenterRequest((value) => value + 1);
+                      }}
+                    >
+                      <Ionicons
+                        name="locate-outline"
+                        size={20}
+                        color={COLORS.pink}
+                      />
+
+                      <Text style={navigationStyles.mapControlText}>
+                        Recenter
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
+        </View>
       )}
 
       <Animated.View
@@ -496,21 +591,14 @@ export default function Directions() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets
-            contentContainerStyle={
-              styles.scrollContainerStyle
-            }
+            contentContainerStyle={styles.scrollContainerStyle}
           >
             <View
               pointerEvents={
-                tripOpen || startingTrip
-                  ? "none"
-                  : "auto"
+                tripOpen || startingTrip ? "none" : "auto"
               }
               style={{
-                opacity:
-                  tripOpen || startingTrip
-                    ? 0.6
-                    : 1,
+                opacity: tripOpen || startingTrip ? 0.6 : 1,
               }}
             >
               <ModeSelector
@@ -565,10 +653,15 @@ export default function Directions() {
               <View
                 style={[
                   styles.tripCard,
-                  { marginBottom: 16 },
+                  navigationStyles.tripControlsCard,
                 ]}
               >
-                <Text style={styles.tripTitle}>
+                <Text
+                  style={[
+                    styles.tripTitle,
+                    navigationStyles.tripControlsTitle,
+                  ]}
+                >
                   {tripState === "active"
                     ? "Walking trip active"
                     : tripState === "paused"
@@ -579,13 +672,13 @@ export default function Directions() {
                 <Text
                   style={[
                     styles.searchHint,
-                    { marginVertical: 12 },
+                    navigationStyles.tripControlsDescription,
                   ]}
                 >
                   {tripState === "active"
                     ? following
                       ? "The map is following your location. End the trip before changing your route."
-                      : "Map following is paused. Tap Recenter to follow your location again."
+                      : "Map following is paused. Open Map controls, then tap Recenter to follow your location again."
                     : tripState === "paused"
                       ? "Check your location, then tap Resume trip when you are ready."
                       : "Start when you are near the selected starting point. Keep SAMAHAN open during your walking trip."}
@@ -604,8 +697,8 @@ export default function Directions() {
                   <TouchableOpacity
                     style={[
                       styles.findRouteButton,
-                      startingTrip &&
-                        styles.disabledButton,
+                      navigationStyles.tripControlButton,
+                      startingTrip && styles.disabledButton,
                     ]}
                     disabled={startingTrip}
                     accessibilityRole="button"
@@ -627,15 +720,20 @@ export default function Directions() {
                   <TouchableOpacity
                     style={[
                       styles.findRouteButton,
-                      {
-                        backgroundColor: "#654255",
-                        marginBottom: 0,
-                      },
+                      navigationStyles.tripControlButton,
+                      navigationStyles.endTripButton,
+                      tripState === "paused" &&
+                        navigationStyles.tripControlButtonSpacing,
                     ]}
                     accessibilityRole="button"
                     onPress={() => confirmEndTrip()}
                   >
-                    <Text style={styles.findRouteText}>
+                    <Text
+                      style={[
+                        styles.findRouteText,
+                        navigationStyles.endTripText,
+                      ]}
+                    >
                       End trip
                     </Text>
                   </TouchableOpacity>
@@ -652,6 +750,8 @@ export default function Directions() {
 
             <TripDetailsCard
               route={route}
+              tripState={tripState}
+              progress={progress}
               selectedMode={selectedMode}
               ticketType={ticketType}
               isFavorite={isFavorite}

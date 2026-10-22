@@ -67,8 +67,10 @@ function CommuteMapContent({
   contentBottomInset = 0,
   followUser = false,
   followZoom = 17,
+  followHeading = false,
   recenterRequest = 0,
   onUserPan,
+  onMapPress,
 }) {
   const mapRef = useRef(null);
 
@@ -83,6 +85,9 @@ function CommuteMapContent({
   const centeredOnUser = useRef(false);
   const followingRef = useRef(followUser);
   const lastRecenter = useRef(recenterRequest);
+  const lastCamera = useRef(null);
+  const lastCameraTime = useRef(0);
+  const wasFollowing = useRef(false);
 
   followingRef.current = followUser;
 
@@ -152,11 +157,7 @@ function CommuteMapContent({
   ]);
 
   useEffect(() => {
-    if (
-      !ready ||
-      !laidOut ||
-      followingRef.current
-    ) {
+    if (!ready || !laidOut || followingRef.current) {
       return;
     }
 
@@ -167,18 +168,15 @@ function CommuteMapContent({
     ].filter(Boolean);
 
     if (coordinates.length > 1) {
-      mapRef.current?.fitToCoordinates(
-        coordinates,
-        {
-          edgePadding: {
-            top: 110,
-            right: 45,
-            bottom: contentBottomInset + 45,
-            left: 45,
-          },
-          animated: true,
+      mapRef.current?.fitToCoordinates(coordinates, {
+        edgePadding: {
+          top: 110,
+          right: 45,
+          bottom: contentBottomInset + 45,
+          left: 45,
         },
-      );
+        animated: true,
+      });
     } else if (coordinates.length === 1) {
       mapRef.current?.animateToRegion(
         {
@@ -200,43 +198,97 @@ function CommuteMapContent({
   ]);
 
   useEffect(() => {
-    if (
-      !ready ||
-      !laidOut ||
-      !hasUserPosition
-    ) {
-      return;
-    }
+    if (!ready || !laidOut || !hasUserPosition) return;
 
     const requested =
       recenterRequest !== lastRecenter.current;
 
-    if (!followUser && !requested) return;
+    if (!followUser && !requested) {
+      wasFollowing.current = false;
+      return;
+    }
 
-    lastRecenter.current = recenterRequest;
-    centeredOnUser.current = true;
+    const previous = lastCamera.current;
 
-    mapRef.current?.animateCamera(
-      {
+    const cameraHeading =
+      followUser && followHeading
+        ? Number.isFinite(heading)
+          ? heading
+          : previous?.heading ?? 0
+        : 0;
+
+    const headingDifference = previous
+      ? Math.abs(
+          ((cameraHeading - previous.heading + 540) % 360) - 180,
+        )
+      : 360;
+
+    const enteringFollow =
+      followUser && !wasFollowing.current;
+
+    const positionChanged =
+      !previous ||
+      previous.center.latitude !== latitude ||
+      previous.center.longitude !== longitude;
+
+    if (
+      !requested &&
+      !enteringFollow &&
+      !positionChanged &&
+      previous?.zoom === followZoom &&
+      headingDifference < 2
+    ) {
+      return;
+    }
+
+    const delay =
+      requested || enteringFollow
+        ? 0
+        : Math.max(
+            0,
+            120 - (Date.now() - lastCameraTime.current),
+          );
+
+    const moveCamera = () => {
+      if (!followingRef.current && !requested) return;
+
+      const camera = {
         center: {
           latitude,
           longitude,
         },
         zoom: followZoom,
         pitch: 0,
-        heading: 0,
-      },
-      {
-        duration: 400,
-      },
-    );
+        heading: cameraHeading,
+      };
+
+      mapRef.current?.animateCamera(camera, {
+        duration: requested || enteringFollow ? 350 : 120,
+      });
+
+      lastCamera.current = camera;
+      lastCameraTime.current = Date.now();
+      lastRecenter.current = recenterRequest;
+      wasFollowing.current = followUser;
+      centeredOnUser.current = true;
+    };
+
+    if (delay === 0) {
+      moveCamera();
+      return;
+    }
+
+    const timer = setTimeout(moveCamera, delay);
+    return () => clearTimeout(timer);
   }, [
     ready,
     laidOut,
     hasUserPosition,
     latitude,
     longitude,
+    heading,
     followUser,
+    followHeading,
     followZoom,
     recenterRequest,
   ]);
@@ -262,21 +314,23 @@ function CommuteMapContent({
         initialRegion={CUBAO_REGION}
         onMapReady={() => setReady(true)}
         onLayout={({ nativeEvent }) => {
-          const { width, height } =
-            nativeEvent.layout;
+          const { width, height } = nativeEvent.layout;
 
           setLaidOut(width > 0 && height > 0);
           setMapHeight(height > 0 ? height : 0);
         }}
-        pointerEvents={
-          interactive ? "auto" : "none"
-        }
+        pointerEvents={interactive ? "auto" : "none"}
         zoomEnabled={interactive}
         scrollEnabled={interactive}
         rotateEnabled={interactive}
         pitchEnabled={interactive}
         toolbarEnabled={false}
-        onPanDrag={() => onUserPan?.()}
+        showsCompass={!followHeading}
+        onPress={() => onMapPress?.()}
+        onPanDrag={() => {
+          followingRef.current = false;
+          onUserPan?.();
+        }}
         onRegionChangeComplete={(region, details) => {
           if (
             Number.isFinite(region?.latitudeDelta) &&
@@ -286,6 +340,7 @@ function CommuteMapContent({
           }
 
           if (details?.isGesture) {
+            followingRef.current = false;
             onUserPan?.();
           }
         }}
