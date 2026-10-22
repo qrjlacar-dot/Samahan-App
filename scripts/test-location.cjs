@@ -686,7 +686,7 @@ test("tracker: stop while subscription is being created removes it", async () =>
   tracker.dispose();
 });
 
-test("tracker: outside area at start does not track", async () => {
+test("tracker: outside area at start keeps a foreground watch", async () => {
   const native = makeNative({
     at: FAR_OUTSIDE,
   });
@@ -697,7 +697,8 @@ test("tracker: outside area at start does not track", async () => {
 
   await tracker.start();
 
-  assert.equal(native.calls.watch, 0);
+  assert.equal(native.calls.watch, 1);
+  assert.equal(tracker.isTracking(), true);
   assert.equal(
     last().status,
     LOCATION_STATUS.OUTSIDE_AREA,
@@ -726,7 +727,7 @@ test("tracker: denied permission does not track", async () => {
   tracker.dispose();
 });
 
-test("tracker: leaving the area stops updates", async () => {
+test("tracker: leaving and returning to the area keeps location updates", async () => {
   const native = makeNative();
 
   useNative(native);
@@ -756,15 +757,16 @@ test("tracker: leaving the area stops updates", async () => {
     last().status,
     LOCATION_STATUS.OUTSIDE_AREA,
   );
-  assert.equal(native.calls.removes, 1);
-  assert.equal(tracker.isTracking(), false);
+  assert.equal(native.calls.removes, 0);
+  assert.equal(tracker.isTracking(), true);
 
   const count = snapshots.length;
 
   callback(fix(TIP));
   await tick();
 
-  assert.equal(snapshots.length, count);
+  assert.equal(snapshots.length, count + 1);
+  assert.equal(last().status, LOCATION_STATUS.READY);
 
   tracker.dispose();
 });

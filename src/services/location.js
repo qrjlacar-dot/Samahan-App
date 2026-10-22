@@ -15,6 +15,7 @@ export const MAX_ACCEPTABLE_ACCURACY_METERS = 150;
 
 const DEFAULT_FIX_TIMEOUT_MS = 15000;
 const LABEL_REUSE_DISTANCE_METERS = 50;
+
 const WATCH_OPTIONS = {
   distanceInterval: 2,
   timeInterval: 1000,
@@ -321,7 +322,11 @@ export async function watchForegroundLocation(onUpdate, onError) {
     : undefined;
 
   const subscription = await native.watchPositionAsync(
-    { accuracy, ...WATCH_OPTIONS, mayShowUserSettingsDialog: false },
+    {
+      accuracy,
+      ...WATCH_OPTIONS,
+      mayShowUserSettingsDialog: false,
+    },
     async (fix) => {
       if (removed) return;
 
@@ -398,7 +403,10 @@ export function createLocationTracker(onSnapshot) {
     const token = ++refreshToken;
     const previous = snapshot;
 
-    if (snapshot.status !== LOCATION_STATUS.READY) {
+    if (
+      snapshot.status !== LOCATION_STATUS.READY &&
+      snapshot.status !== LOCATION_STATUS.OUTSIDE_AREA
+    ) {
       emit({
         ...snapshot,
         status: LOCATION_STATUS.LOCATING,
@@ -424,7 +432,6 @@ export function createLocationTracker(onSnapshot) {
 
     if (
       next.status === LOCATION_STATUS.DENIED ||
-      next.status === LOCATION_STATUS.OUTSIDE_AREA ||
       (next.status === LOCATION_STATUS.UNAVAILABLE &&
         next.label === LOCATION_LABELS.servicesOff)
     ) {
@@ -449,8 +456,11 @@ export function createLocationTracker(onSnapshot) {
     if (disposed || token !== watchToken) return;
 
     if (
-      snapshot.status !== LOCATION_STATUS.READY ||
-      !snapshot.inServiceArea
+      ![
+        LOCATION_STATUS.READY,
+        LOCATION_STATUS.OUTSIDE_AREA,
+      ].includes(snapshot.status) ||
+      !snapshot.position
     ) {
       starting = false;
       return;
@@ -458,17 +468,11 @@ export function createLocationTracker(onSnapshot) {
 
     const onUpdate = (next) => {
       if (disposed || token !== watchToken) return;
-
       emit(next);
-
-      if (next.status === LOCATION_STATUS.OUTSIDE_AREA) {
-        stopWatching();
-      }
     };
 
     const onError = () => {
       if (disposed || token !== watchToken) return;
-
       emit(unavailableSnapshot());
     };
 

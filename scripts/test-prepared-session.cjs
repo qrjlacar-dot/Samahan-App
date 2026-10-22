@@ -68,11 +68,13 @@ test("no fresh GPS reading pauses an active trip after the freshness limit", asy
   f.advance(31000); assert.equal(f.h.result.state, "paused"); assert.equal(f.h.result.following, false);
   assert.ok(f.h.result.message.includes("out of date")); f.h.dispose();
 });
-test("weak GPS pauses the trip and a fresh accurate fix allows resume", async () => {
+test("weak GPS pauses the trip and a new accurate fix automatically resumes following", async () => {
   const f = fixture(); await f.h.result.start(); f.h.flush();
   f.advance(1000, a, 100); assert.equal(f.h.result.state, "paused");
-  f.advance(1000, a); assert.equal(await f.h.result.start(), true); f.h.flush();
-  assert.equal(f.h.result.state, "active"); f.h.dispose();
+  f.advance(1000, a);
+  assert.equal(f.h.result.state, "active");
+  assert.equal(f.h.result.following, true);
+  f.h.dispose();
 });
 test("off-route fixes trigger one reroute using the live position and original destination", async () => {
   const f = fixture(); await f.h.result.start(); f.h.flush();
@@ -99,6 +101,62 @@ test("ending while rerouting aborts the request and ignores its late result", as
   resolve([baseRoute]); assert.equal(await reroute, false); f.h.flush();
   assert.equal(f.routeChanges.length, 0); assert.equal(f.h.result.state, "idle"); f.h.dispose();
 });
+test("fresh on-route GPS recovers a stale trip without another Start press", async () => {
+  const f = fixture();
+  await f.h.result.start(); f.h.flush();
+  f.advance(31000);
+  assert.equal(f.h.result.state, "paused");
+  const request = f.h.result.recenterRequest;
+  f.advance(1000, { latitude: 14.6252, longitude: 121.06 });
+  assert.equal(f.h.result.state, "active");
+  assert.equal(f.h.result.following, true);
+  assert.equal(f.h.result.recenterRequest, request + 1);
+  assert.equal(f.notifications.length, 0);
+  f.h.dispose();
+});
+
+test("recovering GPS preserves the user's manually selected route overview", async () => {
+  const f = fixture();
+  await f.h.result.start(); f.h.flush();
+  f.h.result.stopFollowing(); f.h.flush();
+  f.advance(31000);
+  f.advance(1000, a);
+  assert.equal(f.h.result.state, "active");
+  assert.equal(f.h.result.following, false);
+  f.h.dispose();
+});
+
+test("fresh off-route GPS cannot automatically resume a stale trip", async () => {
+  const f = fixture();
+  await f.h.result.start(); f.h.flush();
+  f.advance(31000);
+  f.advance(1000, { latitude: 14.63, longitude: 121.07 });
+  assert.equal(f.h.result.state, "paused");
+  assert.equal(f.h.result.following, false);
+  f.h.dispose();
+});
+
+test("leaving the service area requires a manual resume after returning", async () => {
+  const f = fixture();
+  await f.h.result.start(); f.h.flush();
+  f.advance(1000, { latitude: 14.7, longitude: 121.2 });
+  assert.equal(f.h.result.state, "paused");
+  f.advance(1000, a);
+  assert.equal(f.h.result.state, "paused");
+  f.h.dispose();
+});
+
+test("ending a temporarily paused trip prevents later GPS from restarting it", async () => {
+  const f = fixture();
+  await f.h.result.start(); f.h.flush();
+  f.advance(31000);
+  f.h.result.end(); f.h.flush();
+  f.advance(1000, a);
+  assert.equal(f.h.result.state, "idle");
+  assert.equal(f.h.result.following, false);
+  f.h.dispose();
+});
+
 test("signing into a different account ends the old trip", async () => {
   const f = fixture(); await f.h.result.start(); f.h.flush();
   f.h.props = { ...f.h.props, uid: "account-b" }; f.h.flush();

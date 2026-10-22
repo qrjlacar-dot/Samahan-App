@@ -17,9 +17,7 @@ import {
 } from "react-native";
 import { searchPlaces } from "../../services/routes";
 import { useLocation } from "../../context/LocationContext";
-import {
-  currentLocationPlace,
-} from "../../services/deviceLocation";
+import { currentLocationPlace } from "../../services/deviceLocation";
 import { styles } from "../../styles/directions.styles";
 import ProviderAttribution from "./ProviderAttribution";
 
@@ -142,6 +140,7 @@ export default function LocationInputCard({
     currentPending.current = false;
     searchToken.current += 1;
     requestRef.current?.abort();
+
     setGettingCurrent(false);
     setCurrentError("");
   };
@@ -205,7 +204,7 @@ export default function LocationInputCard({
       if (token === currentToken.current) {
         setCurrentError(
           error.message ||
-          "Could not read your location. Please try again.",
+            "Could not read your location. Please try again.",
         );
       }
     } finally {
@@ -298,7 +297,7 @@ export default function LocationInputCard({
               Select a{" "}
               {activeField === "origin"
                 ? "starting point"
-                : "destination"}
+                : "destination"} in the Cubao demo area
             </Text>
 
             <TouchableOpacity
@@ -321,7 +320,8 @@ export default function LocationInputCard({
             style={[
               styles.searchResult,
               {
-                borderBottomWidth: suggestions.length > 0 ? 1 : 0,
+                borderBottomWidth:
+                  suggestions.length > 0 ? 1 : 0,
               },
             ]}
             accessibilityRole="button"
@@ -394,8 +394,7 @@ export default function LocationInputCard({
             !error &&
             !suggestions.length && (
               <Text style={styles.searchHint}>
-                No places found. Try the full name
-                and city, or a nearby street.
+                No matching places in our Cubao demo area. Try another nearby place or street.
               </Text>
             )}
 

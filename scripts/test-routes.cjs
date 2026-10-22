@@ -6,6 +6,7 @@ const cache = new Map();
 let payload;
 let calls = 0;
 let nativeCalls = 0;
+let requestUrl = "";
 
 function load(file) {
   if (cache.has(file)) return cache.get(file).exports;
@@ -52,7 +53,8 @@ function load(file) {
 
       throw new Error("Route previews must not request device location.");
     },
-    async () => {
+    async (url) => {
+      requestUrl = url;
       calls += 1;
 
       return {
@@ -73,7 +75,7 @@ function load(file) {
 
 const root = path.join(__dirname, "..");
 
-const { getRoutes } = load(
+const { getRoutes, searchPlaces } = load(
   path.join(root, "src/services/routes.js"),
 );
 
@@ -165,6 +167,33 @@ async function rejected(input, code, expectedCalls) {
 
   assert.equal(calls, expectedCalls);
 }
+
+test("place search requests the configured demo rectangle", async () => {
+  payload = { features: [] };
+  assert.deepEqual(await searchPlaces("Gateway"), []);
+  const params = new URL(requestUrl).searchParams;
+  assert.equal(params.get("filter"), `rect:${bounds.minLongitude},${bounds.minLatitude},${bounds.maxLongitude},${bounds.maxLatitude}|countrycode:ph`);
+  assert.equal(nativeCalls, 0);
+});
+
+test("place search excludes outside and invalid results, keeping unique supported places", async () => {
+  const feature = (id, coordinate) => ({ properties: { place_id: id, name: id, lat: coordinate.latitude, lon: coordinate.longitude } });
+  payload = { features: [
+    feature("outside", { latitude: bounds.maxLatitude + 0.01, longitude: bounds.minLongitude }),
+    feature("invalid", { latitude: NaN, longitude: 121.06 }),
+    feature("supported", origin.coordinate),
+    feature("supported", origin.coordinate),
+    feature("boundary", { latitude: bounds.minLatitude, longitude: bounds.minLongitude }),
+  ] };
+  const results = await searchPlaces("Gateway");
+  assert.deepEqual(results.map((item) => item.id), ["supported", "boundary"]);
+  assert.equal(nativeCalls, 0);
+});
+
+test("short place searches avoid a provider request", async () => {
+  assert.deepEqual(await searchPlaces(" a "), []);
+  assert.equal(calls, 0);
+});
 
 test("TIP QC to Anonas preview works without device GPS", async () => {
   const [route] = await getRoutes(request);

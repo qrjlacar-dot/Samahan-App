@@ -1,5 +1,11 @@
 import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import MapView, {
   Marker,
@@ -24,11 +30,17 @@ export function CommuteMap(props) {
   useFocusEffect(
     useCallback(() => {
       setActive(true);
+
       return () => setActive(false);
     }, []),
   );
 
-  return <CommuteMapContent {...props} active={active} />;
+  return (
+    <CommuteMapContent
+      {...props}
+      active={active}
+    />
+  );
 }
 
 function CommuteMapContent({
@@ -49,6 +61,7 @@ function CommuteMapContent({
   onMapPress,
 }) {
   const mapRef = useRef(null);
+
   const [ready, setReady] = useState(false);
   const [laidOut, setLaidOut] = useState(false);
   const [mapHeight, setMapHeight] = useState(0);
@@ -75,7 +88,32 @@ function CommuteMapContent({
     Math.abs(latitude) <= 90 &&
     Math.abs(longitude) <= 180;
 
-  const heading = useDeviceHeading(active && hasUserPosition);
+  const previewRegion = useMemo(() => {
+    if (
+      interactive ||
+      !followUser ||
+      !hasUserPosition
+    ) {
+      return undefined;
+    }
+
+    return {
+      latitude,
+      longitude,
+      latitudeDelta: 0.012,
+      longitudeDelta: 0.012,
+    };
+  }, [
+    interactive,
+    followUser,
+    hasUserPosition,
+    latitude,
+    longitude,
+  ]);
+
+  const heading = useDeviceHeading(
+    active && hasUserPosition,
+  );
 
   const beamRadius =
     mapHeight > 0
@@ -181,6 +219,11 @@ function CommuteMapContent({
   ]);
 
   useEffect(() => {
+    if (previewRegion) {
+      wasFollowing.current = false;
+      return;
+    }
+
     if (!active) {
       wasFollowing.current = false;
       return;
@@ -212,7 +255,8 @@ function CommuteMapContent({
         )
       : 360;
 
-    const entering = followUser && !wasFollowing.current;
+    const entering =
+      followUser && !wasFollowing.current;
 
     const moved =
       !previous ||
@@ -241,15 +285,26 @@ function CommuteMapContent({
       if (!followingRef.current && !requested) return;
 
       const camera = {
-        center: { latitude, longitude },
+        center: {
+          latitude,
+          longitude,
+        },
         zoom: followZoom,
         pitch: 0,
         heading: cameraHeading,
       };
 
-      mapRef.current?.animateCamera(camera, {
-        duration: requested || entering ? 350 : 120,
-      });
+      const map = mapRef.current;
+
+      if (!map) return;
+
+      if (Platform.OS === "android") {
+        map.setCamera(camera);
+      } else {
+        map.animateCamera(camera, {
+          duration: requested || entering ? 350 : 120,
+        });
+      }
 
       lastCamera.current = camera;
       lastCameraTime.current = Date.now();
@@ -264,6 +319,7 @@ function CommuteMapContent({
     }
 
     const timer = setTimeout(move, delay);
+
     return () => clearTimeout(timer);
   }, [
     active,
@@ -277,6 +333,7 @@ function CommuteMapContent({
     followHeading,
     followZoom,
     recenterRequest,
+    previewRegion,
   ]);
 
   const showAttribution =
@@ -289,21 +346,30 @@ function CommuteMapContent({
     <>
       <MapView
         ref={mapRef}
-        style={[StyleSheet.absoluteFillObject, style]}
+        style={[
+          StyleSheet.absoluteFillObject,
+          style,
+        ]}
         provider={
           Platform.OS === "android"
             ? PROVIDER_GOOGLE
             : undefined
         }
-        initialRegion={CUBAO_REGION}
+        initialRegion={
+          previewRegion ?? CUBAO_REGION
+        }
+        region={previewRegion}
         onMapReady={() => setReady(true)}
         onLayout={({ nativeEvent }) => {
-          const { width, height } = nativeEvent.layout;
+          const { width, height } =
+            nativeEvent.layout;
 
           setLaidOut(width > 0 && height > 0);
           setMapHeight(height > 0 ? height : 0);
         }}
-        pointerEvents={interactive ? "auto" : "none"}
+        pointerEvents={
+          interactive ? "auto" : "none"
+        }
         zoomEnabled={interactive}
         scrollEnabled={interactive}
         rotateEnabled={interactive}
@@ -351,8 +417,14 @@ function CommuteMapContent({
         {hasUserPosition && (
           <Marker
             key="user-position"
-            coordinate={{ latitude, longitude }}
-            anchor={{ x: 0.5, y: 0.5 }}
+            coordinate={{
+              latitude,
+              longitude,
+            }}
+            anchor={{
+              x: 0.5,
+              y: 0.5,
+            }}
             tracksViewChanges={true}
             flat
             zIndex={10}
@@ -394,7 +466,10 @@ function CommuteMapContent({
         {route?.preferredMode !== "walk" &&
         route?.steps?.length
           ? route.steps
-              .filter((step) => step.polyline?.length > 1)
+              .filter(
+                (step) =>
+                  step.polyline?.length > 1,
+              )
               .map((step) => (
                 <Polyline
                   key={step.id}
@@ -402,7 +477,9 @@ function CommuteMapContent({
                   strokeColor="#C76C9B"
                   strokeWidth={5}
                   lineDashPattern={
-                    step.schematic ? [12, 8] : undefined
+                    step.schematic
+                      ? [12, 8]
+                      : undefined
                   }
                 />
               ))

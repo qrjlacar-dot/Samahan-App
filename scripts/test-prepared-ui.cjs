@@ -135,6 +135,59 @@ const snapshot = {
   },
 };
 
+test("Home keeps following live location outside Cubao without enabling heading rotation", () => {
+  const { react, runtime, render } = hookHarness();
+  let current = {
+    status: "outside-area", inServiceArea: false,
+    position: { latitude: 14.59, longitude: 121.17 },
+    label: "Outside the Cubao area",
+  };
+  const load = createLoader({
+    react, "react/jsx-runtime": runtime, "react-native": nativeMocks(),
+    "expo-router": { useRouter: () => ({ push: noop }) },
+    "@expo/vector-icons": { Ionicons: "Ionicons" },
+    "react-native-safe-area-context": { SafeAreaView: "SafeAreaView" },
+    "../../constants/images": { IMAGES: {} },
+    "../../styles/home.styles": { styles: {} },
+    "../../components/CommuteMap": { CommuteMap: "CommuteMap" },
+    "../../hooks/useMapLocation": { useMapLocation: () => ({ snapshot: current }) },
+  });
+  const Home = load(path.join(root, "src/app/(tabs)/home.jsx")).default;
+  const h = render(Home);
+  const map = () => nodes(h.result, (node) => node.type === "CommuteMap")[0];
+  assert.equal(map().props.followUser, true);
+  assert.notEqual(map().props.followHeading, true);
+  current = { ...current, position: { latitude: 14.591, longitude: 121.17 } };
+  h.flush();
+  assert.equal(map().props.userPosition.latitude, 14.591);
+  assert.equal(map().props.followUser, true);
+  h.dispose();
+});
+
+test("map focus starts a watch outside Cubao and retains it when crossing the boundary", () => {
+  const { react, render } = hookHarness();
+  let starts = 0, stops = 0;
+  const location = {
+    snapshot: { status: "outside-area", inServiceArea: false, position: { ...a } },
+    startTracking: (options) => { assert.equal(options.requestPermission, false); starts += 1; },
+    stopTracking: () => { stops += 1; },
+  };
+  const load = createLoader({
+    react,
+    "expo-router": { useFocusEffect: (fn) => react.useEffect(fn, [fn]) },
+    "../context/LocationContext": { useLocation: () => location },
+  });
+  const useMapLocation = load(path.join(root, "src/hooks/useMapLocation.js")).useMapLocation;
+  const h = render(useMapLocation);
+  assert.equal(starts, 1);
+  location.snapshot = { status: "ready", inServiceArea: true, position: { ...a } };
+  h.flush();
+  assert.equal(starts, 1);
+  assert.equal(stops, 0);
+  h.dispose();
+  assert.equal(stops, 1);
+});
+
 test(
   "Directions reopens a saved journey, calculates a fresh route, and saves a real favorite notification",
   async () => {
@@ -370,7 +423,8 @@ test(
       )[0];
 
     map().props.ref.current = {
-      animateCamera: (camera) => calls.push(camera),
+      setCamera: (camera) => calls.push(camera),
+      animateCamera: () => assert.fail("Android following must use direct camera updates"),
       fitToCoordinates: noop,
       animateToRegion: noop,
     };
@@ -529,7 +583,8 @@ test(
       )[0];
 
     map().props.ref.current = {
-      animateCamera: (value) => calls.push(value),
+      setCamera: (value) => calls.push(value),
+      animateCamera: () => assert.fail("Android following must use direct camera updates"),
       animateToRegion: noop,
       fitToCoordinates: noop,
     };

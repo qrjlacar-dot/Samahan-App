@@ -3,21 +3,53 @@ import { useCallback } from "react";
 import { LOCATION_STATUS } from "../constants/commute";
 import { useLocation } from "../context/LocationContext";
 
+const trackingOwners = new WeakMap();
+
 export function useMapLocation() {
   const location = useLocation();
-  const { snapshot, startTracking, stopTracking } = location;
+
+  const {
+    snapshot,
+    startTracking,
+    stopTracking,
+  } = location;
+
   const canTrack =
-    snapshot.status === LOCATION_STATUS.READY &&
-    snapshot.inServiceArea === true &&
+    [
+      LOCATION_STATUS.READY,
+      LOCATION_STATUS.OUTSIDE_AREA,
+    ].includes(snapshot.status) &&
     snapshot.position != null;
 
   useFocusEffect(
     useCallback(() => {
       if (!canTrack) return;
-      // Initial permission belongs to the provider. Screen focus never prompts.
+
+      let owners = trackingOwners.get(stopTracking);
+
+      if (!owners) {
+        owners = new Set();
+        trackingOwners.set(stopTracking, owners);
+      }
+
+      const owner = {};
+      owners.add(owner);
+
       startTracking({ requestPermission: false });
-      return () => stopTracking();
-    }, [canTrack, startTracking, stopTracking]),
+
+      return () => {
+        if (
+          owners.delete(owner) &&
+          owners.size === 0
+        ) {
+          stopTracking();
+        }
+      };
+    }, [
+      canTrack,
+      startTracking,
+      stopTracking,
+    ]),
   );
 
   return location;

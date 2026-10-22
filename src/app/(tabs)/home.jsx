@@ -74,10 +74,7 @@ export default function Home() {
     refreshLocation();
   };
 
-  const handleEmergencyCall = async (
-    title,
-    number,
-  ) => {
+  const handleEmergencyCall = async (title, number) => {
     try {
       await Linking.openURL(`tel:${number}`);
     } catch {
@@ -119,8 +116,7 @@ export default function Home() {
             interactive={false}
             userPosition={snapshot.position}
             followUser={
-              snapshot.status === LOCATION_STATUS.READY &&
-              snapshot.inServiceArea === true
+              hasFix && snapshot.position != null
             }
             followZoom={15}
           />
@@ -139,8 +135,7 @@ export default function Home() {
             <View
               style={[
                 styles.locationDot,
-                !hasFix &&
-                  styles.locationDotMuted,
+                !hasFix && styles.locationDotMuted,
               ]}
             />
 
@@ -240,4 +235,4 @@ export default function Home() {
       </View>
     </SafeAreaView>
   );
-}
+} 
