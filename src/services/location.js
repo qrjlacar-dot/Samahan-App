@@ -16,8 +16,8 @@ export const MAX_ACCEPTABLE_ACCURACY_METERS = 150;
 const DEFAULT_FIX_TIMEOUT_MS = 15000;
 const LABEL_REUSE_DISTANCE_METERS = 50;
 const WATCH_OPTIONS = {
-  distanceInterval: 10,
-  timeInterval: 5000,
+  distanceInterval: 2,
+  timeInterval: 1000,
 };
 
 let nativeOverride = null;

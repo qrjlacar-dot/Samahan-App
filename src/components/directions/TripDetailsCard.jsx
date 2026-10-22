@@ -1,3 +1,5 @@
+import { Linking } from "react-native";
+import FareSummary from "./FareSummary";
 import { Ionicons } from "@expo/vector-icons";
 import {
   Text,
@@ -18,6 +20,9 @@ export default function TripDetailsCard({
   onToggleFavorite,
   tripState = "idle",
   progress = null,
+  favoriteBusy = false,
+  favoriteError = "",
+  ticketType = "regular",
 }) {
   const summaryRoute = progress
     ? {
@@ -39,6 +44,9 @@ export default function TripDetailsCard({
         {route && onToggleFavorite && (
           <TouchableOpacity
             onPress={onToggleFavorite}
+            disabled={favoriteBusy}
+            accessibilityState={{ disabled: favoriteBusy }}
+            style={{ opacity: favoriteBusy ? 0.5 : 1 }}
             accessibilityLabel="Toggle favorite"
           >
             <Ionicons
@@ -58,11 +66,13 @@ export default function TripDetailsCard({
         <Text style={styles.searchHint}>
           {selectedMode === "walk"
             ? "Select your starting point and destination, then tap Find walking route."
-            : "Bus, jeepney, and train routes are not connected yet. Choose Walk to test a real route."}
+            : "Select both places to preview an included transport route. Bus and jeepney routes need confirmed data before they become available."}
         </Text>
       ) : (
         <>
           <TripSummaryBadge route={summaryRoute} />
+          {!!favoriteError && <Text style={styles.routeError}>{favoriteError}</Text>}
+          <FareSummary route={route} ticketType={ticketType} />
 
           {progress && (
             <Text
@@ -150,11 +160,10 @@ export default function TripDetailsCard({
           </View>
 
           <Text style={styles.searchHint}>
-            Walking times are estimates. Keep Location
-            turned on during your trip.
+            {route.preferredMode === "walk" ? "Walking times are estimates. Keep Location turned on during your trip." : "Transport preview only. Check service availability and the correct platform before travelling."}
           </Text>
 
-          {route.warnings.map((warning, index) => (
+          {(route.warnings ?? []).map((warning, index) => (
             <Text
               key={index}
               style={styles.searchHint}
@@ -163,6 +172,9 @@ export default function TripDetailsCard({
             </Text>
           ))}
 
+          {[...new Set(route.steps.map((step) => step.sourceUrl).filter(Boolean))].map((url) => (
+            <Text key={url} style={styles.searchHint} accessibilityRole="link" onPress={() => Linking.openURL(url).catch(() => {})}>Transport route source</Text>
+          ))}
           <ProviderAttribution />
         </>
       )}

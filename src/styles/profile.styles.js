@@ -3,6 +3,13 @@ import { COLORS } from "../constants/theme";
 import { scale, scaleFont } from "../constants/scale";
 
 export const styles = StyleSheet.create({
+  syncCard: {
+    width: "100%", backgroundColor: "#F8EFF4", borderRadius: scale(16),
+    padding: scale(16), marginBottom: scale(20), borderWidth: 1, borderColor: "#E6C3D5",
+  },
+  syncMessage: { color: COLORS.textDark, fontSize: scaleFont(14), lineHeight: scale(21) },
+  syncButton: { alignSelf: "flex-start", paddingVertical: scale(12), paddingHorizontal: scale(4) },
+  syncButtonText: { color: COLORS.pink, fontWeight: "600", fontSize: scaleFont(14) },
   container: {
     flex: 1,
     backgroundColor: COLORS.pageBg,

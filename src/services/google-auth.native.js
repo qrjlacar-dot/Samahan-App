@@ -3,6 +3,7 @@ import { Alert, Platform } from "react-native";
 import { finishGoogleSignIn } from "./account";
 
 let googleConfigured = false;
+let pendingSignIn = null;
 
 export function canSignInWithGoogle() {
   if (Platform.OS === "ios") {
@@ -26,7 +27,7 @@ export function canSignInWithGoogle() {
   return true;
 }
 
-export async function signInWithGoogle() {
+async function performGoogleSignIn() {
   if (!canSignInWithGoogle()) return null;
 
   const {
@@ -49,12 +50,18 @@ export async function signInWithGoogle() {
 
   if (isCancelledResponse(response)) return null;
 
-  if (!isSuccessResponse(response) || !response.data.idToken) {
-    throw new Error("Google sign-in did not finish.");
+  if (!isSuccessResponse(response) || !response.data?.idToken) {
+    throw Object.assign(new Error("Google sign-in did not return an ID token."), { code: "google/missing-token" });
   }
 
   return finishGoogleSignIn(
     response.data.idToken,
     response.data.user,
   );
+}
+
+export function signInWithGoogle() {
+  if (pendingSignIn) return pendingSignIn;
+  pendingSignIn = performGoogleSignIn().finally(() => { pendingSignIn = null; });
+  return pendingSignIn;
 }

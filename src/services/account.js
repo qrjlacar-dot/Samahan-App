@@ -71,11 +71,31 @@ export function accountErrorMessage(error) {
       "Check your internet connection and try again.",
     "auth/too-many-requests": "Too many attempts. Please try again later.",
     "auth/user-disabled": "This account has been disabled.",
+    "auth/account-exists-with-different-credential":
+      "This email uses another sign-in method. Sign in with that method first.",
+    "auth/operation-not-allowed":
+      "This sign-in method is not enabled. Enable it in Firebase Authentication.",
+    "google/missing-token":
+      "Google did not return a sign-in token. Check the Android Google sign-in setup, then try again.",
+    "DEVELOPER_ERROR":
+      "Google sign-in setup needs checking: Android package, signing SHA fingerprints, and Web OAuth client.",
+    "10":
+      "Google sign-in setup needs checking: Android package, signing SHA fingerprints, and Web OAuth client.",
+    "PLAY_SERVICES_NOT_AVAILABLE":
+      "Google Play Services is unavailable. Use a Google Play emulator or update Play Services on your phone.",
+    "IN_PROGRESS": "Google sign-in is already open. Finish that request first.",
     "permission-denied":
       "Your profile could not be saved. Please check the Firebase permissions.",
   };
 
   return messages[error?.code] || "Something went wrong. Please try again.";
+}
+
+export function profileErrorMessage(error) {
+  if (error?.code === "permission-denied" || error?.code === "firestore/permission-denied") {
+    return "You are signed in, but your profile permissions need attention. Tap Retry sync or contact support.";
+  }
+  return "You are signed in, but your profile could not sync. Check your connection, then tap Retry sync.";
 }
 
 async function ensureProfile(user, googlePhotoURL = "") {
@@ -99,6 +119,12 @@ async function ensureProfile(user, googlePhotoURL = "") {
   );
 }
 
+export async function syncAccountProfile() {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Sign in before syncing your profile.");
+  await ensureProfile(user);
+}
+
 export async function loginWithEmail(email, password) {
   const { user } = await signInWithEmailAndPassword(
     auth,
@@ -108,8 +134,8 @@ export async function loginWithEmail(email, password) {
 
   try {
     await ensureProfile(user);
-  } catch {
-    console.warn("Signed in, but the account profile could not be synced.");
+  } catch (error) {
+    console.warn("Account profile sync:", error?.code || "unavailable");
   }
 
   return user;
@@ -202,6 +228,9 @@ export async function signOutAccount() {
 }
 
 export async function finishGoogleSignIn(idToken, googleProfile = {}) {
+  if (typeof idToken !== "string" || !idToken.trim()) {
+    throw Object.assign(new Error("Google did not return an ID token."), { code: "google/missing-token" });
+  }
   const result = await signInWithCredential(
     auth,
     GoogleAuthProvider.credential(idToken),
@@ -209,7 +238,7 @@ export async function finishGoogleSignIn(idToken, googleProfile = {}) {
 
   const user = result.user;
   const details = getAdditionalUserInfo(result)?.profile || {};
-  const provider = user.providerData.find(
+  const provider = user.providerData?.find(
     (item) => item.providerId === "google.com",
   );
 
@@ -252,10 +281,8 @@ export async function finishGoogleSignIn(idToken, googleProfile = {}) {
 
   try {
     await ensureProfile(user, photoURL);
-  } catch {
-    console.warn(
-      "Google profile is available in Auth, but could not be saved in Firestore.",
-    );
+  } catch (error) {
+    console.warn("Google profile sync:", error?.code || "unavailable");
   }
 
   return user;

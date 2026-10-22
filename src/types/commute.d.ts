@@ -55,6 +55,8 @@ export interface RouteStep {
   alightingStop: string | null;
   stopCount: number | null;
   operatorId: string | null;
+  schematic?: boolean;
+  sourceUrl?: string;
 }
 
 export interface CommuteRoute {
@@ -68,6 +70,7 @@ export interface CommuteRoute {
   polyline: Coordinate[];
   steps: RouteStep[];
   source: "google" | "geoapify" | "verified-local";
+  sources?: Array<"google" | "geoapify" | "verified-local">;
   calculatedAt: string;
   warnings: string[];
 }

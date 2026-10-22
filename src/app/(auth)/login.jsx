@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -32,6 +32,7 @@ export default function LoginScreen() {
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const submitting = useRef(false);
 
   const handleLayout = (event) => {
     const height = event.nativeEvent.layout.height;
@@ -42,7 +43,7 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    if (loading) return;
+    if (submitting.current) return;
 
     const missingEmail = !email.trim();
     const missingPassword = !password;
@@ -53,6 +54,7 @@ export default function LoginScreen() {
     if (missingEmail || missingPassword) return;
 
     Keyboard.dismiss();
+    submitting.current = true;
     setLoading(true);
 
     try {
@@ -61,6 +63,7 @@ export default function LoginScreen() {
     } catch (error) {
       Alert.alert("Log In failed", accountErrorMessage(error));
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
   };

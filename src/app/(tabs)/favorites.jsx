@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { scale } from "../../constants/scale";
 import { COLORS } from "../../constants/theme";
 import { loadFavorites, removeFavorite } from "../../services/favorites";
-import { auth } from "../../services/firebase";
+import { useAuth } from "../../context/AuthContext";
 import { styles } from "../../styles/favorites.styles";
 
 const MODE_LABELS = { bus: "Bus", jeep: "Jeep", train: "Train", walk: "Walk" };
@@ -21,6 +21,8 @@ const TICKET_LABELS = { regular: "Regular fare", discounted: "Discounted fare" }
 
 export default function FavoritesScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const uid = user?.uid;
   const [favorites, setFavorites] = useState([]);
   const [status, setStatus] = useState("loading"); // loading | ready | error
   const [removingId, setRemovingId] = useState(null);
@@ -28,7 +30,6 @@ export default function FavoritesScreen() {
 
   const load = useCallback(async () => {
     const id = ++requestId.current;
-    const uid = auth.currentUser?.uid;
     if (!uid) {
       setFavorites([]);
       setStatus("ready");
@@ -44,7 +45,7 @@ export default function FavoritesScreen() {
       if (id !== requestId.current) return;
       setStatus("error");
     }
-  }, []);
+  }, [uid]);
 
   useFocusEffect(
     useCallback(() => {
@@ -79,8 +80,7 @@ export default function FavoritesScreen() {
           text: "Remove",
           style: "destructive",
           onPress: async () => {
-            const uid = auth.currentUser?.uid;
-            if (!uid || removingId) return;
+                    if (!uid || removingId) return;
             setRemovingId(favorite.id);
             try {
               await removeFavorite(uid, favorite.id);

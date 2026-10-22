@@ -26,7 +26,7 @@ import { styles } from "../../styles/profile.styles";
 
 export default function Profile() {
   const router = useRouter();
-  const { identity, isGoogle, user } = useAuth();
+  const { identity, isGoogle, user, profileError, profileSyncing, retryProfile } = useAuth();
   const uid = user?.uid;
 
   const [signingOut, setSigningOut] = useState(false);
@@ -131,6 +131,15 @@ export default function Profile() {
             </Text>
           )}
         </View>
+
+        {!!profileError && (
+          <View style={styles.syncCard}>
+            <Text style={styles.syncMessage} accessibilityLiveRegion="polite">{profileError}</Text>
+            <TouchableOpacity onPress={retryProfile} disabled={profileSyncing} accessibilityRole="button" style={styles.syncButton}>
+              {profileSyncing ? <ActivityIndicator color={COLORS.pink} /> : <Text style={styles.syncButtonText}>Retry sync</Text>}
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.menuCard}>
           <TouchableOpacity

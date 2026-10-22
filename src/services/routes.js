@@ -1,3 +1,4 @@
+import { getTransitRoutes } from "./transitRoutes";
 import { isWithinServiceArea } from "./location";
 
 const API_BASE = "https://api.geoapify.com/v1";
@@ -166,7 +167,7 @@ export async function searchPlaces(query, { signal } = {}) {
   });
 }
 
-export async function getRoutes(request, { signal } = {}) {
+export async function getWalkingRoutes(request, { signal } = {}) {
   const { origin, destination, preferredMode } = request ?? {};
 
   if (preferredMode !== "walk")
@@ -330,4 +331,9 @@ export async function getRoutes(request, { signal } = {}) {
       ],
     };
   });
+}
+
+export async function getRoutes(request, options = {}) {
+  if (request?.preferredMode === "walk") return getWalkingRoutes(request, options);
+  return getTransitRoutes(request, { ...options, getWalkingRoutes });
 }

@@ -20,10 +20,12 @@ export function formatDuration(seconds) {
 
 export default function TripSummaryBadge({ route }) {
   if (!route) return null;
+  const modes = route.actualModes?.length ? route.actualModes : [route.preferredMode || "walk"];
+  const labels = { walk: "Walk", train: "Train", jeep: "Jeep", bus: "Bus" };
   return (
     <View style={[styles.summaryBadgePill, { flexWrap: "wrap" }]}>
-      <TransportIcon mode="walk" size={14} color="#C76C9B" />
-      <Text style={styles.badgeText}>Walk</Text>
+      <TransportIcon mode={route.preferredMode} size={14} color="#C76C9B" imageStyle={{ width: 16, height: 16, resizeMode: "contain", tintColor: "#C76C9B" }} />
+      <Text style={styles.badgeText}>{modes.map((mode) => labels[mode] || mode).join(" + ")}</Text>
       <Text style={styles.badgeDivider}>|</Text>
       <Text style={styles.badgeDetailText}>
         {formatDistance(route.distanceMeters)}

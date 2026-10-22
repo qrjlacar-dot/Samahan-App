@@ -7,15 +7,17 @@ import { Alert, Image, Text, TouchableOpacity, View } from "react-native";
 import { scale } from "../../constants/scale";
 import { COLORS } from "../../constants/theme";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { signInWithGoogle } from "../../services/google-auth";
 import { accountErrorMessage } from "../../services/account";
 
 export default function GoogleConsentScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const submitting = useRef(false);
   const handleGoogleSignIn = async () => {
-    if (loading) return;
+    if (submitting.current) return;
+    submitting.current = true;
     setLoading(true);
     try {
       const user = await signInWithGoogle();
@@ -23,6 +25,7 @@ export default function GoogleConsentScreen() {
     } catch (error) {
       Alert.alert("Google Sign In failed", accountErrorMessage(error));
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
   };

@@ -5,7 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Platform, StyleSheet } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import MapView, {
   Circle,
   Marker,
@@ -25,38 +25,20 @@ const CUBAO_REGION = {
 };
 
 export function CommuteMap(props) {
-  const [session, setSession] = useState({
-    version: 0,
-    visible: false,
-  });
+  const [active, setActive] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      setSession((previous) => ({
-        version: previous.version + 1,
-        visible: true,
-      }));
-
-      return () => {
-        setSession((previous) => ({
-          ...previous,
-          visible: false,
-        }));
-      };
+      setActive(true);
+      return () => setActive(false);
     }, []),
   );
 
-  if (!session.visible) return null;
-
-  return (
-    <CommuteMapContent
-      key={session.version}
-      {...props}
-    />
-  );
+  return <CommuteMapContent {...props} active={active} />;
 }
 
 function CommuteMapContent({
+  active,
   style,
   interactive = true,
   userPosition = null,
@@ -89,7 +71,7 @@ function CommuteMapContent({
   const lastCameraTime = useRef(0);
   const wasFollowing = useRef(false);
 
-  followingRef.current = followUser;
+  followingRef.current = active && followUser;
 
   const latitude = userPosition?.latitude;
   const longitude = userPosition?.longitude;
@@ -100,7 +82,7 @@ function CommuteMapContent({
     Math.abs(latitude) <= 90 &&
     Math.abs(longitude) <= 180;
 
-  const heading = useDeviceHeading(hasUserPosition);
+  const heading = useDeviceHeading(active && hasUserPosition);
 
   const beamRadius =
     mapHeight > 0
@@ -115,7 +97,7 @@ function CommuteMapContent({
 
   const beam = headingBeam(
     userPosition,
-    heading,
+    Number.isFinite(heading) ? heading : 0,
     beamRadius,
   );
 
@@ -125,6 +107,7 @@ function CommuteMapContent({
 
   useEffect(() => {
     if (
+      !active ||
       !ready ||
       !laidOut ||
       !hasUserPosition ||
@@ -147,6 +130,7 @@ function CommuteMapContent({
       400,
     );
   }, [
+    active,
     ready,
     laidOut,
     hasUserPosition,
@@ -157,7 +141,12 @@ function CommuteMapContent({
   ]);
 
   useEffect(() => {
-    if (!ready || !laidOut || followingRef.current) {
+    if (
+      !active ||
+      !ready ||
+      !laidOut ||
+      followingRef.current
+    ) {
       return;
     }
 
@@ -168,15 +157,18 @@ function CommuteMapContent({
     ].filter(Boolean);
 
     if (coordinates.length > 1) {
-      mapRef.current?.fitToCoordinates(coordinates, {
-        edgePadding: {
-          top: 110,
-          right: 45,
-          bottom: contentBottomInset + 45,
-          left: 45,
+      mapRef.current?.fitToCoordinates(
+        coordinates,
+        {
+          edgePadding: {
+            top: 110,
+            right: 45,
+            bottom: contentBottomInset + 45,
+            left: 45,
+          },
+          animated: true,
         },
-        animated: true,
-      });
+      );
     } else if (coordinates.length === 1) {
       mapRef.current?.animateToRegion(
         {
@@ -188,6 +180,7 @@ function CommuteMapContent({
       );
     }
   }, [
+    active,
     ready,
     laidOut,
     origin,
@@ -198,114 +191,44 @@ function CommuteMapContent({
   ]);
 
   useEffect(() => {
+    if (!active) { wasFollowing.current = false; return; }
     if (!ready || !laidOut || !hasUserPosition) return;
-
-    const requested =
-      recenterRequest !== lastRecenter.current;
-
-    if (!followUser && !requested) {
-      wasFollowing.current = false;
-      return;
-    }
-
+    const requested = recenterRequest !== lastRecenter.current;
+    if (!followUser && !requested) { wasFollowing.current = false; return; }
     const previous = lastCamera.current;
-
-    const cameraHeading =
-      followUser && followHeading
-        ? Number.isFinite(heading)
-          ? heading
-          : previous?.heading ?? 0
-        : 0;
-
-    const headingDifference = previous
-      ? Math.abs(
-          ((cameraHeading - previous.heading + 540) % 360) - 180,
-        )
-      : 360;
-
-    const enteringFollow =
-      followUser && !wasFollowing.current;
-
-    const positionChanged =
-      !previous ||
-      previous.center.latitude !== latitude ||
-      previous.center.longitude !== longitude;
-
-    if (
-      !requested &&
-      !enteringFollow &&
-      !positionChanged &&
-      previous?.zoom === followZoom &&
-      headingDifference < 2
-    ) {
-      return;
-    }
-
-    const delay =
-      requested || enteringFollow
-        ? 0
-        : Math.max(
-            0,
-            120 - (Date.now() - lastCameraTime.current),
-          );
-
-    const moveCamera = () => {
+    const cameraHeading = followUser && followHeading
+      ? Number.isFinite(heading) ? heading : previous?.heading ?? 0
+      : 0;
+    const difference = previous ? Math.abs(((cameraHeading - previous.heading + 540) % 360) - 180) : 360;
+    const entering = followUser && !wasFollowing.current;
+    const moved = !previous || previous.center.latitude !== latitude || previous.center.longitude !== longitude;
+    if (!requested && !entering && !moved && previous?.zoom === followZoom && difference < 2) return;
+    const delay = requested || entering ? 0 : Math.max(0, 120 - (Date.now() - lastCameraTime.current));
+    const move = () => {
       if (!followingRef.current && !requested) return;
-
-      const camera = {
-        center: {
-          latitude,
-          longitude,
-        },
-        zoom: followZoom,
-        pitch: 0,
-        heading: cameraHeading,
-      };
-
-      mapRef.current?.animateCamera(camera, {
-        duration: requested || enteringFollow ? 350 : 120,
-      });
-
+      const camera = { center: { latitude, longitude }, zoom: followZoom, pitch: 0, heading: cameraHeading };
+      mapRef.current?.animateCamera(camera, { duration: requested || entering ? 350 : 120 });
       lastCamera.current = camera;
       lastCameraTime.current = Date.now();
       lastRecenter.current = recenterRequest;
       wasFollowing.current = followUser;
       centeredOnUser.current = true;
     };
-
-    if (delay === 0) {
-      moveCamera();
-      return;
-    }
-
-    const timer = setTimeout(moveCamera, delay);
+    if (!delay) { move(); return; }
+    const timer = setTimeout(move, delay);
     return () => clearTimeout(timer);
-  }, [
-    ready,
-    laidOut,
-    hasUserPosition,
-    latitude,
-    longitude,
-    heading,
-    followUser,
-    followHeading,
-    followZoom,
-    recenterRequest,
-  ]);
+  }, [active, ready, laidOut, hasUserPosition, latitude, longitude, heading, followUser, followHeading, followZoom, recenterRequest]);
 
   const showAttribution =
-    route?.source === "geoapify" ||
+    route?.source === "geoapify" || route?.sources?.includes("geoapify") ||
     origin?.source === "geoapify" ||
     destination?.source === "geoapify";
 
   return (
-    <>
+    <View collapsable={false} style={[StyleSheet.absoluteFillObject, style]}>
       <MapView
         ref={mapRef}
-        style={[
-          StyleSheet.absoluteFillObject,
-          style,
-        ]}
+        style={StyleSheet.absoluteFillObject}
         provider={
           Platform.OS === "android"
             ? PROVIDER_GOOGLE
@@ -314,12 +237,15 @@ function CommuteMapContent({
         initialRegion={CUBAO_REGION}
         onMapReady={() => setReady(true)}
         onLayout={({ nativeEvent }) => {
-          const { width, height } = nativeEvent.layout;
+          const { width, height } =
+            nativeEvent.layout;
 
           setLaidOut(width > 0 && height > 0);
           setMapHeight(height > 0 ? height : 0);
         }}
-        pointerEvents={interactive ? "auto" : "none"}
+        pointerEvents={
+          interactive ? "auto" : "none"
+        }
         zoomEnabled={interactive}
         scrollEnabled={interactive}
         rotateEnabled={interactive}
@@ -347,9 +273,10 @@ function CommuteMapContent({
       >
         {beam.length > 2 && (
           <Polygon
+            key="user-heading"
             coordinates={beam}
-            fillColor="rgba(199, 108, 155, 0.25)"
-            strokeColor="rgba(199, 108, 155, 0.08)"
+            fillColor={Number.isFinite(heading) ? "rgba(199, 108, 155, 0.25)" : "transparent"}
+            strokeColor={Number.isFinite(heading) ? "rgba(199, 108, 155, 0.08)" : "transparent"}
             strokeWidth={1}
             zIndex={5}
           />
@@ -357,6 +284,7 @@ function CommuteMapContent({
 
         {hasUserPosition && (
           <Circle
+            key="user-position"
             center={{
               latitude,
               longitude,
@@ -371,6 +299,7 @@ function CommuteMapContent({
 
         {origin && (
           <Marker
+            key="origin"
             coordinate={origin.coordinate}
             title={origin.name}
             description="Starting point"
@@ -380,6 +309,7 @@ function CommuteMapContent({
 
         {destination && (
           <Marker
+            key="destination"
             coordinate={destination.coordinate}
             title={destination.name}
             description="Destination"
@@ -387,13 +317,19 @@ function CommuteMapContent({
           />
         )}
 
-        {route?.polyline?.length > 1 && (
-          <Polyline
-            coordinates={route.polyline}
-            strokeColor="#C76C9B"
-            strokeWidth={5}
-          />
-        )}
+        {route?.preferredMode !== "walk" && route?.steps?.length
+          ? route.steps.filter((step) => step.polyline?.length > 1).map((step) => (
+              <Polyline
+                key={step.id}
+                coordinates={step.polyline}
+                strokeColor="#C76C9B"
+                strokeWidth={5}
+                lineDashPattern={step.schematic ? [12, 8] : undefined}
+              />
+            ))
+          : route?.polyline?.length > 1 && (
+              <Polyline key="walking-route" coordinates={route.polyline} strokeColor="#C76C9B" strokeWidth={5} />
+            )}
       </MapView>
 
       {showAttribution && (
@@ -408,6 +344,6 @@ function CommuteMapContent({
           }}
         />
       )}
-    </>
+    </View>
   );
 }

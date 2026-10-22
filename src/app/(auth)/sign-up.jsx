@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -24,9 +24,10 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const submitting = useRef(false);
 
   const handleSignUp = async () => {
-    if (loading) return;
+    if (submitting.current) return;
     if (!name.trim() || !email.trim() || !password || !confirmPassword) {
       Alert.alert("Missing details", "Please fill in all fields.");
       return;
@@ -43,6 +44,7 @@ export default function SignUpScreen() {
       Alert.alert("Passwords don't match", "Please check both passwords.");
       return;
     }
+    submitting.current = true;
     setLoading(true);
     try {
       await registerWithEmail(name, email, password);
@@ -55,6 +57,7 @@ export default function SignUpScreen() {
           : accountErrorMessage(error),
       );
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
   };

@@ -1,402 +1,195 @@
-import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  useFocusEffect,
-  useLocalSearchParams,
-  useRouter,
-} from "expo-router";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  BackHandler,
-  Dimensions,
-  Keyboard,
-  PanResponder,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+  ActivityIndicator, Alert, Animated, BackHandler, Dimensions, Keyboard,
+  PanResponder, ScrollView, Text, TouchableOpacity, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BackButton } from "../components/BackButton";
 import { CommuteMap } from "../components/CommuteMap";
 import LocationInputCard from "../components/directions/LocationInputCard";
+import MapControls from "../components/directions/MapControls";
 import ModeSelector from "../components/directions/ModeSelector";
 import TicketToggle from "../components/directions/TicketToggle";
 import TripDetailsCard from "../components/directions/TripDetailsCard";
 import WalkingNavigationBanner from "../components/directions/WalkingNavigationBanner";
-import { COLORS } from "../constants/theme";
+import { useAuth } from "../context/AuthContext";
+import { useJourneyFavorites } from "../hooks/useJourneyFavorites";
 import { useMapLocation } from "../hooks/useMapLocation";
-import { useWalkingProgress } from "../hooks/useWalkingProgress";
+import { useWalkingTrip } from "../hooks/useWalkingTrip";
+import { parseJourneyParam } from "../services/journeys";
 import { getRoutes } from "../services/routes";
-import { getTripIssue } from "../services/trips";
 import { styles } from "../styles/directions.styles";
-import {
-  styles as navigationStyles,
-} from "../styles/walking-navigation.styles";
+import { styles as navigationStyles } from "../styles/walking-navigation.styles";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
-const MAX_TRANSLATE = Math.max(0, SCREEN_HEIGHT - 90 - 90);
+const MAX_TRANSLATE = Math.max(0, SCREEN_HEIGHT - 180);
 
 export default function Directions() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const { user } = useAuth();
   const { snapshot, refreshLocation } = useMapLocation();
-  const { collapsed } = useLocalSearchParams();
-
-  const initialY = collapsed === "true" ? MAX_TRANSLATE : 0;
+  const journeyParam = Array.isArray(params.journey) ? params.journey[0] : params.journey;
+  const incoming = useMemo(() => parseJourneyParam(journeyParam), [journeyParam]);
+  const initialY = params.collapsed === "true" ? MAX_TRANSLATE : 0;
   const translateY = useRef(new Animated.Value(initialY)).current;
   const lastY = useRef(initialY);
   const dragStart = useRef(initialY);
-
-  const [isExpanded, setIsExpanded] = useState(collapsed !== "true");
-  const [selectedMode, setSelectedMode] = useState("walk");
-  const [ticketType, setTicketType] = useState("discounted");
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [locationText, setLocationText] = useState("");
-  const [destinationText, setDestinationText] = useState("");
-  const [origin, setOrigin] = useState(null);
-  const [destination, setDestination] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(params.collapsed !== "true");
+  const [selectedMode, setSelectedMode] = useState(incoming?.preferredMode || "walk");
+  const [ticketType, setTicketType] = useState(incoming?.ticketType || "discounted");
+  const [origin, setOrigin] = useState(incoming?.origin || null);
+  const [destination, setDestination] = useState(incoming?.destination || null);
+  const [locationText, setLocationText] = useState(incoming?.origin.name || "");
+  const [destinationText, setDestinationText] = useState(incoming?.destination.name || "");
   const [route, setRoute] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fitRequest, setFitRequest] = useState(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  const routeRequest = useRef(null);
-  const startRequest = useRef(0);
-
-  const [tripState, setTripState] = useState("idle");
-  const [startingTrip, setStartingTrip] = useState(false);
-  const [tripMessage, setTripMessage] = useState("");
-  const [following, setFollowing] = useState(false);
-  const [recenterRequest, setRecenterRequest] = useState(0);
   const [mapControlsOpen, setMapControlsOpen] = useState(false);
+  const request = useRef(null);
 
-  const tripOpen = tripState !== "idle";
-  const progress = useWalkingProgress(route, snapshot, tripState);
-  const showNavigation = tripOpen && progress !== null;
+  const journey = useMemo(() => origin && destination ? {
+    origin, destination, preferredMode: selectedMode, ticketType,
+  } : null, [origin, destination, selectedMode, ticketType]);
 
-  const liveIssue = tripOpen
-    ? getTripIssue(route, snapshot, {
-        requireOrigin: false,
-        requireFresh: false,
-      })
-    : null;
+  const trip = useWalkingTrip({
+    uid: user?.uid, journey, route, snapshot, refreshLocation, onRouteChange: setRoute,
+  });
+  const favorite = useJourneyFavorites(user?.uid, route ? journey : null);
+  const locked = trip.open || trip.busy;
+  const showNavigation = Boolean(trip.progress && (trip.open || trip.state === "arrived"));
 
-  useEffect(() => {
-    if (tripState === "active" && liveIssue) {
-      setTripState("paused");
-      setFollowing(false);
-      setTripMessage(liveIssue.message);
-    }
-  }, [
-    tripState,
-    liveIssue?.code,
-    liveIssue?.message,
-  ]);
-
-  const endTrip = useCallback(() => {
-    startRequest.current += 1;
-    setMapControlsOpen(false);
-    setTripState("idle");
-    setStartingTrip(false);
-    setFollowing(false);
-    setTripMessage("");
-  }, []);
-
-  const confirmEndTrip = useCallback(
-    (leaveScreen = false) => {
-      Alert.alert(
-        "End walking trip?",
-        "Your walking trip will end. You can start another trip from its starting point.",
-        [
-          {
-            text: "Keep trip",
-            style: "cancel",
-          },
-          {
-            text: "End trip",
-            style: "destructive",
-            onPress: () => {
-              endTrip();
-
-              if (leaveScreen) {
-                router.back();
-              }
-            },
-          },
-        ],
-      );
-    },
-    [endTrip, router],
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      if (!tripOpen && !mapControlsOpen) return;
-
-      const subscription = BackHandler.addEventListener(
-        "hardwareBackPress",
-        () => {
-          if (mapControlsOpen) {
-            setMapControlsOpen(false);
-            return true;
-          }
-
-          confirmEndTrip(true);
-          return true;
-        },
-      );
-
-      return () => subscription.remove();
-    }, [tripOpen, mapControlsOpen, confirmEndTrip]),
-  );
-
-  const startTrip = async () => {
-    if (!route || startingTrip) return;
-
-    const token = ++startRequest.current;
-    const requireOrigin = tripState === "idle";
-
-    setStartingTrip(true);
-    setTripMessage("");
-
-    try {
-      const fresh = await refreshLocation();
-
-      if (token !== startRequest.current) return;
-
-      const issue = getTripIssue(route, fresh, {
-        requireOrigin,
-      });
-
-      if (issue) {
-        setTripMessage(issue.message);
-        return;
-      }
-
-      setTripState("active");
-      setFollowing(true);
-      setRecenterRequest((value) => value + 1);
-      snapTo(MAX_TRANSLATE);
-    } catch {
-      if (token === startRequest.current) {
-        setTripMessage(
-          "Could not check your location. Please try again.",
-        );
-      }
-    } finally {
-      if (token === startRequest.current) {
-        setStartingTrip(false);
-      }
-    }
-  };
-
-  useEffect(() => {
-    const shown = Keyboard.addListener(
-      "keyboardDidShow",
-      (event) => setKeyboardHeight(event.endCoordinates.height),
-    );
-
-    const hidden = Keyboard.addListener(
-      "keyboardDidHide",
-      () => setKeyboardHeight(0),
-    );
-
-    return () => {
-      shown.remove();
-      hidden.remove();
-    };
-  }, []);
-
-  useEffect(() => {
-    const listener = translateY.addListener(({ value }) => {
-      lastY.current = value;
-    });
-
-    return () => {
-      translateY.removeListener(listener);
-      routeRequest.current?.abort();
-      routeRequest.current = null;
-      startRequest.current += 1;
-    };
-  }, [translateY]);
-
-  const snapTo = (toValue) => {
+  const snapTo = useCallback((toValue) => {
     setMapControlsOpen(false);
     setIsExpanded(toValue === 0);
-
     Animated.spring(translateY, {
-      toValue,
-      useNativeDriver: true,
-      bounciness: 0,
-      speed: 14,
+      toValue, useNativeDriver: true, bounciness: 0, speed: 14,
     }).start();
-  };
+  }, [translateY]);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-
-      onMoveShouldSetPanResponder: (_, gesture) =>
-        Math.abs(gesture.dy) > 3,
-
-      onPanResponderGrant: () => {
+  const confirmEndTrip = useCallback((leaveScreen = false) => {
+    Alert.alert("End walking trip?", "Your walking trip will end. You can start another trip from its starting point.", [
+      { text: "Keep trip", style: "cancel" },
+      { text: "End trip", style: "destructive", onPress: () => {
+        trip.end();
         setMapControlsOpen(false);
-        translateY.stopAnimation();
-        dragStart.current = lastY.current;
-      },
+        if (leaveScreen) router.back();
+      } },
+    ]);
+  }, [trip.end, router]);
 
-      onPanResponderMove: (_, gesture) => {
-        translateY.setValue(
-          Math.max(
-            0,
-            Math.min(
-              MAX_TRANSLATE,
-              dragStart.current + gesture.dy,
-            ),
-          ),
-        );
-      },
+  useFocusEffect(useCallback(() => {
+    if (!trip.open && !mapControlsOpen) return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (mapControlsOpen) setMapControlsOpen(false);
+      else confirmEndTrip(true);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [trip.open, mapControlsOpen, confirmEndTrip]));
 
-      onPanResponderRelease: (_, gesture) => {
-        const position = Math.max(
-          0,
-          Math.min(
-            MAX_TRANSLATE,
-            dragStart.current + gesture.dy,
-          ),
-        );
+  useEffect(() => {
+    const shown = Keyboard.addListener("keyboardDidShow", (event) => setKeyboardHeight(event.endCoordinates.height));
+    const hidden = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
+    return () => { shown.remove(); hidden.remove(); };
+  }, []);
 
-        if (gesture.dy > 50 || gesture.vy > 0.3) {
-          snapTo(MAX_TRANSLATE);
-        } else if (gesture.dy < -50 || gesture.vy < -0.3) {
-          snapTo(0);
-        } else {
-          snapTo(
-            position > MAX_TRANSLATE / 2 ? MAX_TRANSLATE : 0,
-          );
-        }
-      },
+  useEffect(() => {
+    const listener = translateY.addListener(({ value }) => { lastY.current = value; });
+    return () => { translateY.removeListener(listener); request.current?.abort(); request.current = null; };
+  }, [translateY]);
 
-      onPanResponderTerminate: () => snapTo(0),
-    }),
-  ).current;
+  const panResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 3,
+    onPanResponderGrant: () => {
+      setMapControlsOpen(false);
+      translateY.stopAnimation();
+      dragStart.current = lastY.current;
+    },
+    onPanResponderMove: (_, gesture) => translateY.setValue(Math.max(0, Math.min(MAX_TRANSLATE, dragStart.current + gesture.dy))),
+    onPanResponderRelease: (_, gesture) => {
+      const position = Math.max(0, Math.min(MAX_TRANSLATE, dragStart.current + gesture.dy));
+      if (gesture.dy > 50 || gesture.vy > 0.3) snapTo(MAX_TRANSLATE);
+      else if (gesture.dy < -50 || gesture.vy < -0.3) snapTo(0);
+      else snapTo(position > MAX_TRANSLATE / 2 ? MAX_TRANSLATE : 0);
+    },
+    onPanResponderTerminate: () => snapTo(0),
+  })).current;
 
-  const invalidateRoute = () => {
-    endTrip();
-    routeRequest.current?.abort();
-    routeRequest.current = null;
+  const invalidateRoute = useCallback(() => {
+    trip.end();
+    request.current?.abort();
+    request.current = null;
     setRoute(null);
     setLoading(false);
     setError("");
-    setIsFavorite(false);
-  };
+    setMapControlsOpen(false);
+  }, [trip.end]);
 
-  const editOrigin = (value) => {
-    if (tripOpen || startingTrip) return;
-
-    invalidateRoute();
-    setLocationText(value);
-    setOrigin(null);
-  };
-
-  const editDestination = (value) => {
-    if (tripOpen || startingTrip) return;
-
-    invalidateRoute();
-    setDestinationText(value);
-    setDestination(null);
-  };
-
-  const selectPlace = (field, place) => {
-    if (tripOpen || startingTrip) return;
-
-    invalidateRoute();
-
-    if (field === "origin") {
-      setOrigin(place);
-      setLocationText(place.name);
-    } else {
-      setDestination(place);
-      setDestinationText(place.name);
-    }
-  };
-
-  const swapLocations = () => {
-    if (tripOpen || startingTrip) return;
-
-    invalidateRoute();
-    setOrigin(destination);
-    setDestination(origin);
-    setLocationText(destinationText);
-    setDestinationText(locationText);
-  };
-
-  const findRoute = async () => {
-    if (tripOpen || startingTrip) return;
-
+  const calculateRoute = useCallback(async (choices) => {
+    if (!choices) return;
     Keyboard.dismiss();
-    routeRequest.current?.abort();
-
+    trip.end();
+    request.current?.abort();
     const controller = new AbortController();
-    routeRequest.current = controller;
-
+    request.current = controller;
     setLoading(true);
     setRoute(null);
     setError("");
-    setIsFavorite(false);
-
+    setMapControlsOpen(false);
     try {
-      const routes = await getRoutes(
-        {
-          origin,
-          destination,
-          preferredMode: selectedMode,
-        },
-        {
-          signal: controller.signal,
-        },
-      );
-
-      if (
-        routeRequest.current !== controller ||
-        controller.signal.aborted
-      ) {
-        return;
-      }
-
+      const routes = await getRoutes(choices, { signal: controller.signal });
+      if (request.current !== controller || controller.signal.aborted) return;
+      if (!routes[0]) throw new Error("No route was found for these places.");
       setRoute(routes[0]);
       setFitRequest((value) => value + 1);
       snapTo(MAX_TRANSLATE);
-    } catch (e) {
-      if (
-        routeRequest.current === controller &&
-        e.name !== "AbortError"
-      ) {
-        setError(e.message);
-      }
+    } catch (failure) {
+      if (request.current === controller && failure.name !== "AbortError") setError(failure.message);
     } finally {
-      if (routeRequest.current === controller) {
-        setLoading(false);
-        routeRequest.current = null;
-      }
+      if (request.current === controller) { setLoading(false); request.current = null; }
     }
-  };
+  }, [trip.end, snapTo]);
 
-  const canSearch =
-    !!origin &&
-    !!destination &&
-    selectedMode === "walk" &&
-    !loading &&
-    !tripOpen &&
-    !startingTrip;
+  useEffect(() => {
+    if (!journeyParam) return;
+    if (!incoming) { setError("This saved journey could not be opened. Select your places again."); return; }
+    setOrigin(incoming.origin);
+    setDestination(incoming.destination);
+    setLocationText(incoming.origin.name);
+    setDestinationText(incoming.destination.name);
+    setSelectedMode(incoming.preferredMode);
+    setTicketType(incoming.ticketType);
+    void calculateRoute(incoming);
+  }, [journeyParam, incoming, calculateRoute]);
+
+  const editOrigin = (value) => {
+    if (locked) return;
+    invalidateRoute(); setLocationText(value); setOrigin(null);
+  };
+  const editDestination = (value) => {
+    if (locked) return;
+    invalidateRoute(); setDestinationText(value); setDestination(null);
+  };
+  const selectPlace = (field, place) => {
+    if (locked) return;
+    invalidateRoute();
+    if (field === "origin") { setOrigin(place); setLocationText(place.name); }
+    else { setDestination(place); setDestinationText(place.name); }
+  };
+  const swapLocations = () => {
+    if (locked) return;
+    invalidateRoute();
+    setOrigin(destination); setDestination(origin);
+    setLocationText(destinationText); setDestinationText(locationText);
+  };
+  const startTrip = async () => { if (await trip.start()) snapTo(MAX_TRANSLATE); };
+  const canSearch = Boolean(journey && !loading && !locked);
+  const sheetTitle = trip.state === "active" ? "Trip active" : trip.state === "paused" ? "Trip paused" : trip.state === "rerouting" ? "Updating route" : trip.state === "arrived" ? "You have arrived" : "Directions";
 
   return (
     <View style={styles.container}>
@@ -404,361 +197,88 @@ export default function Directions() {
         <CommuteMap
           style={styles.map}
           userPosition={snapshot.position}
-          origin={origin}
+          origin={route?.origin ?? origin}
           destination={destination}
           route={route}
           fitRequest={fitRequest}
           contentBottomInset={110}
-          followUser={
-            tripState === "active" &&
-            following &&
-            !liveIssue
-          }
-          followHeading={tripState === "active"}
+          followUser={trip.following}
+          followHeading={trip.state === "active"}
           followZoom={18}
-          recenterRequest={recenterRequest}
+          recenterRequest={trip.recenterRequest}
           onMapPress={() => setMapControlsOpen(false)}
-          onUserPan={() => {
-            setFollowing(false);
-            setMapControlsOpen(false);
-          }}
+          onUserPan={() => { trip.stopFollowing(); setMapControlsOpen(false); }}
         />
       </View>
-
       <BackButton
         style={styles.backButton}
-        onPress={() =>
-          tripOpen ? confirmEndTrip(true) : router.back()
-        }
-        activeOpacity={0.8}
-        iconSize={22}
-        iconColor="#333333"
-        useDefaultStyle={false}
-        hitSlop={null}
+        onPress={() => trip.open ? confirmEndTrip(true) : router.back()}
+        activeOpacity={0.8} iconSize={22} iconColor="#333333" useDefaultStyle={false} hitSlop={null}
       />
-
       {!isExpanded && showNavigation && (
-        <View
-          pointerEvents="box-none"
-          style={navigationStyles.overlay}
-        >
-          <WalkingNavigationBanner
-            route={route}
-            progress={progress}
-            tripState={tripState}
-          />
+        <View pointerEvents="box-none" style={navigationStyles.overlay}>
+          <WalkingNavigationBanner route={route} progress={trip.progress} tripState={trip.state} />
         </View>
       )}
-
       {!isExpanded && (
-        <View
-          pointerEvents="box-none"
-          style={navigationStyles.controlsOverlay}
-        >
-          {(route || snapshot.position) && (
-            <View
-              pointerEvents="box-none"
-              style={navigationStyles.mapControls}
-            >
-              <TouchableOpacity
-                style={[
-                  navigationStyles.mapControlsToggle,
-                  mapControlsOpen &&
-                    navigationStyles.mapControlsToggleOpen,
-                ]}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel="Map controls"
-                accessibilityHint="Show or hide Fit route and Recenter"
-                accessibilityState={{ expanded: mapControlsOpen }}
-                onPress={() =>
-                  setMapControlsOpen((value) => !value)
-                }
-              >
-                <Ionicons
-                  name={
-                    mapControlsOpen ? "close" : "options-outline"
-                  }
-                  size={23}
-                  color={
-                    mapControlsOpen ? COLORS.cardBg : COLORS.pink
-                  }
-                />
-              </TouchableOpacity>
-
-              {mapControlsOpen && (
-                <View style={navigationStyles.mapControlsMenu}>
-                  {route && (
-                    <TouchableOpacity
-                      style={navigationStyles.mapControlAction}
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityLabel="Show entire route"
-                      onPress={() => {
-                        setMapControlsOpen(false);
-                        setFollowing(false);
-                        setFitRequest((value) => value + 1);
-                      }}
-                    >
-                      <Ionicons
-                        name="expand-outline"
-                        size={20}
-                        color={COLORS.pink}
-                      />
-
-                      <Text style={navigationStyles.mapControlText}>
-                        Fit route
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {route && snapshot.position && (
-                    <View
-                      style={navigationStyles.mapControlDivider}
-                    />
-                  )}
-
-                  {snapshot.position && (
-                    <TouchableOpacity
-                      style={navigationStyles.mapControlAction}
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityLabel="Recenter on your location"
-                      onPress={() => {
-                        setMapControlsOpen(false);
-                        setFollowing(
-                          tripState === "active" && !liveIssue,
-                        );
-                        setRecenterRequest((value) => value + 1);
-                      }}
-                    >
-                      <Ionicons
-                        name="locate-outline"
-                        size={20}
-                        color={COLORS.pink}
-                      />
-
-                      <Text style={navigationStyles.mapControlText}>
-                        Recenter
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
-            </View>
-          )}
-        </View>
+        <MapControls
+          expanded={mapControlsOpen}
+          onToggle={() => setMapControlsOpen((value) => !value)}
+          hasRoute={Boolean(route)}
+          hasPosition={Boolean(snapshot.position)}
+          onFit={() => { setMapControlsOpen(false); trip.stopFollowing(); setFitRequest((value) => value + 1); }}
+          onRecenter={() => { setMapControlsOpen(false); trip.recenter(); }}
+        />
       )}
-
-      <Animated.View
-        style={[
-          styles.bottomSheet,
-          {
-            height: Math.max(
-              200,
-              SCREEN_HEIGHT - 90 - keyboardHeight,
-            ),
-            transform: [{ translateY }],
-          },
-        ]}
-      >
+      <Animated.View style={[styles.bottomSheet, { height: Math.max(200, SCREEN_HEIGHT - 90 - keyboardHeight), transform: [{ translateY }] }]}>
         <View {...panResponder.panHandlers}>
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={() => {
-              Keyboard.dismiss();
-              snapTo(isExpanded ? MAX_TRANSLATE : 0);
-            }}
-            style={styles.dragHeader}
-          >
+          <TouchableOpacity activeOpacity={0.9} onPress={() => { Keyboard.dismiss(); snapTo(isExpanded ? MAX_TRANSLATE : 0); }} style={styles.dragHeader}>
             <View style={styles.dragHandle} />
-
-            <Text style={styles.sheetTitle}>
-              {tripState === "active"
-                ? "Trip active"
-                : tripState === "paused"
-                  ? "Trip paused"
-                  : "Directions"}
-            </Text>
+            <Text style={styles.sheetTitle}>{sheetTitle}</Text>
           </TouchableOpacity>
         </View>
-
-        <SafeAreaView
-          edges={["bottom"]}
-          style={styles.sheetContent}
-        >
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
-            contentContainerStyle={styles.scrollContainerStyle}
-          >
-            <View
-              pointerEvents={
-                tripOpen || startingTrip ? "none" : "auto"
-              }
-              style={{
-                opacity: tripOpen || startingTrip ? 0.6 : 1,
-              }}
-            >
-              <ModeSelector
-                selectedMode={selectedMode}
-                onSelectMode={(mode) => {
-                  if (tripOpen || startingTrip) return;
-
-                  invalidateRoute();
-                  setSelectedMode(mode);
-                }}
-              />
-
-              <LocationInputCard
-                locationText={locationText}
-                setLocationText={editOrigin}
-                destinationText={destinationText}
-                setDestinationText={editDestination}
-                onSwapLocations={swapLocations}
-                onSelectPlace={selectPlace}
-              />
+        <SafeAreaView edges={["bottom"]} style={styles.sheetContent}>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={styles.scrollContainerStyle}>
+            <View pointerEvents={locked ? "none" : "auto"} style={{ opacity: locked ? 0.6 : 1 }}>
+              <ModeSelector selectedMode={selectedMode} onSelectMode={(mode) => { if (!locked) { invalidateRoute(); setSelectedMode(mode); } }} />
+              <LocationInputCard locationText={locationText} setLocationText={editOrigin} destinationText={destinationText} setDestinationText={editDestination} onSwapLocations={swapLocations} onSelectPlace={selectPlace} />
             </View>
-
-            <TouchableOpacity
-              style={[
-                styles.findRouteButton,
-                !canSearch && styles.disabledButton,
-              ]}
-              disabled={!canSearch}
-              accessibilityRole="button"
-              accessibilityLabel="Find walking route"
-              onPress={findRoute}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.findRouteText}>
-                  Find walking route
-                </Text>
-              )}
+            <TouchableOpacity style={[styles.findRouteButton, !canSearch && styles.disabledButton]} disabled={!canSearch} accessibilityRole="button" accessibilityLabel={selectedMode === "walk" ? "Find walking route" : "Find transport route"} onPress={() => calculateRoute(journey)}>
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.findRouteText}>{selectedMode === "walk" ? "Find walking route" : "Find transport route"}</Text>}
             </TouchableOpacity>
-
-            {!!error && (
-              <Text
-                style={styles.routeError}
-                accessibilityLiveRegion="polite"
-              >
-                {error}
-              </Text>
-            )}
-
-            {route && (
-              <View
-                style={[
-                  styles.tripCard,
-                  navigationStyles.tripControlsCard,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.tripTitle,
-                    navigationStyles.tripControlsTitle,
-                  ]}
-                >
-                  {tripState === "active"
-                    ? "Walking trip active"
-                    : tripState === "paused"
-                      ? "Walking trip paused"
-                      : "Ready to walk?"}
+            {!!error && <Text style={styles.routeError} accessibilityLiveRegion="polite">{error}</Text>}
+            {route?.preferredMode === "walk" && (
+              <View style={[styles.tripCard, navigationStyles.tripControlsCard]}>
+                <Text style={[styles.tripTitle, navigationStyles.tripControlsTitle]}>{trip.state === "arrived" ? "You have arrived" : trip.state === "active" ? "Walking trip active" : trip.state === "paused" ? "Walking trip paused" : trip.state === "rerouting" ? "Updating walking route" : "Ready to walk?"}</Text>
+                <Text style={[styles.searchHint, navigationStyles.tripControlsDescription]}>
+                  {trip.state === "arrived" ? "Your walking trip is complete." : trip.state === "active" ? trip.following ? "The map is following your location and phone direction." : "Open Map controls, then tap Recenter to follow your location again." : trip.state === "paused" ? "Check your location, then resume or update the route." : trip.state === "rerouting" ? "Finding a new walking route from your current location." : "Start near the selected starting point. Keep SAMAHAN open during your trip."}
                 </Text>
-
-                <Text
-                  style={[
-                    styles.searchHint,
-                    navigationStyles.tripControlsDescription,
-                  ]}
-                >
-                  {tripState === "active"
-                    ? following
-                      ? "The map is following your location. End the trip before changing your route."
-                      : "Map following is paused. Open Map controls, then tap Recenter to follow your location again."
-                    : tripState === "paused"
-                      ? "Check your location, then tap Resume trip when you are ready."
-                      : "Start when you are near the selected starting point. Keep SAMAHAN open during your walking trip."}
-                </Text>
-
-                {!!tripMessage && (
-                  <Text
-                    style={styles.routeError}
-                    accessibilityLiveRegion="polite"
-                  >
-                    {tripMessage}
-                  </Text>
-                )}
-
-                {tripState !== "active" && (
-                  <TouchableOpacity
-                    style={[
-                      styles.findRouteButton,
-                      navigationStyles.tripControlButton,
-                      startingTrip && styles.disabledButton,
-                    ]}
-                    disabled={startingTrip}
-                    accessibilityRole="button"
-                    onPress={startTrip}
-                  >
-                    {startingTrip ? (
-                      <ActivityIndicator color="#FFFFFF" />
-                    ) : (
-                      <Text style={styles.findRouteText}>
-                        {tripState === "paused"
-                          ? "Resume trip"
-                          : "Start trip"}
-                      </Text>
-                    )}
+                {!!trip.message && <Text style={[styles.searchHint, { marginBottom: 12 }]} accessibilityLiveRegion="polite">{trip.message}</Text>}
+                {trip.state === "rerouting" && <ActivityIndicator color="#C76C9B" />}
+                {["idle", "paused"].includes(trip.state) && (
+                  <TouchableOpacity style={[styles.findRouteButton, navigationStyles.tripControlButton, trip.busy && styles.disabledButton]} disabled={trip.busy} accessibilityRole="button" onPress={startTrip}>
+                    {trip.busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.findRouteText}>{trip.state === "paused" ? "Resume trip" : "Start trip"}</Text>}
                   </TouchableOpacity>
                 )}
-
-                {tripOpen && (
-                  <TouchableOpacity
-                    style={[
-                      styles.findRouteButton,
-                      navigationStyles.tripControlButton,
-                      navigationStyles.endTripButton,
-                      tripState === "paused" &&
-                        navigationStyles.tripControlButtonSpacing,
-                    ]}
-                    accessibilityRole="button"
-                    onPress={() => confirmEndTrip()}
-                  >
-                    <Text
-                      style={[
-                        styles.findRouteText,
-                        navigationStyles.endTripText,
-                      ]}
-                    >
-                      End trip
-                    </Text>
+                {trip.state === "paused" && (
+                  <TouchableOpacity style={[styles.findRouteButton, navigationStyles.tripControlButton, navigationStyles.tripControlButtonSpacing]} disabled={trip.busy} accessibilityRole="button" onPress={() => trip.reroute()}>
+                    <Text style={styles.findRouteText}>Update route from my location</Text>
+                  </TouchableOpacity>
+                )}
+                {trip.open && (
+                  <TouchableOpacity style={[styles.findRouteButton, navigationStyles.tripControlButton, navigationStyles.endTripButton, trip.state === "paused" && navigationStyles.tripControlButtonSpacing]} accessibilityRole="button" onPress={() => confirmEndTrip()}>
+                    <Text style={[styles.findRouteText, navigationStyles.endTripText]}>End trip</Text>
+                  </TouchableOpacity>
+                )}
+                {trip.state === "arrived" && (
+                  <TouchableOpacity style={[styles.findRouteButton, navigationStyles.tripControlButton]} accessibilityRole="button" onPress={() => { invalidateRoute(); snapTo(0); }}>
+                    <Text style={styles.findRouteText}>Plan another trip</Text>
                   </TouchableOpacity>
                 )}
               </View>
             )}
-
-            {selectedMode !== "walk" && (
-              <TicketToggle
-                ticketType={ticketType}
-                onSelectTicketType={setTicketType}
-              />
-            )}
-
-            <TripDetailsCard
-              route={route}
-              tripState={tripState}
-              progress={progress}
-              selectedMode={selectedMode}
-              ticketType={ticketType}
-              isFavorite={isFavorite}
-              onToggleFavorite={() =>
-                setIsFavorite((value) => !value)
-              }
-            />
+            {selectedMode !== "walk" && <TicketToggle ticketType={ticketType} onSelectTicketType={setTicketType} />}
+            <TripDetailsCard route={route} selectedMode={selectedMode} ticketType={ticketType} tripState={trip.state} progress={trip.progress} isFavorite={favorite.isFavorite} favoriteBusy={favorite.busy} favoriteError={favorite.error} onToggleFavorite={user?.uid ? favorite.toggle : null} />
           </ScrollView>
         </SafeAreaView>
       </Animated.View>

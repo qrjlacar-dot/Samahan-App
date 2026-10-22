@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { TICKET_TYPES, TRAVEL_MODES } from "../constants/commute";
 
 const KEY_PREFIX = "samahan:favorites:v1:";
-const PLACE_SOURCES = ["google", "verified-local", "device"];
+const PLACE_SOURCES = ["google", "geoapify", "verified-local", "device"];
 
 function storageKey(uid) {
   if (typeof uid !== "string" || uid.trim() === "") {

@@ -361,3 +361,54 @@ test("emergency contacts remain separate across accounts and survive reloading",
   assert.equal((await api.loadContacts("account-b")).length, 0);
   assert.equal((await api.loadContacts("account-a"))[0].phone, "09123456789");
 });
+
+test("Google rejects an empty token before calling Firebase", async () => {
+  const { api, calls } = accountFixture(googleUser());
+  await assert.rejects(api.finishGoogleSignIn("  "), (error) => error.code === "google/missing-token");
+  assert.equal(calls.length, 0);
+});
+
+test("Google rapid taps share one native sign-in and one Firebase exchange", async () => {
+  const { api, calls } = googleFixture("android", "standalone", { type: "success", data: { idToken: "one-token" } });
+  const first = api.signInWithGoogle();
+  const second = api.signInWithGoogle();
+  assert.equal(first, second);
+  await Promise.all([first, second]);
+  assert.equal(calls.filter(([name]) => name === "nativeSignIn").length, 1);
+  assert.equal(calls.filter(([name]) => name === "firebase").length, 1);
+});
+
+test("Google missing-token responses allow another attempt", async () => {
+  const { api, calls } = googleFixture("android", "standalone", { type: "success", data: {} });
+  await assert.rejects(api.signInWithGoogle(), (error) => error.code === "google/missing-token");
+  await assert.rejects(api.signInWithGoogle(), (error) => error.code === "google/missing-token");
+  assert.equal(calls.filter(([name]) => name === "nativeSignIn").length, 2);
+  assert.equal(calls.filter(([name]) => name === "firebase").length, 0);
+});
+
+test("profile retry targets the signed-in account and preserves existing phone data", async () => {
+  const user = emailUser();
+  const { api, calls } = accountFixture(user, {
+    firestore: { getDoc: async () => ({ exists: () => true, data: () => ({ name: "Saved name", phone: "09123456789" }) }) },
+  });
+  await api.syncAccountProfile();
+  const save = calls.find(([name]) => name === "save");
+  assert.equal(save[1].uid, user.uid);
+  assert.equal(save[2].name, "Saved name");
+  assert.equal(save[2].phone, "09123456789");
+});
+
+test("signed-out profile retries never write to Firestore", async () => {
+  const { api, calls } = accountFixture(null);
+  await assert.rejects(api.syncAccountProfile());
+  assert.equal(calls.length, 0);
+});
+
+test("Google login remains authenticated when Firestore permissions deny the profile", async () => {
+  const user = googleUser();
+  const { api, calls } = accountFixture(user, {
+    firestore: { getDoc: async () => { throw Object.assign(new Error("denied"), { code: "permission-denied" }); } },
+  });
+  assert.equal(await api.finishGoogleSignIn("valid-token"), user);
+  assert.equal(calls.filter(([name]) => name === "signOut").length, 0);
+});

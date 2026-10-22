@@ -28,7 +28,7 @@ function AppNavigator() {
       <Stack.Screen name="onboarding3" />
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="directions" />
+        <Stack.Screen name="directions" options={{ animation: "none" }} />
         <Stack.Screen name="emergency-contacts" />
         <Stack.Screen name="profile/edit" />
         <Stack.Screen name="profile/reset" />
