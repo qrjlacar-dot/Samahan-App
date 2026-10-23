@@ -402,9 +402,9 @@ test("identical endpoints are rejected before calling Geoapify", async () => {
   );
 });
 
-test("passenger transit is not claimed as implemented", async () => {
+test("unlisted jeep service is not claimed as implemented", async () => {
   await rejected(
-    { ...request, preferredMode: "bus" },
+    { ...request, preferredMode: "jeep" },
     "unsupported-mode",
     0,
   );

@@ -82,8 +82,8 @@ test("reverse LRT preview changes direction and station order", async () => {
   assert.ok(ride.boardingStop.includes("Cubao"));
   assert.ok(ride.instruction.includes("Antipolo"));
 });
-test("unconfirmed bus and jeep routes are never invented", async () => {
-  for (const preferredMode of ["bus", "jeep"]) await assert.rejects(getTransitRoutes({ ...journey, preferredMode }, { getWalkingRoutes: walking }), (error) => error.code === "commute/unsupported-mode");
+test("unconfirmed jeep routes are never invented", async () => {
+  await assert.rejects(getTransitRoutes({ ...journey, preferredMode: "jeep" }, { getWalkingRoutes: walking }), (error) => error.code === "commute/unsupported-mode");
 });
 test("cancelled transit requests do not return a route", async () => {
   const controller = new AbortController(); controller.abort();

@@ -73,6 +73,8 @@ export interface CommuteRoute {
   sources?: Array<"google" | "geoapify" | "verified-local">;
   calculatedAt: string;
   warnings: string[];
+  sourceUrls?: string[];
+  preview?: boolean;
 }
 
 export interface FareItem {

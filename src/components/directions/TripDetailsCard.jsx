@@ -66,7 +66,9 @@ export default function TripDetailsCard({
         <Text style={styles.searchHint}>
           {selectedMode === "walk"
             ? "Select your starting point and destination, then tap Find walking route."
-            : "Select both places to preview an included transport route. Bus and jeepney routes need confirmed data before they become available."}
+            : selectedMode === "bus"
+              ? "Select both places to preview the Aurora bus toward Cubao. Confirm listed stops and service with the conductor. Destinations away from Aurora need a final walk."
+              : "Select both places to preview an included transport route. Jeepney routes need confirmed data before they become available."}
         </Text>
       ) : (
         <>
@@ -160,7 +162,7 @@ export default function TripDetailsCard({
           </View>
 
           <Text style={styles.searchHint}>
-            {route.preferredMode === "walk" ? "Walking times are estimates. Keep Location turned on during your trip." : "Transport preview only. Check service availability and the correct platform before travelling."}
+            {route.preferredMode === "walk" ? "Walking times are estimates. Keep Location turned on during your trip." : route.preferredMode === "train" ? "Transport preview only. Check service availability and the correct platform before travelling." : "Transport preview only. Confirm the loading area, destination sign, and drop-off before boarding."}
           </Text>
 
           {(route.warnings ?? []).map((warning, index) => (
@@ -172,7 +174,7 @@ export default function TripDetailsCard({
             </Text>
           ))}
 
-          {[...new Set(route.steps.map((step) => step.sourceUrl).filter(Boolean))].map((url) => (
+          {[...new Set([...(route.sourceUrls ?? []), ...route.steps.map((step) => step.sourceUrl)].filter(Boolean))].map((url) => (
             <Text key={url} style={styles.searchHint} accessibilityRole="link" onPress={() => Linking.openURL(url).catch(() => {})}>Transport route source</Text>
           ))}
           <ProviderAttribution />
