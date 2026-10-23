@@ -551,6 +551,7 @@ export default function Directions() {
       )}
 
       <Animated.View
+        collapsable={false}
         style={[
           styles.bottomSheet,
           {
@@ -586,6 +587,7 @@ export default function Directions() {
           style={styles.sheetContent}
         >
           <ScrollView
+            removeClippedSubviews={false}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets
@@ -594,6 +596,7 @@ export default function Directions() {
             }
           >
             <View
+              collapsable={false}
               pointerEvents={locked ? "none" : "auto"}
               style={{ opacity: locked ? 0.6 : 1 }}
             >

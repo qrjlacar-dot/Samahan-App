@@ -170,7 +170,7 @@ async function rejected(input, code, expectedCalls) {
 
 test("place search requests the configured demo rectangle", async () => {
   payload = { features: [] };
-  assert.deepEqual(await searchPlaces("Gateway"), []);
+  assert.deepEqual(await searchPlaces("Example Cafe"), []);
   const params = new URL(requestUrl).searchParams;
   assert.equal(params.get("filter"), `rect:${bounds.minLongitude},${bounds.minLatitude},${bounds.maxLongitude},${bounds.maxLatitude}|countrycode:ph`);
   assert.equal(nativeCalls, 0);
@@ -185,7 +185,7 @@ test("place search excludes outside and invalid results, keeping unique supporte
     feature("supported", origin.coordinate),
     feature("boundary", { latitude: bounds.minLatitude, longitude: bounds.minLongitude }),
   ] };
-  const results = await searchPlaces("Gateway");
+  const results = await searchPlaces("Example Cafe");
   assert.deepEqual(results.map((item) => item.id), ["supported", "boundary"]);
   assert.equal(nativeCalls, 0);
 });

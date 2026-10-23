@@ -68,11 +68,13 @@ export default function LocationInputCard({
     if (
       !activeField ||
       gettingCurrent ||
-      query.trim().length < 3 ||
+      query.trim().length < 2 ||
       query === "Current location"
     ) {
       return;
     }
+
+    setLoading(true);
 
     const token = ++searchToken.current;
     const controller = new AbortController();
@@ -82,8 +84,6 @@ export default function LocationInputCard({
     let cancelled = false;
 
     const timer = setTimeout(async () => {
-      setLoading(true);
-
       try {
         const results = await searchPlaces(query, {
           signal: controller.signal,
@@ -112,7 +112,7 @@ export default function LocationInputCard({
           setLoading(false);
         }
       }
-    }, 450);
+    }, 300);
 
     return () => {
       cancelled = true;

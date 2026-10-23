@@ -149,14 +149,15 @@ export async function searchPlaces(
   query,
   { signal } = {},
 ) {
-  let text = String(query ?? "").trim();
+  const text = String(query ?? "").trim();
 
-  if (text.length < 3) return [];
+  const cancelled = () =>
+    Object.assign(new Error("Request cancelled."), {
+      name: "AbortError",
+    });
 
-  if (/^tip\s*(qc|quezon city)?$/i.test(text)) {
-    text =
-      "Technological Institute of the Philippines Quezon City";
-  }
+  if (signal?.aborted) throw cancelled();
+  if (text.length < 2) return [];
 
   const bounds = SERVICE_AREA.bounds;
 
@@ -167,60 +168,97 @@ export async function searchPlaces(
     bounds.maxLatitude,
   ].join(",");
 
-  const data = await requestGeoapify(
-    "geocode/autocomplete",
-    {
-      text,
-      filter: `rect:${rectangle}|countrycode:ph`,
-      bias: "proximity:121.0603,14.6255",
-      limit: 5,
-      lang: "en",
-      format: "geojson",
-    },
-    signal,
-  );
+  const params = {
+    text,
+    filter: `rect:${rectangle}|countrycode:ph`,
+    bias: `proximity:${
+      (bounds.minLongitude + bounds.maxLongitude) / 2
+    },${(bounds.minLatitude + bounds.maxLatitude) / 2}`,
+    limit: 10,
+    lang: "en",
+    format: "geojson",
+  };
 
+  const responses = await Promise.allSettled([
+    requestGeoapify(
+      "geocode/autocomplete",
+      { ...params, type: "amenity" },
+      signal,
+    ),
+    requestGeoapify(
+      "geocode/autocomplete",
+      params,
+      signal,
+    ),
+  ]);
+
+  if (signal?.aborted) throw cancelled();
+
+  const results = [];
   const seen = new Set();
+  let failure = null;
 
-  return data.features.flatMap((feature) => {
-    const p = feature.properties ?? {};
+  for (const response of responses) {
+    if (response.status === "rejected") {
+      if (response.reason?.name === "AbortError") {
+        throw response.reason;
+      }
 
-    const point = {
-      latitude: p.lat,
-      longitude: p.lon,
-    };
-
-    if (
-      !isCoordinate(point) ||
-      !isWithinServiceArea(point)
-    ) {
-      return [];
+      failure ??= response.reason;
+      continue;
     }
 
-    const id = String(
-      p.place_id ??
-        `${point.latitude},${point.longitude}`,
-    );
+    for (const feature of response.value.features) {
+      const p = feature?.properties ?? {};
 
-    if (seen.has(id)) return [];
+      const coordinate = {
+        latitude: p.lat,
+        longitude: p.lon,
+      };
 
-    seen.add(id);
+      if (
+        !isCoordinate(coordinate) ||
+        !isWithinServiceArea(coordinate)
+      ) {
+        continue;
+      }
 
-    return [
-      {
+      const id = String(
+        p.place_id ??
+          `${coordinate.latitude},${coordinate.longitude}`,
+      );
+
+      const name =
+        p.name ||
+        p.address_line1 ||
+        p.formatted ||
+        text;
+
+      const key = [
+        String(name).trim().toLowerCase(),
+        coordinate.latitude,
+        coordinate.longitude,
+      ].join("|");
+
+      if (seen.has(id) || seen.has(key)) continue;
+
+      seen.add(id);
+      seen.add(key);
+
+      results.push({
         id,
-        name:
-          p.name ||
-          p.address_line1 ||
-          p.formatted ||
-          text,
+        name,
         address:
           p.formatted || p.address_line2 || "",
-        coordinate: point,
+        coordinate,
         source: "geoapify",
-      },
-    ];
-  });
+      });
+    }
+  }
+
+  if (!results.length && failure) throw failure;
+
+  return results.slice(0, 8);
 }
 
 export async function getWalkingRoutes(
