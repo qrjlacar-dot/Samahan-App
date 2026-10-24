@@ -1,4 +1,6 @@
 import { getTransitRoutes } from "./transitRoutes";
+import { getMultimodalTrainGuide } from "./trainPlanner";
+import { searchTrainPlaces } from "../data/trainNetwork";
 import { isWithinServiceArea } from "./location";
 import { SERVICE_AREA } from "../data/serviceArea";
 
@@ -297,7 +299,7 @@ export async function getWalkingRoutes(
   ) {
     throw routeError(
       "outside-service-area",
-      "Choose a starting point and destination inside our current Cubao demo area, including TIP QC and Anonas.",
+      "Choose a starting point and destination inside the Cubao area, including TIP QC and Anonas.",
     );
   }
 
@@ -377,7 +379,7 @@ export async function getWalkingRoutes(
     ) {
       throw routeError(
         "route-outside-service-area",
-        "This walking route leaves our current demo area. Try another route or choose closer places inside the area.",
+        "This walking route leaves the Cubao area. Try another route or choose closer places inside the area.",
       );
     }
 
@@ -472,8 +474,31 @@ export async function getRoutes(
     return getWalkingRoutes(request, options);
   }
 
+  if (request?.preferredMode === "train") {
+    if (options.signal?.aborted) {
+      throw Object.assign(new Error("Request cancelled."), { name: "AbortError" });
+    }
+    return [await getMultimodalTrainGuide(request, { ...options, getWalkingRoutes })];
+  }
+
   return getTransitRoutes(request, {
     ...options,
     getWalkingRoutes,
   });
+}
+
+// Keep the locally cached station list searchable alongside ordinary Cubao
+// places, so Train mode accepts the very same walking-service boundary.
+export async function searchTrainAndWalkingPlaces(query, options = {}) {
+  const stations = await searchTrainPlaces(query);
+  if (!String(query).trim()) return stations;
+  try {
+    const places = await searchPlaces(query, options);
+    const known = new Set(stations.map((item) => item.id));
+    return [...stations, ...places.filter((item) => !known.has(item.id))];
+  } catch (error) {
+    if (options.signal?.aborted || error.name === "AbortError") throw error;
+    if (stations.length) return stations; // cached stations still work offline
+    throw error;
+  }
 }

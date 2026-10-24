@@ -463,6 +463,18 @@ function CommuteMapContent({
           />
         )}
 
+        {route?.stationMarkers?.filter((station) =>
+          station.id !== origin?.id && station.id !== destination?.id,
+        ).map((station) => (
+          <Marker
+            key={`station:${station.id}`}
+            coordinate={station.coordinate}
+            title={station.name}
+            description={`${station.line} station · location approximate`}
+            pinColor="#654255"
+          />
+        ))}
+
         {route?.preferredMode !== "walk" &&
         route?.steps?.length
           ? route.steps
@@ -476,11 +488,7 @@ function CommuteMapContent({
                   coordinates={step.polyline}
                   strokeColor="#C76C9B"
                   strokeWidth={5}
-                  lineDashPattern={
-                    step.schematic
-                      ? [12, 8]
-                      : undefined
-                  }
+                  lineDashPattern={step.mode === "walk" ? [12, 8] : undefined}
                 />
               ))
           : route?.polyline?.length > 1 && (

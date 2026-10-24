@@ -8,10 +8,10 @@ function failure(code, message) {
 export async function getTransitRoutes(request, { signal, getWalkingRoutes, lines = TRANSIT_LINES } = {}) {
   const { origin, destination, preferredMode } = request ?? {};
   const available = lines.filter((line) => line.mode === preferredMode);
-  if (!available.length) throw failure("unsupported-mode", "No confirmed route for this transport mode is included yet. Choose Walk or the LRT-2 demo.");
+  if (!available.length) throw failure("unsupported-mode", "No confirmed route for this transport mode is included yet. Choose Walk or Train Lines.");
   if (!origin?.coordinate || !destination?.coordinate ||
       !isWithinServiceArea(origin.coordinate) || !isWithinServiceArea(destination.coordinate)) {
-    throw failure("invalid-places", "Select two places inside our demo area.");
+    throw failure("invalid-places", "Select two places inside the Cubao area.");
   }
   if (origin.coordinate.latitude === destination.coordinate.latitude &&
       origin.coordinate.longitude === destination.coordinate.longitude) {

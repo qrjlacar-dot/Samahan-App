@@ -4,7 +4,7 @@ export function isValidJourney(value) {
   const place = (item) => Boolean(
     item && typeof item.id === "string" && item.id.trim() &&
     typeof item.name === "string" && typeof item.address === "string" &&
-    ["google", "geoapify", "verified-local", "device"].includes(item.source) &&
+    ["google", "geoapify", "verified-local", "local-reference", "device"].includes(item.source) &&
     Number.isFinite(item.coordinate?.latitude) &&
     Number.isFinite(item.coordinate?.longitude) &&
     Math.abs(item.coordinate.latitude) <= 90 &&

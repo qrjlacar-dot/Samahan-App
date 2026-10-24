@@ -5,7 +5,7 @@ import { useLocation } from "../context/LocationContext";
 
 const trackingOwners = new WeakMap();
 
-export function useMapLocation() {
+export function useMapLocation({ trackWhenFocused = true } = {}) {
   const location = useLocation();
 
   const {
@@ -23,7 +23,7 @@ export function useMapLocation() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!canTrack) return;
+      if (!canTrack || !trackWhenFocused) return;
 
       let owners = trackingOwners.get(stopTracking);
 
@@ -47,6 +47,7 @@ export function useMapLocation() {
       };
     }, [
       canTrack,
+      trackWhenFocused,
       startTracking,
       stopTracking,
     ]),

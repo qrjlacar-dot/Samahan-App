@@ -3,12 +3,12 @@ import { styles } from "../../styles/walking-navigation.styles";
 import { formatDistance } from "./TripSummaryBadge";
 
 export default function WalkingNavigationBanner({ route, progress, tripState }) {
-  if (!route || !progress || !["active", "paused", "rerouting", "arrived"].includes(tripState)) return null;
+  if (!route || !progress || !["active", "paused", "off-route", "rerouting", "arrived"].includes(tripState)) return null;
   const current = route.steps[progress.stepIndex];
   const next = route.steps[progress.stepIndex + 1];
   if (!current) return null;
   const arrived = tripState === "arrived";
-  const label = arrived ? "Arrived" : tripState === "paused" ? "Paused · Last estimate" : tripState === "rerouting" ? "Updating route · Last estimate" : "Current step";
+  const label = arrived ? "Arrived" : tripState === "off-route" ? "Off route · Check your position" : tripState === "paused" ? "Paused · Last estimate" : tripState === "rerouting" ? "Updating route · Last estimate" : "Current step";
   return (
     <View pointerEvents="none" style={styles.banner}>
       <Text style={styles.label}>

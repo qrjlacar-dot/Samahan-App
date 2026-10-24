@@ -31,13 +31,16 @@ import MapControls from "../components/directions/MapControls";
 import ModeSelector from "../components/directions/ModeSelector";
 import TicketToggle from "../components/directions/TicketToggle";
 import TripDetailsCard from "../components/directions/TripDetailsCard";
+import TrainNavigationControls from "../components/directions/TrainNavigationControls";
 import WalkingNavigationBanner from "../components/directions/WalkingNavigationBanner";
 import { useAuth } from "../context/AuthContext";
 import { useJourneyFavorites } from "../hooks/useJourneyFavorites";
 import { useMapLocation } from "../hooks/useMapLocation";
 import { useWalkingTrip } from "../hooks/useWalkingTrip";
+import { useTrainTrip } from "../hooks/useTrainTrip";
+import { currentLocationPlace } from "../services/deviceLocation";
 import { parseJourneyParam } from "../services/journeys";
-import { getRoutes } from "../services/routes";
+import { getRoutes, searchTrainAndWalkingPlaces } from "../services/routes";
 import { styles } from "../styles/directions.styles";
 import { styles as navigationStyles } from "../styles/walking-navigation.styles";
 
@@ -48,11 +51,6 @@ export default function Directions() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { user } = useAuth();
-
-  const {
-    snapshot,
-    refreshLocation,
-  } = useMapLocation();
 
   const journeyParam = Array.isArray(params.journey)
     ? params.journey[0]
@@ -80,6 +78,13 @@ export default function Directions() {
   const [selectedMode, setSelectedMode] = useState(
     incoming?.preferredMode || "walk",
   );
+
+  const {
+    snapshot,
+    refreshLocation,
+    startTracking,
+    stopTracking,
+  } = useMapLocation({ trackWhenFocused: selectedMode !== "train" });
 
   const [ticketType, setTicketType] = useState(
     incoming?.ticketType || "discounted",
@@ -142,16 +147,38 @@ export default function Directions() {
     onRouteChange: setRoute,
   });
 
+  const trainTrip = useTrainTrip({
+    route,
+    snapshot,
+    refreshLocation,
+    startTracking,
+    stopTracking,
+    onRouteChange: setRoute,
+  });
+
+  const activeTrip = selectedMode === "train" ? trainTrip : trip;
+
+  useEffect(() => {
+    if (selectedMode !== "train" || origin || locationText.trim()) return;
+    if (!Number.isFinite(snapshot.position?.accuracyMeters) ||
+        snapshot.position.accuracyMeters > 70) return;
+    try {
+      const here = currentLocationPlace(snapshot);
+      setOrigin(here);
+      setLocationText(here.name);
+    } catch { /* GPS is optional; the user may search for a starting point. */ }
+  }, [selectedMode, snapshot, origin, locationText]);
+
   const favorite = useJourneyFavorites(
     user?.uid,
     route ? journey : null,
   );
 
-  const locked = trip.open || trip.busy;
+  const locked = trip.open || trip.busy || trainTrip.open;
 
   const showNavigation = Boolean(
-    trip.progress &&
-      (trip.open || trip.state === "arrived"),
+    activeTrip.progress &&
+      (activeTrip.open || activeTrip.state === "arrived"),
   );
 
   const snapTo = useCallback(
@@ -172,8 +199,8 @@ export default function Directions() {
   const confirmEndTrip = useCallback(
     (leaveScreen = false) => {
       Alert.alert(
-        "End walking trip?",
-        "Your walking trip will end. You can start another trip from its starting point.",
+        selectedMode === "train" ? "End train trip?" : "End walking trip?",
+        "Your navigation session will end. You can start another trip from its starting point.",
         [
           {
             text: "Keep trip",
@@ -184,6 +211,7 @@ export default function Directions() {
             style: "destructive",
             onPress: () => {
               trip.end();
+              trainTrip.end();
               setMapControlsOpen(false);
 
               if (leaveScreen) router.back();
@@ -192,12 +220,12 @@ export default function Directions() {
         ],
       );
     },
-    [trip.end, router],
+    [trip.end, trainTrip.end, router, selectedMode],
   );
 
   useFocusEffect(
     useCallback(() => {
-      if (!trip.open && !mapControlsOpen) return;
+      if (!activeTrip.open && !mapControlsOpen) return;
 
       const subscription = BackHandler.addEventListener(
         "hardwareBackPress",
@@ -214,7 +242,7 @@ export default function Directions() {
 
       return () => subscription.remove();
     }, [
-      trip.open,
+      activeTrip.open,
       mapControlsOpen,
       confirmEndTrip,
     ]),
@@ -309,6 +337,7 @@ export default function Directions() {
   const invalidateRoute = useCallback(() => {
     setBrowseFollowing(false);
     trip.end();
+    trainTrip.end();
 
     request.current?.abort();
     request.current = null;
@@ -317,7 +346,7 @@ export default function Directions() {
     setLoading(false);
     setError("");
     setMapControlsOpen(false);
-  }, [trip.end]);
+  }, [trip.end, trainTrip.end]);
 
   const calculateRoute = useCallback(
     async (choices) => {
@@ -326,6 +355,7 @@ export default function Directions() {
       setBrowseFollowing(false);
       Keyboard.dismiss();
       trip.end();
+      trainTrip.end();
 
       request.current?.abort();
 
@@ -372,7 +402,7 @@ export default function Directions() {
         }
       }
     },
-    [trip.end, snapTo],
+    [trip.end, trainTrip.end, snapTo],
   );
 
   useEffect(() => {
@@ -447,18 +477,25 @@ export default function Directions() {
     }
   };
 
+  const startTrainTrip = async () => {
+    if (await trainTrip.start()) {
+      setBrowseFollowing(false);
+      snapTo(MAX_TRANSLATE);
+    }
+  };
+
   const canSearch = Boolean(
     journey && !loading && !locked,
   );
 
   const sheetTitle =
-    trip.state === "active"
+    activeTrip.state === "active"
       ? "Trip active"
-      : trip.state === "paused"
+      : activeTrip.state === "paused" || activeTrip.state === "off-route"
         ? "Trip paused"
-        : trip.state === "rerouting"
+        : activeTrip.state === "rerouting"
           ? "Updating route"
-          : trip.state === "arrived"
+          : activeTrip.state === "arrived"
             ? "You have arrived"
             : "Directions";
 
@@ -474,21 +511,21 @@ export default function Directions() {
           fitRequest={fitRequest}
           contentBottomInset={110}
           followUser={
-            trip.open || trip.busy
-              ? trip.following
+            activeTrip.open || trip.busy
+              ? activeTrip.following
               : browseFollowing
           }
-          followHeading={trip.state === "active"}
+          followHeading={activeTrip.state === "active"}
           followZoom={18}
           recenterRequest={
-            trip.recenterRequest + browseRecenterRequest
+            activeTrip.recenterRequest + browseRecenterRequest
           }
           onMapPress={() =>
             setMapControlsOpen(false)
           }
           onUserPan={() => {
             setBrowseFollowing(false);
-            trip.stopFollowing();
+            activeTrip.stopFollowing();
             setMapControlsOpen(false);
           }}
         />
@@ -497,7 +534,7 @@ export default function Directions() {
       <BackButton
         style={styles.backButton}
         onPress={() =>
-          trip.open
+          activeTrip.open
             ? confirmEndTrip(true)
             : router.back()
         }
@@ -515,8 +552,8 @@ export default function Directions() {
         >
           <WalkingNavigationBanner
             route={route}
-            progress={trip.progress}
-            tripState={trip.state}
+            progress={activeTrip.progress}
+            tripState={activeTrip.state}
           />
         </View>
       )}
@@ -532,14 +569,14 @@ export default function Directions() {
           onFit={() => {
             setMapControlsOpen(false);
             setBrowseFollowing(false);
-            trip.stopFollowing();
+            activeTrip.stopFollowing();
             setFitRequest((value) => value + 1);
           }}
           onRecenter={() => {
             setMapControlsOpen(false);
 
-            if (trip.open || trip.busy) {
-              trip.recenter();
+            if (activeTrip.open || trip.busy) {
+              activeTrip.recenter();
             } else {
               setBrowseFollowing(true);
               setBrowseRecenterRequest(
@@ -603,9 +640,15 @@ export default function Directions() {
               <ModeSelector
                 selectedMode={selectedMode}
                 onSelectMode={(mode) => {
-                  if (!locked) {
+                  if (!locked && mode !== selectedMode) {
                     invalidateRoute();
                     setSelectedMode(mode);
+                    if (mode === "train" || selectedMode === "train") {
+                      setOrigin(null);
+                      setDestination(null);
+                      setLocationText("");
+                      setDestinationText("");
+                    }
                   }
                 }}
               />
@@ -617,6 +660,8 @@ export default function Directions() {
                 setDestinationText={editDestination}
                 onSwapLocations={swapLocations}
                 onSelectPlace={selectPlace}
+                searchPlacesFn={selectedMode === "train" ? searchTrainAndWalkingPlaces : undefined}
+                minQueryLength={selectedMode === "train" ? 0 : 2}
               />
             </View>
 
@@ -798,6 +843,14 @@ export default function Directions() {
               </View>
             )}
 
+            {route?.preferredMode === "train" && (
+              <TrainNavigationControls
+                trip={trainTrip}
+                onStart={startTrainTrip}
+                onEnd={() => confirmEndTrip()}
+              />
+            )}
+
             {selectedMode !== "walk" && (
               <TicketToggle
                 ticketType={ticketType}
@@ -809,8 +862,8 @@ export default function Directions() {
               route={route}
               selectedMode={selectedMode}
               ticketType={ticketType}
-              tripState={trip.state}
-              progress={trip.progress}
+              tripState={activeTrip.state}
+              progress={activeTrip.progress}
               isFavorite={favorite.isFavorite}
               favoriteBusy={favorite.busy}
               favoriteError={favorite.error}

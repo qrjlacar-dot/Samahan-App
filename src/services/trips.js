@@ -78,7 +78,7 @@ export function getTripIssue(
   ) {
     return issue(
       "route-area",
-      "Choose a route fully inside our current demo area.",
+      "Choose a route fully inside the Cubao area.",
     );
   }
 
@@ -88,7 +88,7 @@ export function getTripIssue(
   ) {
     return issue(
       "outside-area",
-      "Your location is outside our demo area. You can preview routes, but a trip can only run inside the area.",
+      "Your location is outside the Cubao area. You can preview routes, but a trip can only run inside the area.",
     );
   }
 

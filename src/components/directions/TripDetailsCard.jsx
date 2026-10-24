@@ -12,6 +12,7 @@ import TripSummaryBadge, {
   formatDuration,
 } from "./TripSummaryBadge";
 import ProviderAttribution from "./ProviderAttribution";
+import { TRAIN_RIDE_FARES, farePairKey } from "../../data/trainFares";
 
 export default function TripDetailsCard({
   route,
@@ -33,6 +34,13 @@ export default function TripDetailsCard({
           progress.remainingDurationSeconds,
       }
     : route;
+  const isTrain = route?.preferredMode === "train";
+  const selectedTrainFare = isTrain
+    ? route.steps.filter((step) => step.mode === "train").reduce((total, step) => {
+        const fare = TRAIN_RIDE_FARES[farePairKey(...(step.stationIds ?? []))];
+        return total + (fare?.[ticketType] ?? 0);
+      }, 0)
+    : null;
 
   return (
     <View style={styles.tripCard}>
@@ -73,6 +81,18 @@ export default function TripDetailsCard({
           <TripSummaryBadge route={summaryRoute} />
           {!!favoriteError && <Text style={styles.routeError}>{favoriteError}</Text>}
           <FareSummary route={route} ticketType={ticketType} />
+
+          {isTrain && route.trainStopCount > 0 && (
+            <Text style={styles.searchHint}>
+              {route.nextTrainDirection} · {route.trainStopCount} stop(s)
+            </Text>
+          )}
+
+          {isTrain && route.trainStopCount === 0 && (
+            <Text style={styles.searchHint}>
+              Both places are closest to the same train station, so this trip is walking-only. No train fare.
+            </Text>
+          )}
 
           {progress && (
             <Text
@@ -145,25 +165,31 @@ export default function TripDetailsCard({
                     {step.instruction}
                   </Text>
 
-                  <Text style={styles.stopSubtitle}>
-                    {formatDistance(
-                      step.distanceMeters,
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Text style={styles.stopSubtitle}>
+                      {formatDistance(step.distanceMeters)}
+                      {!isTrain && ` · ${formatDuration(step.durationSeconds)}`}
+                    </Text>
+                    {isTrain && step.mode === "train" && Number.isFinite(selectedTrainFare) && (
+                      <View style={styles.farePill}>
+                        <Text style={styles.fareText}>₱{selectedTrainFare.toFixed(2)}</Text>
+                      </View>
                     )}
-                    {" · "}
-                    {formatDuration(
-                      step.durationSeconds,
-                    )}
-                  </Text>
+                  </View>
                 </View>
               </View>
             ))}
           </View>
 
           <Text style={styles.searchHint}>
-            {route.preferredMode === "walk" ? "Walking times are estimates. Keep Location turned on during your trip." : "Transport preview only. Check service availability and the correct platform before travelling."}
+            {isTrain
+              ? "Approximate route. Check platform signs and current service before travelling."
+              : route.preferredMode === "walk"
+                ? "Walking times are estimates. Keep Location turned on during your trip."
+                : "Transport preview only. Check service availability and the correct platform before travelling."}
           </Text>
 
-          {(route.warnings ?? []).map((warning, index) => (
+          {!isTrain && (route.warnings ?? []).map((warning, index) => (
             <Text
               key={index}
               style={styles.searchHint}
@@ -172,7 +198,7 @@ export default function TripDetailsCard({
             </Text>
           ))}
 
-          {[...new Set(route.steps.map((step) => step.sourceUrl).filter(Boolean))].map((url) => (
+          {!isTrain && [...new Set(route.steps.map((step) => step.sourceUrl).filter(Boolean))].map((url) => (
             <Text key={url} style={styles.searchHint} accessibilityRole="link" onPress={() => Linking.openURL(url).catch(() => {})}>Transport route source</Text>
           ))}
           <ProviderAttribution />
