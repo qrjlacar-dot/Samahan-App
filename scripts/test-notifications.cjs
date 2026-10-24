@@ -365,3 +365,29 @@ test("event helpers respect the off switch", async () => {
   assert.equal(await api.notifyArrival("account-a", { tripId: "t1", journey: journey() }), null);
   assert.equal((await api.loadNotifications("account-a")).length, 0);
 });
+
+test("a new account should be asked once; answering or a saved choice stops it", async () => {
+  const api = loadApi(new Map());
+  assert.equal(await api.shouldAskNotificationPermission("account-a"), true);
+  await api.markNotificationPermissionAsked("account-a");
+  assert.equal(await api.shouldAskNotificationPermission("account-a"), false);
+  assert.equal(await api.shouldAskNotificationPermission("account-b"), true);
+});
+
+test("an account that already used the Profile switch is not asked", async () => {
+  const api = loadApi(new Map());
+  await api.setNotificationPreferences("account-a", { enabled: false });
+  assert.equal(await api.shouldAskNotificationPermission("account-a"), false);
+});
+
+test("the question is remembered after an app restart", async () => {
+  const storage = new Map();
+  await loadApi(storage).markNotificationPermissionAsked("account-a");
+  assert.equal(await loadApi(storage).shouldAskNotificationPermission("account-a"), false);
+});
+
+test("the question needs a signed-in account", async () => {
+  const api = loadApi(new Map());
+  await assert.rejects(() => api.shouldAskNotificationPermission(""));
+  await assert.rejects(() => api.markNotificationPermissionAsked(undefined));
+});

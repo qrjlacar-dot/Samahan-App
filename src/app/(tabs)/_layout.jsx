@@ -1,7 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useNotificationPrompt } from "../../hooks/useNotificationPrompt";
 
 export default function TabsLayout() {
+  useNotificationPrompt();
+
   return (
     <Tabs
       screenOptions={{
