@@ -209,11 +209,12 @@ test("TIP QC to Anonas preview works without device GPS", async () => {
   assert.equal(nativeCalls, 0);
 });
 
-test("draft boundary stays unverified and is explained", async () => {
+test("service boundary remains unchanged and walking guidance uses no demo wording", async () => {
   const [route] = await getRoutes(request);
 
   assert.equal(SERVICE_AREA.verified, false);
-  assert.match(route.warnings.join(" "), /draft/i);
+  assert.doesNotMatch(route.warnings.join(" "), /draft|demo/i);
+  assert.match(route.warnings.join(" "), /public walkways/);
 });
 
 test("all selected demo landmarks remain valid endpoints", async () => {
@@ -402,9 +403,9 @@ test("identical endpoints are rejected before calling Geoapify", async () => {
   );
 });
 
-test("passenger transit is not claimed as implemented", async () => {
+test("unlisted jeep services remain unavailable", async () => {
   await rejected(
-    { ...request, preferredMode: "bus" },
+    { ...request, preferredMode: "jeep" },
     "unsupported-mode",
     0,
   );
@@ -468,3 +469,4 @@ test("missing walking instructions are rejected", async () => {
   process.exitCode =
     passed === tests.length ? 0 : 1;
 })();
+

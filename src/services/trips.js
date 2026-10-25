@@ -62,11 +62,17 @@ export function getTripIssue(
 ) {
   const issue = (code, message) => ({ code, message });
 
-  if (!route || route.preferredMode !== "walk") {
+  if (!route || !["walk", "bus"].includes(route.preferredMode)) {
     return issue(
       "no-route",
-      "Find a walking route before starting your trip.",
+      "Find a walking or bus route before starting your trip.",
     );
+  }
+
+  if (route.preferredMode === "bus" && (!Array.isArray(route.steps) ||
+      route.steps.filter(step => step.mode === "bus").length !== 1 ||
+      route.steps.some(step => !["bus", "walk"].includes(step.mode)))) {
+    return issue("no-route", "Find a complete bus route before starting your trip.");
   }
 
   if (
@@ -78,7 +84,7 @@ export function getTripIssue(
   ) {
     return issue(
       "route-area",
-      "Choose a route fully inside our current demo area.",
+      "Choose a route fully inside our current service area.",
     );
   }
 
@@ -88,7 +94,7 @@ export function getTripIssue(
   ) {
     return issue(
       "outside-area",
-      "Your location is outside our demo area. You can preview routes, but a trip can only run inside the area.",
+      "Your location is outside our service area. You can preview routes, but a trip can only run inside the area.",
     );
   }
 
@@ -149,11 +155,11 @@ export function getTripIssue(
     distanceToRouteMeters(
       snapshot.position,
       route.polyline,
-    ) > ROUTE_DISTANCE_METERS
+    ) > (route.preferredMode === "bus" ? 150 : ROUTE_DISTANCE_METERS)
   ) {
     return issue(
       "far-from-route",
-      "Move closer to the walking route, then try again.",
+      route.preferredMode === "bus" ? "Move closer to the bus route, then try again." : "Move closer to the walking route, then try again.",
     );
   }
 

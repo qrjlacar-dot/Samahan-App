@@ -50,7 +50,7 @@ function CommuteMapContent({
   userPosition = null,
   origin = null,
   destination = null,
-  route = null,
+  route: selectedRoute = null,
   fitRequest = 0,
   contentBottomInset = 0,
   followUser = false,
@@ -60,6 +60,12 @@ function CommuteMapContent({
   onUserPan,
   onMapPress,
 }) {
+  // A late/old result must not draw a route for a different input selection.
+  const matches = (a, b) => !a || !b ||
+    a.coordinate?.latitude === b.coordinate?.latitude && a.coordinate?.longitude === b.coordinate?.longitude;
+  const route = matches(origin, selectedRoute?.origin) && matches(destination, selectedRoute?.destination)
+    ? selectedRoute : null;
+  const routeKey = `${route?.id ?? "none"}:${route?.calculatedAt ?? ""}`;
   const mapRef = useRef(null);
 
   const [ready, setReady] = useState(false);
@@ -463,6 +469,15 @@ function CommuteMapContent({
           />
         )}
 
+        {route?.steps?.filter(step => step.mode === "bus").flatMap(step => [
+          <Marker key={`${routeKey}:${step.id}:boarding`} coordinate={step.start}
+            title={step.boardingStop} description="Suggested boarding area. Use a permitted stop and check the signboard."
+            pinColor="#654255" />,
+          <Marker key={`${routeKey}:${step.id}:alighting`} coordinate={step.end}
+            title={step.alightingStop} description="Suggested drop-off area. Confirm the permitted stop with the conductor."
+            pinColor="#D78A38" />,
+        ])}
+
         {route?.preferredMode !== "walk" &&
         route?.steps?.length
           ? route.steps
@@ -472,20 +487,22 @@ function CommuteMapContent({
               )
               .map((step) => (
                 <Polyline
-                  key={step.id}
+                  key={`${routeKey}:${step.id}`}
                   coordinates={step.polyline}
                   strokeColor="#C76C9B"
                   strokeWidth={5}
                   lineDashPattern={
                     step.schematic
                       ? [12, 8]
-                      : undefined
+                      : route.preferredMode === "bus" && step.mode === "walk"
+                        ? [4, 6]
+                        : undefined
                   }
                 />
               ))
           : route?.polyline?.length > 1 && (
               <Polyline
-                key="walking-route"
+                key={`${routeKey}:walking-route`}
                 coordinates={route.polyline}
                 strokeColor="#C76C9B"
                 strokeWidth={5}

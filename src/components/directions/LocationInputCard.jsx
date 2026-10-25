@@ -87,6 +87,11 @@ export default function LocationInputCard({
       try {
         const results = await searchPlaces(query, {
           signal: controller.signal,
+          onResults: (partial) => {
+            if (!cancelled && token === searchToken.current && !controller.signal.aborted) {
+              setSuggestions(partial);
+            }
+          },
         });
 
         if (
@@ -112,7 +117,7 @@ export default function LocationInputCard({
           setLoading(false);
         }
       }
-    }, 300);
+    }, 180);
 
     return () => {
       cancelled = true;
@@ -294,10 +299,10 @@ export default function LocationInputCard({
         <View style={styles.searchResults}>
           <View style={styles.searchResultHeader}>
             <Text style={styles.searchHint}>
-              Select a{" "}
+              Type part of a place or street name, then choose a{" "}
               {activeField === "origin"
                 ? "starting point"
-                : "destination"} in the Cubao demo area
+                : "destination"} in Cubao or Anonas
             </Text>
 
             <TouchableOpacity
@@ -394,7 +399,7 @@ export default function LocationInputCard({
             !error &&
             !suggestions.length && (
               <Text style={styles.searchHint}>
-                No matching places in our Cubao demo area. Try another nearby place or street.
+                No matches found. Try part of the business name, its street, or a nearby landmark. Some places may not be listed in the map data.
               </Text>
             )}
 

@@ -24,16 +24,17 @@ export default function TripSummaryBadge({ route }) {
   const labels = { walk: "Walk", train: "Train", jeep: "Jeep", bus: "Bus" };
   return (
     <View style={[styles.summaryBadgePill, { flexWrap: "wrap" }]}>
-      <TransportIcon mode={route.preferredMode} size={14} color="#C76C9B" imageStyle={{ width: 16, height: 16, resizeMode: "contain", tintColor: "#C76C9B" }} />
+      <TransportIcon mode={modes.find(mode => mode !== "walk") || "walk"} size={14} color="#C76C9B" imageStyle={{ width: 16, height: 16, resizeMode: "contain", tintColor: "#C76C9B" }} />
       <Text style={styles.badgeText}>{modes.map((mode) => labels[mode] || mode).join(" + ")}</Text>
       <Text style={styles.badgeDivider}>|</Text>
       <Text style={styles.badgeDetailText}>
         {formatDistance(route.distanceMeters)}
       </Text>
-      <Text style={styles.badgeDivider}>|</Text>
-      <Text style={styles.badgeDetailText}>
-        {formatDuration(route.durationSeconds)}
-      </Text>
+      {Number.isFinite(route.durationSeconds) && <>
+        <Text style={styles.badgeDivider}>|</Text>
+        <Text style={styles.badgeDetailText}>{formatDuration(route.durationSeconds)}</Text>
+      </>}
     </View>
   );
 }
+

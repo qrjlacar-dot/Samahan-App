@@ -8,7 +8,7 @@ export default function FareSummary({ route, ticketType }) {
   const quote = result?.quote;
   return (
     <View style={styles.fareSummary}>
-      <Text style={styles.fareTitle}>{ticketType === "discounted" ? "Discounted fare estimate" : "Regular fare estimate"}</Text>
+      <Text style={styles.fareTitle}>{route.preferredMode === "bus" ? `Estimated bus fare · ${ticketType === "discounted" ? "Discounted" : "Regular"}` : ticketType === "discounted" ? "Discounted fare estimate" : "Regular fare estimate"}</Text>
       <Text style={styles.instruction}>
         {!result ? "Checking fare…" : result.error || (quote.complete ? `₱${quote.selectedTotal.toFixed(2)}` : "Fare not fully verified")}
       </Text>
@@ -19,7 +19,8 @@ export default function FareSummary({ route, ticketType }) {
           {item.sourceUrl && <Text accessibilityRole="link" style={styles.fareSource} onPress={() => Linking.openURL(item.sourceUrl).catch(() => {})}>Fare source</Text>}
         </View>
       ))}
-      <Text style={styles.label}>Confirm the current fare with the operator before travelling.</Text>
+      <Text style={styles.label}>{route.preferredMode === "bus" ? "Confirm the current fare and bus type with the conductor before boarding." : "Confirm the current fare with the operator before travelling."}</Text>
     </View>
   );
 }
+

@@ -701,3 +701,40 @@ test(
     wrapper.dispose();
   },
 );
+
+test('switching from a long bus route to a short walk removes bus lines and stop markers', () => {
+  const { react, runtime, render } = hookHarness();
+  const load = createLoader({ react, 'react/jsx-runtime': runtime,
+    'react-native': nativeMocks(),
+    'expo-router': { useFocusEffect: fn => react.useEffect(fn, [fn]) },
+    'react-native-maps': { __esModule: true, default: 'MapView', Marker: 'Marker', Polygon: 'Polygon', Polyline: 'Polyline', PROVIDER_GOOGLE: 'google' },
+    '../hooks/useDeviceHeading': { useDeviceHeading: () => null },
+  });
+  const Wrapper = load(path.join(root, 'src/components/CommuteMap.native.jsx')).CommuteMap;
+  const origin = { id: 'a', name: 'A', coordinate: { latitude: 14.6279, longitude: 121.064 } };
+  const gateway = { id: 'g', name: 'Gateway', coordinate: { latitude: 14.62299, longitude: 121.05308 } };
+  const tip = { id: 't', name: 'TIP', coordinate: { latitude: 14.6268, longitude: 121.0621 } };
+  const bus = { id: 'bus', calculatedAt: 'first', preferredMode: 'bus', origin, destination: gateway,
+    polyline: [origin.coordinate, gateway.coordinate], steps: [{ id: 'ride', mode: 'bus', start: origin.coordinate, end: gateway.coordinate, polyline: [origin.coordinate, gateway.coordinate] }] };
+  const walk = { id: 'walk', calculatedAt: 'second', preferredMode: 'walk', requestedMode: 'bus', origin, destination: tip,
+    polyline: [origin.coordinate, tip.coordinate], steps: [{ id: 'walk-step', mode: 'walk', polyline: [origin.coordinate, tip.coordinate] }] };
+  const wrapper = render(Wrapper, { origin, destination: gateway, route: bus });
+  const h = render(wrapper.result.type, wrapper.result.props);
+  const polylines = () => nodes(h.result, n => n.type === 'Polyline');
+  const markers = () => nodes(h.result, n => n.type === 'Marker');
+  assert.equal(polylines().length, 1); assert.equal(markers().length, 4);
+  const busKey = polylines()[0].key;
+  h.props = { ...h.props, destination: tip }; h.flush();
+  assert.equal(polylines().length, 0, 'old journey is hidden as soon as the input selection changes');
+  assert.equal(markers().length, 2);
+  h.props = { ...h.props, route: walk }; h.flush();
+  assert.equal(polylines().length, 1); assert.equal(markers().length, 2);
+  assert.equal(polylines()[0].props.coordinates, walk.polyline);
+  assert.notEqual(polylines()[0].key, busKey);
+  const walkKey = polylines()[0].key;
+  h.props = { ...h.props, route: { ...walk, calculatedAt: 'third' } }; h.flush();
+  assert.notEqual(polylines()[0].key, walkKey, 'recalculation gets a new native overlay identity');
+  h.props = { ...h.props, route: null }; h.flush();
+  assert.equal(polylines().length, 0);
+  h.dispose(); wrapper.dispose();
+});

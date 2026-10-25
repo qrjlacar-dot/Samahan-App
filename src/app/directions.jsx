@@ -35,9 +35,11 @@ import WalkingNavigationBanner from "../components/directions/WalkingNavigationB
 import { useAuth } from "../context/AuthContext";
 import { useJourneyFavorites } from "../hooks/useJourneyFavorites";
 import { useMapLocation } from "../hooks/useMapLocation";
+import { useBusTrip } from "../hooks/useBusTrip";
 import { useWalkingTrip } from "../hooks/useWalkingTrip";
 import { parseJourneyParam } from "../services/journeys";
 import { getRoutes } from "../services/routes";
+import { busReturnNotice } from "../services/busPresentation";
 import { styles } from "../styles/directions.styles";
 import { styles as navigationStyles } from "../styles/walking-navigation.styles";
 
@@ -102,6 +104,7 @@ export default function Directions() {
   );
 
   const [route, setRoute] = useState(null);
+  const returnNotice = busReturnNotice(route);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fitRequest, setFitRequest] = useState(0);
@@ -133,14 +136,25 @@ export default function Directions() {
     [origin, destination, selectedMode, ticketType],
   );
 
-  const trip = useWalkingTrip({
+  const walkingTrip = useWalkingTrip({
     uid: user?.uid,
     journey,
-    route,
+    route: route?.preferredMode === "walk" ? route : null,
     snapshot,
     refreshLocation,
     onRouteChange: setRoute,
   });
+
+  const busTrip = useBusTrip({
+    uid: user?.uid, journey,
+    route: route?.preferredMode === "bus" ? route : null,
+    snapshot, refreshLocation,
+  });
+  const trip = route?.preferredMode === "bus" ? busTrip : walkingTrip;
+  const endTrips = useCallback(() => {
+    walkingTrip.end();
+    busTrip.end();
+  }, [walkingTrip.end, busTrip.end]);
 
   const favorite = useJourneyFavorites(
     user?.uid,
@@ -172,8 +186,8 @@ export default function Directions() {
   const confirmEndTrip = useCallback(
     (leaveScreen = false) => {
       Alert.alert(
-        "End walking trip?",
-        "Your walking trip will end. You can start another trip from its starting point.",
+        "End trip?",
+        "Your trip will end. You can start another trip from its starting point.",
         [
           {
             text: "Keep trip",
@@ -183,7 +197,7 @@ export default function Directions() {
             text: "End trip",
             style: "destructive",
             onPress: () => {
-              trip.end();
+              endTrips();
               setMapControlsOpen(false);
 
               if (leaveScreen) router.back();
@@ -192,7 +206,7 @@ export default function Directions() {
         ],
       );
     },
-    [trip.end, router],
+    [endTrips, router],
   );
 
   useFocusEffect(
@@ -308,7 +322,7 @@ export default function Directions() {
 
   const invalidateRoute = useCallback(() => {
     setBrowseFollowing(false);
-    trip.end();
+    endTrips();
 
     request.current?.abort();
     request.current = null;
@@ -317,7 +331,7 @@ export default function Directions() {
     setLoading(false);
     setError("");
     setMapControlsOpen(false);
-  }, [trip.end]);
+  }, [endTrips]);
 
   const calculateRoute = useCallback(
     async (choices) => {
@@ -325,7 +339,7 @@ export default function Directions() {
 
       setBrowseFollowing(false);
       Keyboard.dismiss();
-      trip.end();
+      endTrips();
 
       request.current?.abort();
 
@@ -372,7 +386,7 @@ export default function Directions() {
         }
       }
     },
-    [trip.end, snapTo],
+    [endTrips, snapTo],
   );
 
   useEffect(() => {
@@ -517,6 +531,11 @@ export default function Directions() {
             route={route}
             progress={trip.progress}
             tripState={trip.state}
+            instruction={trip.instruction}
+            actionLabel={trip.actionLabel}
+            onAction={trip.confirmStage}
+            actionDisabled={trip.busy}
+            message={trip.message}
           />
         </View>
       )}
@@ -654,7 +673,7 @@ export default function Directions() {
               </Text>
             )}
 
-            {route?.preferredMode === "walk" && (
+            {["walk", "bus"].includes(route?.preferredMode) && (
               <View
                 style={[
                   styles.tripCard,
@@ -670,12 +689,12 @@ export default function Directions() {
                   {trip.state === "arrived"
                     ? "You have arrived"
                     : trip.state === "active"
-                      ? "Walking trip active"
+                      ? "Trip active"
                       : trip.state === "paused"
-                        ? "Walking trip paused"
+                        ? "Trip paused"
                         : trip.state === "rerouting"
                           ? "Updating walking route"
-                          : "Ready to walk?"}
+                          : route.preferredMode === "bus" ? "Ready for your bus trip?" : "Ready to walk?"}
                 </Text>
 
                 <Text
@@ -685,17 +704,36 @@ export default function Directions() {
                   ]}
                 >
                   {trip.state === "arrived"
-                    ? "Your walking trip is complete."
+                    ? "Your trip is complete."
                     : trip.state === "active"
                       ? trip.following
                         ? "The map is following your location and phone direction."
                         : "Open Map controls, then tap Recenter to follow your location again."
                       : trip.state === "paused"
-                        ? "Check your location, then resume or update the route."
+                        ? route.preferredMode === "bus"
+                          ? "Check your location and bus route, then resume. End this trip to choose a different route."
+                          : "Check your location, then resume or update the route."
                         : trip.state === "rerouting"
                           ? "Finding a new walking route from your current location."
                           : "Start near the selected starting point. Keep SAMAHAN open during your trip."}
                 </Text>
+
+                {!!returnNotice && trip.state !== "arrived" && (
+                  <Text accessibilityLiveRegion="polite" style={[
+                    styles.searchHint,
+                    { color: "#704658", backgroundColor: "#FAEDF3", borderRadius: 12, padding: 12, marginBottom: 12 },
+                  ]}>{returnNotice}</Text>
+                )}
+
+                {route.preferredMode === "bus" && trip.open && (
+                  <Text style={[styles.searchHint, { marginBottom: 12 }]}>{trip.instruction}</Text>
+                )}
+                {trip.actionLabel && (
+                  <TouchableOpacity style={[styles.findRouteButton, { marginBottom: 12 }]}
+                    accessibilityRole="button" disabled={trip.busy} onPress={trip.confirmStage}>
+                    <Text style={styles.findRouteText}>{trip.busy ? "Checking location…" : trip.actionLabel}</Text>
+                  </TouchableOpacity>
+                )}
 
                 {!!trip.message && (
                   <Text
@@ -738,7 +776,7 @@ export default function Directions() {
                   </TouchableOpacity>
                 )}
 
-                {trip.state === "paused" && (
+                {trip.state === "paused" && route.preferredMode === "walk" && (
                   <TouchableOpacity
                     style={[
                       styles.findRouteButton,
@@ -798,7 +836,7 @@ export default function Directions() {
               </View>
             )}
 
-            {selectedMode !== "walk" && (
+            {route && route.preferredMode !== "walk" && (
               <TicketToggle
                 ticketType={ticketType}
                 onSelectTicketType={setTicketType}
@@ -807,6 +845,7 @@ export default function Directions() {
 
             <TripDetailsCard
               route={route}
+              routeError={error}
               selectedMode={selectedMode}
               ticketType={ticketType}
               tripState={trip.state}

@@ -1,3 +1,4 @@
+import { busTimelineSteps, simplifyWalkingInstruction } from "../../services/busPresentation";
 import { Linking } from "react-native";
 import FareSummary from "./FareSummary";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,6 +16,7 @@ import ProviderAttribution from "./ProviderAttribution";
 
 export default function TripDetailsCard({
   route,
+  routeError = "",
   selectedMode,
   isFavorite,
   onToggleFavorite,
@@ -24,6 +26,12 @@ export default function TripDetailsCard({
   favoriteError = "",
   ticketType = "regular",
 }) {
+  if (!route && routeError) return null;
+  const busJourney = route?.preferredMode === "bus" || route?.requestedMode === "bus";
+  const timelineSteps = busJourney ? busTimelineSteps(route) : route?.steps ?? [];
+  const currentStep = busJourney && tripState === "arrived"
+    ? timelineSteps.length - 1 : progress?.stepIndex ?? 0;
+
   const summaryRoute = progress
     ? {
         ...route,
@@ -66,11 +74,14 @@ export default function TripDetailsCard({
         <Text style={styles.searchHint}>
           {selectedMode === "walk"
             ? "Select your starting point and destination, then tap Find walking route."
-            : "Select both places to preview an included transport route. Bus and jeepney routes need confirmed data before they become available."}
+            : selectedMode === "bus"
+              ? "Choose your places to find a bus route between Anonas and Cubao."
+              : "Select both places, then tap Find transport route to see the available journey."}
         </Text>
       ) : (
         <>
           <TripSummaryBadge route={summaryRoute} />
+          {!!route.recommendation && <Text style={[styles.searchHint, { marginBottom: 12 }]}>{route.recommendation}</Text>}
           {!!favoriteError && <Text style={styles.routeError}>{favoriteError}</Text>}
           <FareSummary route={route} ticketType={ticketType} />
 
@@ -81,12 +92,14 @@ export default function TripDetailsCard({
                 { marginBottom: 12 },
               ]}
             >
+              {busJourney && tripState === "arrived" ? "Trip complete" : <>
               {tripState === "paused"
                 ? "Paused · Last estimate"
                 : "Remaining"}
               {" · "}
               Step {progress.stepIndex + 1} of{" "}
               {progress.stepCount}
+              </>}
             </Text>
           )}
 
@@ -96,12 +109,12 @@ export default function TripDetailsCard({
           </Text>
 
           <View style={styles.timelineContainer}>
-            {route.steps.map((step, index) => (
+            {timelineSteps.map((step, index) => (
               <View
                 key={step.id}
                 style={styles.timelineItem}
               >
-                {index < route.steps.length - 1 && (
+                {index < timelineSteps.length - 1 && (
                   <View
                     style={
                       styles.verticalDottedConnector
@@ -114,8 +127,7 @@ export default function TripDetailsCard({
                 >
                   <View
                     style={
-                      index ===
-                      (progress?.stepIndex ?? 0)
+                      index === currentStep && (!step.displayArrival || tripState === "arrived")
                         ? styles.solidDot
                         : styles.hollowCircle
                     }
@@ -126,7 +138,7 @@ export default function TripDetailsCard({
                   style={[
                     styles.timelineContent,
                     progress &&
-                      index < progress.stepIndex && {
+                      index < currentStep && {
                         opacity: 0.45,
                       },
                   ]}
@@ -135,24 +147,22 @@ export default function TripDetailsCard({
                     style={[
                       styles.stopTitle,
                       progress &&
-                        index ===
-                          progress.stepIndex && {
+                        index === currentStep && (!step.displayArrival || tripState === "arrived") && {
                           color: "#C76C9B",
                           fontWeight: "700",
                         },
                     ]}
                   >
-                    {step.instruction}
+                    {step.mode === "walk" ? simplifyWalkingInstruction(step.instruction) : step.instruction}
                   </Text>
 
                   <Text style={styles.stopSubtitle}>
                     {formatDistance(
                       step.distanceMeters,
                     )}
-                    {" · "}
-                    {formatDuration(
-                      step.durationSeconds,
-                    )}
+                    {Number.isFinite(step.durationSeconds) && !step.displayArrival && <>
+                      {" · "}{formatDuration(step.durationSeconds)}
+                    </>}
                   </Text>
                 </View>
               </View>
@@ -160,7 +170,11 @@ export default function TripDetailsCard({
           </View>
 
           <Text style={styles.searchHint}>
-            {route.preferredMode === "walk" ? "Walking times are estimates. Keep Location turned on during your trip." : "Transport preview only. Check service availability and the correct platform before travelling."}
+            {route.preferredMode === "walk"
+              ? "Walking times are estimates. Keep Location turned on during your trip."
+              : route.preferredMode === "bus"
+                ? "Follow the boarding and drop-off instructions. Check the signboard and tell the conductor your stopping point before boarding."
+                : "Check service availability and the correct platform before travelling."}
           </Text>
 
           {(route.warnings ?? []).map((warning, index) => (

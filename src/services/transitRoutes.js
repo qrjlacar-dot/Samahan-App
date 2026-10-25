@@ -1,17 +1,19 @@
 import { TRANSIT_LINES } from "../data/transitCatalog";
+import { getBusRoutes } from "./busRoutes";
 import { distanceMeters, isWithinServiceArea } from "./location";
 
 function failure(code, message) {
   return Object.assign(new Error(message), { code: `commute/${code}` });
 }
 
-export async function getTransitRoutes(request, { signal, getWalkingRoutes, lines = TRANSIT_LINES } = {}) {
+export async function getTransitRoutes(request, { signal, getWalkingRoutes, getBusGeometry, lines = TRANSIT_LINES } = {}) {
+  if (request?.preferredMode === "bus") return getBusRoutes(request, { signal, getWalkingRoutes, getBusGeometry });
   const { origin, destination, preferredMode } = request ?? {};
   const available = lines.filter((line) => line.mode === preferredMode);
   if (!available.length) throw failure("unsupported-mode", "No confirmed route for this transport mode is included yet. Choose Walk or the LRT-2 demo.");
   if (!origin?.coordinate || !destination?.coordinate ||
       !isWithinServiceArea(origin.coordinate) || !isWithinServiceArea(destination.coordinate)) {
-    throw failure("invalid-places", "Select two places inside our demo area.");
+    throw failure("invalid-places", "Select two places inside our service area.");
   }
   if (origin.coordinate.latitude === destination.coordinate.latitude &&
       origin.coordinate.longitude === destination.coordinate.longitude) {
@@ -87,3 +89,4 @@ export async function getTransitRoutes(request, { signal, getWalkingRoutes, line
     ],
   }];
 }
+

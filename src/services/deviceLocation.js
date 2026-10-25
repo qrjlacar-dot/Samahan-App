@@ -9,7 +9,7 @@ export function currentLocationPlace(snapshot, now = Date.now()) {
     (position && !isWithinServiceArea(position))
   ) {
     throw new Error(
-      "Your current location is outside our demo area. Choose two places inside the area to preview a route.",
+      "Your current location is outside our service area. Choose two places inside the area to preview a route.",
     );
   }
 

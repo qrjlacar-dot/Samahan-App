@@ -51,6 +51,8 @@ export interface RouteStep {
   distanceMeters: number | null;
   durationSeconds: number | null;
   lineName: string | null;
+  placards?: string[];
+  direction?: "cubao-bound" | "anonas-bound";
   boardingStop: string | null;
   alightingStop: string | null;
   stopCount: number | null;
@@ -60,6 +62,8 @@ export interface RouteStep {
 }
 
 export interface CommuteRoute {
+  requestedMode?: TravelMode;
+  recommendation?: string;
   id: string;
   origin: Place;
   destination: Place;
@@ -152,3 +156,4 @@ export interface NavigationProgress {
   remainingDurationSeconds: number | null;
   lastPositionAt: string | null;
 }
+
