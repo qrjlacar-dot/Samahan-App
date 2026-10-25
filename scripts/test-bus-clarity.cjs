@@ -141,11 +141,12 @@ test('a walking-only recommendation in the Bus tab starts the walking navigator'
     'react-native-safe-area-context': { SafeAreaView: 'SafeArea' }, '../context/AuthContext': { useAuth: () => ({ user: { uid: 'account' } }) },
     '../hooks/useMapLocation': { useMapLocation: () => ({ snapshot: {}, refreshLocation: noop }) },
     '../hooks/useWalkingTrip': { useWalkingTrip: ({ route }) => { walkingRoute = route; return walkingTrip; } },
+    '../hooks/useTrainTrip': { useTrainTrip: () => idle },
     '../hooks/useBusTrip': { useBusTrip: ({ route }) => { busRoute = route; return busTrip; } },
     '../hooks/useJourneyFavorites': { useJourneyFavorites: () => ({}) }, '../services/routes': { getRoutes: async () => [walkRoute] },
     '../styles/directions.styles': { styles: {} }, '../styles/walking-navigation.styles': { styles: {} },
     '../components/BackButton': { BackButton: 'Back' }, '../components/CommuteMap': { CommuteMap: 'Map' },
-    ...Object.fromEntries(['LocationInputCard', 'MapControls', 'ModeSelector', 'TicketToggle', 'TripDetailsCard', 'WalkingNavigationBanner'].map(name => [`../components/directions/${name}`, { __esModule: true, default: name }])),
+    ...Object.fromEntries(['TrainNavigationControls', 'LocationInputCard', 'MapControls', 'ModeSelector', 'TicketToggle', 'TripDetailsCard', 'WalkingNavigationBanner'].map(name => [`../components/directions/${name}`, { __esModule: true, default: name }])),
   });
   const Screen = loader(path.join(root, 'src/app/directions.jsx')).default;
   const h = render(Screen); await new Promise(resolve => setImmediate(resolve)); h.flush();

@@ -4,7 +4,7 @@ import { formatDistance } from "./TripSummaryBadge";
 import { busReturnNotice, simplifyWalkingInstruction } from "../../services/busPresentation";
 
 export default function WalkingNavigationBanner({ route, progress, tripState, instruction, actionLabel, onAction, actionDisabled, message }) {
-  if (!route || !progress || !["active", "paused", "rerouting", "arrived"].includes(tripState)) return null;
+  if (!route || !progress || !["active", "paused", "off-route", "rerouting", "arrived"].includes(tripState)) return null;
   const current = route.steps[progress.stepIndex];
   const next = route.steps[progress.stepIndex + 1];
   if (!current) return null;
@@ -13,7 +13,7 @@ export default function WalkingNavigationBanner({ route, progress, tripState, in
   const currentInstruction = instruction || current.instruction;
   const displayInstruction = current.mode === "walk"
     ? simplifyWalkingInstruction(currentInstruction) : currentInstruction;
-  const label = arrived ? "Arrived" : tripState === "paused" ? "Paused · Last estimate" : tripState === "rerouting" ? "Updating route · Last estimate" : "Current step";
+  const label = arrived ? "Arrived" : tripState === "off-route" ? "Off route · Check your position" : tripState === "paused" ? "Paused · Last estimate" : tripState === "rerouting" ? "Updating route · Last estimate" : "Current step";
   return (
     <View pointerEvents={actionLabel ? "auto" : "none"} style={styles.banner}>
       <Text style={styles.label}>
@@ -41,4 +41,3 @@ export default function WalkingNavigationBanner({ route, progress, tripState, in
     </View>
   );
 }
-

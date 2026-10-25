@@ -30,6 +30,7 @@ import LocationInputCard from "../components/directions/LocationInputCard";
 import MapControls from "../components/directions/MapControls";
 import ModeSelector from "../components/directions/ModeSelector";
 import TicketToggle from "../components/directions/TicketToggle";
+import TrainNavigationControls from "../components/directions/TrainNavigationControls";
 import TripDetailsCard from "../components/directions/TripDetailsCard";
 import WalkingNavigationBanner from "../components/directions/WalkingNavigationBanner";
 import { useAuth } from "../context/AuthContext";
@@ -37,8 +38,10 @@ import { useJourneyFavorites } from "../hooks/useJourneyFavorites";
 import { useMapLocation } from "../hooks/useMapLocation";
 import { useBusTrip } from "../hooks/useBusTrip";
 import { useWalkingTrip } from "../hooks/useWalkingTrip";
+import { useTrainTrip } from "../hooks/useTrainTrip";
+import { currentLocationPlace } from "../services/deviceLocation";
 import { parseJourneyParam } from "../services/journeys";
-import { getRoutes } from "../services/routes";
+import { getRoutes, searchTrainAndWalkingPlaces } from "../services/routes";
 import { busReturnNotice } from "../services/busPresentation";
 import { styles } from "../styles/directions.styles";
 import { styles as navigationStyles } from "../styles/walking-navigation.styles";
@@ -50,11 +53,6 @@ export default function Directions() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { user } = useAuth();
-
-  const {
-    snapshot,
-    refreshLocation,
-  } = useMapLocation();
 
   const journeyParam = Array.isArray(params.journey)
     ? params.journey[0]
@@ -82,6 +80,9 @@ export default function Directions() {
   const [selectedMode, setSelectedMode] = useState(
     incoming?.preferredMode || "walk",
   );
+
+  const { snapshot, refreshLocation, startTracking, stopTracking } =
+    useMapLocation({ trackWhenFocused: selectedMode !== "train" });
 
   const [ticketType, setTicketType] = useState(
     incoming?.ticketType || "discounted",
@@ -150,18 +151,35 @@ export default function Directions() {
     route: route?.preferredMode === "bus" ? route : null,
     snapshot, refreshLocation,
   });
-  const trip = route?.preferredMode === "bus" ? busTrip : walkingTrip;
+  const trainTrip = useTrainTrip({
+    route: route?.preferredMode === "train" ? route : null,
+    snapshot, refreshLocation, startTracking, stopTracking,
+    onRouteChange: setRoute,
+  });
+  const trip = route?.preferredMode === "train" ? trainTrip
+    : route?.preferredMode === "bus" ? busTrip : walkingTrip;
   const endTrips = useCallback(() => {
     walkingTrip.end();
     busTrip.end();
-  }, [walkingTrip.end, busTrip.end]);
+    trainTrip.end();
+  }, [walkingTrip.end, busTrip.end, trainTrip.end]);
+
+  useEffect(() => {
+    if (selectedMode !== "train" || origin || locationText.trim()) return;
+    if (!Number.isFinite(snapshot.position?.accuracyMeters) || snapshot.position.accuracyMeters > 70) return;
+    try {
+      const here = currentLocationPlace(snapshot);
+      setOrigin(here);
+      setLocationText(here.name);
+    } catch { /* GPS is optional; a starting point can be searched. */ }
+  }, [selectedMode, snapshot, origin, locationText]);
 
   const favorite = useJourneyFavorites(
     user?.uid,
     route ? journey : null,
   );
 
-  const locked = trip.open || trip.busy;
+  const locked = walkingTrip.open || walkingTrip.busy || busTrip.open || busTrip.busy || trainTrip.open || trainTrip.busy;
 
   const showNavigation = Boolean(
     trip.progress &&
@@ -468,7 +486,7 @@ export default function Directions() {
   const sheetTitle =
     trip.state === "active"
       ? "Trip active"
-      : trip.state === "paused"
+      : (trip.state === "paused" || trip.state === "off-route")
         ? "Trip paused"
         : trip.state === "rerouting"
           ? "Updating route"
@@ -622,9 +640,13 @@ export default function Directions() {
               <ModeSelector
                 selectedMode={selectedMode}
                 onSelectMode={(mode) => {
-                  if (!locked) {
+                  if (!locked && mode !== selectedMode) {
                     invalidateRoute();
                     setSelectedMode(mode);
+                    if (mode === "train" || selectedMode === "train") {
+                      setOrigin(null); setDestination(null);
+                      setLocationText(""); setDestinationText("");
+                    }
                   }
                 }}
               />
@@ -636,6 +658,8 @@ export default function Directions() {
                 setDestinationText={editDestination}
                 onSwapLocations={swapLocations}
                 onSelectPlace={selectPlace}
+                searchPlacesFn={selectedMode === "train" ? searchTrainAndWalkingPlaces : undefined}
+                minQueryLength={selectedMode === "train" ? 0 : 2}
               />
             </View>
 
@@ -834,6 +858,10 @@ export default function Directions() {
                   </TouchableOpacity>
                 )}
               </View>
+            )}
+
+            {route?.preferredMode === "train" && (
+              <TrainNavigationControls trip={trainTrip} onStart={startTrip} onEnd={() => confirmEndTrip()} />
             )}
 
             {route && route.preferredMode !== "walk" && (

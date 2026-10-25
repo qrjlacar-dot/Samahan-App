@@ -478,6 +478,11 @@ function CommuteMapContent({
             pinColor="#D78A38" />,
         ])}
 
+        {route?.stationMarkers?.filter(station => station.id !== origin?.id && station.id !== destination?.id).map(station => (
+          <Marker key={`${routeKey}:station:${station.id}`} coordinate={station.coordinate}
+            title={station.name} description={`${station.line} station · location approximate`} pinColor="#654255" />
+        ))}
+
         {route?.preferredMode !== "walk" &&
         route?.steps?.length
           ? route.steps
@@ -494,7 +499,7 @@ function CommuteMapContent({
                   lineDashPattern={
                     step.schematic
                       ? [12, 8]
-                      : route.preferredMode === "bus" && step.mode === "walk"
+                      : ["bus", "train"].includes(route.preferredMode) && step.mode === "walk"
                         ? [4, 6]
                         : undefined
                   }

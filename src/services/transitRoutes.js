@@ -10,7 +10,7 @@ export async function getTransitRoutes(request, { signal, getWalkingRoutes, getB
   if (request?.preferredMode === "bus") return getBusRoutes(request, { signal, getWalkingRoutes, getBusGeometry });
   const { origin, destination, preferredMode } = request ?? {};
   const available = lines.filter((line) => line.mode === preferredMode);
-  if (!available.length) throw failure("unsupported-mode", "No confirmed route for this transport mode is included yet. Choose Walk or the LRT-2 demo.");
+  if (!available.length) throw failure("unsupported-mode", "No confirmed route for this transport mode is included yet. Choose Walk or Train Lines.");
   if (!origin?.coordinate || !destination?.coordinate ||
       !isWithinServiceArea(origin.coordinate) || !isWithinServiceArea(destination.coordinate)) {
     throw failure("invalid-places", "Select two places inside our service area.");
@@ -89,4 +89,3 @@ export async function getTransitRoutes(request, { signal, getWalkingRoutes, getB
     ],
   }];
 }
-

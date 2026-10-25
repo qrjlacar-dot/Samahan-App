@@ -7,6 +7,7 @@ import {
 
 const NOTIFICATIONS_PREFIX = "samahan:notifications:v1:";
 const PREFERENCES_PREFIX = "samahan:notification-preferences:v1:";
+const PROMPT_PREFIX = "samahan:notification-prompt:v1:";
 const PLACE_SOURCES = ["google", "geoapify", "verified-local", "device"];
 const MAX_STORED = 100; // oldest are dropped so storage cannot grow forever
 
@@ -21,6 +22,7 @@ function requireUid(uid) {
 
 const notificationsKey = (uid) => `${NOTIFICATIONS_PREFIX}${requireUid(uid)}`;
 const preferencesKey = (uid) => `${PREFERENCES_PREFIX}${requireUid(uid)}`;
+const promptKey = (uid) => `${PROMPT_PREFIX}${requireUid(uid)}`;
 
 // ---------- validation ----------
 
@@ -254,6 +256,32 @@ export async function setNotificationPreferences(uid, preferences) {
     await AsyncStorage.setItem(preferencesKey(uid), JSON.stringify(saved));
     return saved;
   });
+}
+
+// ---------- first-time "Allow notifications?" question ----------
+
+/**
+ * True only for an account that has never been asked and has never saved a
+ * notification choice (so people who already used the Profile switch are
+ * not asked again).
+ * @returns {Promise<boolean>}
+ */
+export async function shouldAskNotificationPermission(uid) {
+  requireUid(uid);
+  const [asked, savedChoice] = await Promise.all([
+    AsyncStorage.getItem(promptKey(uid)),
+    AsyncStorage.getItem(preferencesKey(uid)),
+  ]);
+  return asked === null && savedChoice === null;
+}
+
+/**
+ * Call right before the question is shown so it never appears twice.
+ * @returns {Promise<void>}
+ */
+export async function markNotificationPermissionAsked(uid) {
+  requireUid(uid);
+  await AsyncStorage.setItem(promptKey(uid), "asked");
 }
 
 // ---------- event helpers for Member 1 (arrival) and Member 3 (favorites) ----------

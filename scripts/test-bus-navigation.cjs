@@ -135,12 +135,13 @@ test('Directions opens a saved bus journey with Start trip, and changing modes d
     '../context/AuthContext': { useAuth: () => ({ user: { uid: 'account' } }) },
     '../hooks/useMapLocation': { useMapLocation: () => ({ snapshot: {}, refreshLocation: noop }) },
     '../hooks/useWalkingTrip': { useWalkingTrip: () => idle },
+    '../hooks/useTrainTrip': { useTrainTrip: () => idle },
     '../hooks/useBusTrip': { useBusTrip: () => idle },
     '../hooks/useJourneyFavorites': { useJourneyFavorites: () => ({}) },
     '../services/routes': { getRoutes: async input => { requests.push(input); return [displayedRoute]; } },
     '../styles/directions.styles': { styles: {} }, '../styles/walking-navigation.styles': { styles: {} },
     '../components/BackButton': { BackButton: 'Back' }, '../components/CommuteMap': { CommuteMap: 'Map' },
-    ...Object.fromEntries(['LocationInputCard', 'MapControls', 'ModeSelector', 'TicketToggle', 'TripDetailsCard', 'WalkingNavigationBanner'].map(name => [`../components/directions/${name}`, { __esModule: true, default: name }])),
+    ...Object.fromEntries(['TrainNavigationControls', 'LocationInputCard', 'MapControls', 'ModeSelector', 'TicketToggle', 'TripDetailsCard', 'WalkingNavigationBanner'].map(name => [`../components/directions/${name}`, { __esModule: true, default: name }])),
   });
   const nodes = (tree, type) => Array.isArray(tree) ? tree.flatMap(t => nodes(t, type)) : tree && typeof tree === 'object' ? [...(tree.type === type ? [tree] : []), ...nodes(tree.props?.children, type)] : [];
   const Screen = load(path.join(root, 'src/app/directions.jsx')).default;

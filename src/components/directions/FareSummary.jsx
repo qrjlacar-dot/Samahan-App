@@ -4,7 +4,9 @@ import { styles } from "../../styles/walking-navigation.styles";
 
 export default function FareSummary({ route, ticketType }) {
   const result = useFareQuote(route, ticketType);
-  if (!route || route.preferredMode === "walk") return null;
+  // Train fares are displayed beside the selected train ride in Trip Details.
+  // The complete fare matrix stays in src/data/trainFares.js for offline use.
+  if (!route || route.preferredMode === "walk" || route.preferredMode === "train") return null;
   const quote = result?.quote;
   return (
     <View style={styles.fareSummary}>

@@ -28,6 +28,9 @@ export default function LocationInputCard({
   setDestinationText,
   onSwapLocations,
   onSelectPlace,
+  searchPlacesFn = searchPlaces,
+  minQueryLength = 2,
+  mapCurrentLocation = currentLocationPlace,
 }) {
   const { refreshLocation } = useLocation();
 
@@ -68,7 +71,7 @@ export default function LocationInputCard({
     if (
       !activeField ||
       gettingCurrent ||
-      query.trim().length < 2 ||
+      query.trim().length < minQueryLength ||
       query === "Current location"
     ) {
       return;
@@ -85,7 +88,7 @@ export default function LocationInputCard({
 
     const timer = setTimeout(async () => {
       try {
-        const results = await searchPlaces(query, {
+        const results = await searchPlacesFn(query, {
           signal: controller.signal,
           onResults: (partial) => {
             if (!cancelled && token === searchToken.current && !controller.signal.aborted) {
@@ -129,6 +132,8 @@ export default function LocationInputCard({
     query,
     retry,
     gettingCurrent,
+    searchPlacesFn,
+    minQueryLength,
   ]);
 
   useEffect(
@@ -201,7 +206,7 @@ export default function LocationInputCard({
 
       if (token !== currentToken.current) return;
 
-      const place = currentLocationPlace(snapshot);
+      const place = mapCurrentLocation(snapshot);
 
       onSelectPlace(field, place);
       setActiveField(null);
@@ -420,7 +425,7 @@ export default function LocationInputCard({
             </TouchableOpacity>
           ))}
 
-          {!!suggestions.length && (
+          {!!suggestions.length && searchPlacesFn === searchPlaces && (
             <ProviderAttribution />
           )}
         </View>

@@ -1,3 +1,4 @@
+import { TRAIN_RIDE_FARES, farePairKey } from "../../data/trainFares";
 import { busTimelineSteps, simplifyWalkingInstruction } from "../../services/busPresentation";
 import { Linking } from "react-native";
 import FareSummary from "./FareSummary";
@@ -27,6 +28,7 @@ export default function TripDetailsCard({
   ticketType = "regular",
 }) {
   if (!route && routeError) return null;
+  const isTrain = route?.preferredMode === "train";
   const busJourney = route?.preferredMode === "bus" || route?.requestedMode === "bus";
   const timelineSteps = busJourney ? busTimelineSteps(route) : route?.steps ?? [];
   const currentStep = busJourney && tripState === "arrived"
@@ -85,6 +87,12 @@ export default function TripDetailsCard({
           {!!favoriteError && <Text style={styles.routeError}>{favoriteError}</Text>}
           <FareSummary route={route} ticketType={ticketType} />
 
+          {isTrain && route.trainStopCount > 0 && <Text style={styles.searchHint}>
+            {route.nextTrainDirection} · {route.trainStopCount} stop(s)
+          </Text>}
+          {isTrain && route.trainStopCount === 0 && <Text style={styles.searchHint}>
+            Both places are closest to the same train station, so this trip is walking-only. No train fare.
+          </Text>}
           {progress && (
             <Text
               style={[
@@ -160,24 +168,33 @@ export default function TripDetailsCard({
                     {formatDistance(
                       step.distanceMeters,
                     )}
-                    {Number.isFinite(step.durationSeconds) && !step.displayArrival && <>
+                    {!isTrain && Number.isFinite(step.durationSeconds) && !step.displayArrival && <>
                       {" · "}{formatDuration(step.durationSeconds)}
                     </>}
                   </Text>
+                  {isTrain && step.mode === "train" && (
+                    <View style={styles.farePill}>
+                      <Text style={styles.fareText}>{Number.isFinite(TRAIN_RIDE_FARES[farePairKey(...(step.stationIds ?? []))]?.[ticketType])
+                        ? `₱${TRAIN_RIDE_FARES[farePairKey(...(step.stationIds ?? []))][ticketType].toFixed(2)}`
+                        : "Confirm fare"}</Text>
+                    </View>
+                  )}
                 </View>
               </View>
             ))}
           </View>
 
           <Text style={styles.searchHint}>
-            {route.preferredMode === "walk"
+            {isTrain
+              ? "Approximate route. Check platform signs and current service before travelling."
+              : route.preferredMode === "walk"
               ? "Walking times are estimates. Keep Location turned on during your trip."
               : route.preferredMode === "bus"
                 ? "Follow the boarding and drop-off instructions. Check the signboard and tell the conductor your stopping point before boarding."
                 : "Check service availability and the correct platform before travelling."}
           </Text>
 
-          {(route.warnings ?? []).map((warning, index) => (
+          {(isTrain ? (route.warnings ?? []).filter(note => /walking leg|offline|unavailable/i.test(note)) : route.warnings ?? []).map((warning, index) => (
             <Text
               key={index}
               style={styles.searchHint}

@@ -30,11 +30,10 @@ export default function TripSummaryBadge({ route }) {
       <Text style={styles.badgeDetailText}>
         {formatDistance(route.distanceMeters)}
       </Text>
-      {Number.isFinite(route.durationSeconds) && <>
+      {route.preferredMode !== "train" && Number.isFinite(route.durationSeconds) && <>
         <Text style={styles.badgeDivider}>|</Text>
         <Text style={styles.badgeDetailText}>{formatDuration(route.durationSeconds)}</Text>
       </>}
     </View>
   );
 }
-

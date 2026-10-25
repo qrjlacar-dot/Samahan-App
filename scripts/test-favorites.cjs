@@ -281,3 +281,17 @@ test("failed storage while loading reports the error", async () => {
   });
   await assert.rejects(api.loadFavorites("account-a"), /read failed/);
 });
+
+test("favorites accept places found through Geoapify search", async () => {
+  const api = loadFavoritesApi(new Map());
+  const saved = await api.saveFavorite(
+    "account-a",
+    journey({
+      origin: { ...place("tip-qc"), source: "geoapify" },
+      destination: { ...place("gateway-mall"), source: "geoapify" },
+      preferredMode: "walk",
+    }),
+  );
+  assert.equal(saved.origin.source, "geoapify");
+  assert.equal((await api.loadFavorites("account-a")).length, 1);
+});

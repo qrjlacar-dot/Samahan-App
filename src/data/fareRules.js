@@ -13,25 +13,25 @@ export const FARE_RULES = Object.freeze({
     mode: "jeep",
     label: "Traditional jeepney",
     regular: 14,
-    discounted: null, // 20% discount confirmed; exact amount/rounding not verified
+    discounted: 12, // commonly charged; official 20% fare is 11.25 (11.20 rounded to 0.25)
     firstKmMeters: 4000,
     perKmAfter: 2,
     sourceUrl:
-      "https://www.sunstar.com.ph/manila/ltfrb-sets-new-puv-rates-effective-sept-28",
-    verifiedAt: "2026-10-18",
-    note: "Minimum fare for the first 4 km.",
+      "https://baguiocityguide.com/new-jeepney-taxi-bus-and-tnvs-fares-start-september-28/",
+    verifiedAt: "2026-10-23",
+    note: "Minimum fare for the first 4 km. Discounted fare is the whole-peso amount commonly charged; the official 20% fare is 11.25.",
   },
   "jeep-modern": {
     mode: "jeep",
     label: "Modern jeepney",
     regular: 17,
-    discounted: null,
+    discounted: 14, // commonly charged; official 20% fare is 13.50 (13.60 rounded to 0.25)
     firstKmMeters: 4000,
     perKmAfter: 2.4,
     sourceUrl:
-      "https://www.sunstar.com.ph/manila/ltfrb-sets-new-puv-rates-effective-sept-28",
-    verifiedAt: "2026-10-18",
-    note: "Minimum fare for the first 4 km.",
+      "https://baguiocityguide.com/new-jeepney-taxi-bus-and-tnvs-fares-start-september-28/",
+    verifiedAt: "2026-10-23",
+    note: "Minimum fare for the first 4 km. Discounted fare is the whole-peso amount commonly charged; the official 20% fare is 13.50.",
   },
   "bus-city-ordinary": {
     mode: "bus",
@@ -61,7 +61,7 @@ export const FARE_RULES = Object.freeze({
     effectiveAt: "2026-09-28",
     note: "Air-conditioned city bus minimum fare for the first 5 km. The published discounted fare is ₱14.50 for eligible students, senior citizens, and PWDs with valid ID. Source: PTV's report of the LTFRB fare guides, effective September 28, 2026.",
   },
-   "train-lrt2": {
+  "train-lrt2": {
     mode: "train",
     label: "LRT-2",
     regular: null,
@@ -79,12 +79,12 @@ export const FARE_RULES = Object.freeze({
     stationFares: {
       "anonas|araneta-center-cubao": {
         regular: 8,
-        discounted: 8, // riders already entitled to 50% get no extra cut
-        note: "Single journey ticket with the 50% LRT-2 discount in effect since March 23, 2026 (Beep card: about 7.50). The standard fare is 15 if the discount ends. Seen at the station on 2026-10-19.",
+        discounted: 8,
+        note: "LRTA 2026 Annex A/B single-journey fare, effective March 23, 2026. The 50% blanket discount already applies to everyone; no additional 20% discount. Beep stored-value fare: PHP 7.50.",
       },
     },
-    sourceUrl: "https://www.lrta.gov.ph/tickets-and-fares/",
-    verifiedAt: "2026-10-19",
+    sourceUrl: "https://www.lrta.gov.ph/wp-content/uploads/2026/03/Citizens-Charter-Handbook-2026-2nd-Edition.pdf",
+    verifiedAt: "2026-10-24",
     note: "Only listed station pairs have a fare. Others are not verified.",
   },
 });

@@ -81,13 +81,27 @@ test("modern jeep is 17 and ordinary city bus is 15", async () => {
 
 test("an unverified discounted fare stays unknown, not guessed", async () => {
   const quote = await quoteFare(
-    route(step({ mode: "jeep", operatorId: "jeep-traditional", distanceMeters: 3000 })),
+    route(step({ mode: "bus", operatorId: "unknown-bus", distanceMeters: 3000 })),
     "discounted",
   );
-  assert.equal(quote.regularTotal, 14);
+  assert.equal(quote.regularTotal, null);
   assert.equal(quote.discountedTotal, null);
   assert.equal(quote.selectedTotal, null);
   assert.equal(quote.complete, false);
+});
+
+test("jeepney discounted fares use the whole-peso amounts commonly charged", async () => {
+  const traditional = await quoteFare(
+    route(step({ mode: "jeep", operatorId: "jeep-traditional", distanceMeters: 1000 })),
+    "discounted",
+  );
+  const modern = await quoteFare(
+    route(step({ mode: "jeep", operatorId: "jeep-modern", distanceMeters: 1000 })),
+    "discounted",
+  );
+  assert.equal(traditional.selectedTotal, 12);
+  assert.equal(modern.selectedTotal, 14);
+  assert.equal(traditional.complete, true);
 });
 
 test("a ride beyond the minimum-fare distance is unknown", async () => {
