@@ -7,7 +7,10 @@ import {
 import { currentLocationPlace } from "../services/deviceLocation";
 import { getRoutes } from "../services/routes";
 import { getTripIssue } from "../services/trips";
-import { notifyArrival } from "../services/notifications";
+import {
+  notifyTripCancelled,
+  notifyTripCompleted,
+} from "../services/notifications";
 import {
   updateArrival,
   updateOffRoute,
@@ -375,7 +378,7 @@ export function useWalkingTrip({
       setFollowing(false);
       setMessage("You have arrived at your destination.");
 
-      void notifyArrival(finished.uid, {
+      void notifyTripCompleted(finished.uid, {
         tripId: finished.tripId,
         journey: finished.journey,
       });
@@ -390,6 +393,23 @@ export function useWalkingTrip({
     reroute,
     following,
   ]);
+
+  // Only after the user confirmed they want to stop. A trip that already
+  // finished (notified) is never recorded as cancelled.
+  const cancel = useCallback(() => {
+    const current = session.current;
+
+    if (current && !current.notified) {
+      current.notified = true;
+
+      void notifyTripCancelled(current.uid, {
+        tripId: current.tripId,
+        journey: current.journey,
+      });
+    }
+
+    end();
+  }, [end]);
 
   const recenter = useCallback(() => {
     if (automaticPause.current) {
@@ -418,6 +438,7 @@ export function useWalkingTrip({
     recenterRequest,
     start,
     end,
+    cancel,
     reroute,
     recenter,
     stopFollowing,

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { distanceMeters } from "../services/location";
 import { getTripIssue } from "../services/trips";
 import { updateArrival } from "../services/tripArrival";
-import { notifyArrival } from "../services/notifications";
+import { notifyTripCancelled, notifyTripCompleted } from "../services/notifications";
 import { busStepIndex, getBusProgress, busInstruction } from "../services/busNavigation";
 
 export function useBusTrip({ uid, journey, route, snapshot, refreshLocation }) {
@@ -140,9 +140,20 @@ export function useBusTrip({ uid, journey, route, snapshot, refreshLocation }) {
       const finished = session.current;
       finished.notified = true;
       setState("arrived"); setFollowing(false); setMessage("You have arrived at your destination.");
-      void notifyArrival(finished.uid, { tripId: finished.tripId, journey: finished.journey });
+      void notifyTripCompleted(finished.uid, { tripId: finished.tripId, journey: finished.journey });
     }
   }, [uid, state, route, ride, snapshot, phase, now, changePhase]);
+
+  // Only after the user confirmed they want to stop. A trip that already
+  // finished (notified) is never recorded as cancelled.
+  const cancel = useCallback(() => {
+    const current = session.current;
+    if (current && !current.notified) {
+      current.notified = true;
+      void notifyTripCancelled(current.uid, { tripId: current.tripId, journey: current.journey });
+    }
+    end();
+  }, [end]);
 
   const recenter = useCallback(() => { setFollowing(true); setRecenterRequest(n => n + 1); }, []);
   const stopFollowing = useCallback(() => setFollowing(false), []);
@@ -151,6 +162,6 @@ export function useBusTrip({ uid, journey, route, snapshot, refreshLocation }) {
     instruction: busInstruction(route, phase, progress),
     actionLabel: state === "active" ? phase === "boarding" ? "I've boarded" : phase === "riding" ? "I've got off" : null : null,
     confirmStage, open: ["active", "paused"].includes(state), following: state === "active" && following,
-    recenterRequest, start, end, recenter, stopFollowing,
+    recenterRequest, start, end, cancel, recenter, stopFollowing,
   };
 }

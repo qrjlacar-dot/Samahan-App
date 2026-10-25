@@ -22,6 +22,7 @@ function trainSession({ routing, refresh } = {}) {
     position: { ...route.origin.coordinate, accuracyMeters: 15, timestamp: new Date().toISOString() } };
   const { useTrainTrip } = createLoader({ react,
     "react-native": { Alert: { alert() {} } },
+    "../services/notifications": { notifyTripCompleted: async () => ({}), notifyTripCancelled: async () => ({}) },
     "../services/routes": { getRoutes: (...args) => { calls++; return routing(...args); } },
   })(root("hooks/useTrainTrip.js"));
   const h = render(useTrainTrip, {

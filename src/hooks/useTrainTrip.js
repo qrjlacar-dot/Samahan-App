@@ -2,6 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
 import { LOCATION_STATUS } from "../constants/commute";
 import { distanceMeters } from "../services/location";
+import {
+  notifyTripCancelled,
+  notifyTripCompleted,
+} from "../services/notifications";
 import { getRoutes } from "../services/routes";
 import { distanceToRouteMeters } from "../services/trips";
 
@@ -40,7 +44,7 @@ function remainingDistance(route, stepIndex, position) {
   return Math.round(futureMeters + currentMeters);
 }
 
-export function useTrainTrip({ route, snapshot, refreshLocation, startTracking, stopTracking, onRouteChange }) {
+export function useTrainTrip({ uid, journey, route, snapshot, refreshLocation, startTracking, stopTracking, onRouteChange }) {
   const [state, setState] = useState("idle");
   const [message, setMessage] = useState("");
   const [stepIndex, setStepIndex] = useState(0);
@@ -57,9 +61,11 @@ export function useTrainTrip({ route, snapshot, refreshLocation, startTracking, 
   const reroutePending = useRef(false);
   const rerouteRequest = useRef(null);
   const generation = useRef(0);
+  const session = useRef(null);
 
   const end = useCallback(() => {
     generation.current += 1;
+    session.current = null;
     startPending.current = false;
     reroutePending.current = false;
     rerouteRequest.current?.abort();
@@ -135,6 +141,12 @@ export function useTrainTrip({ route, snapshot, refreshLocation, startTracking, 
       offRouteHits.current = 0;
       lastFix.current = null;
       alertedFor.current = null;
+      session.current = {
+        tripId: `trip_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        uid,
+        journey,
+        finished: false,
+      };
       setStepIndex(0);
       setState("active");
       setFollowing(true);
@@ -153,7 +165,7 @@ export function useTrainTrip({ route, snapshot, refreshLocation, startTracking, 
         setBusy(false);
       }
     }
-  }, [route, refreshLocation, startTracking, stopTracking]);
+  }, [uid, journey, route, refreshLocation, startTracking, stopTracking]);
 
   const advance = useCallback(() => {
     if (!route?.steps?.length || reroutePending.current || !["active", "off-route"].includes(state)) return;
@@ -267,6 +279,34 @@ export function useTrainTrip({ route, snapshot, refreshLocation, startTracking, 
     }
   }, [snapshot, state, stepIndex, route, advance]);
 
+  // Completed only when the whole trip is finished (state "arrived").
+  useEffect(() => {
+    const current = session.current;
+    if (state !== "arrived" || !current || current.finished) return;
+    current.finished = true;
+    if (current.uid) {
+      void notifyTripCompleted(current.uid, {
+        tripId: current.tripId,
+        journey: current.journey,
+      });
+    }
+  }, [state]);
+
+  // Cancelled only after the user confirmed they want to stop.
+  const cancel = useCallback(() => {
+    const current = session.current;
+    if (current && !current.finished) {
+      current.finished = true;
+      if (current.uid) {
+        void notifyTripCancelled(current.uid, {
+          tripId: current.tripId,
+          journey: current.journey,
+        });
+      }
+    }
+    end();
+  }, [end]);
+
   const step = route?.steps?.[stepIndex];
   const goodFix = validPosition(snapshot) && (state === "active" || state === "off-route");
   const position = goodFix ? snapshot.position : null;
@@ -276,7 +316,7 @@ export function useTrainTrip({ route, snapshot, refreshLocation, startTracking, 
     ? 0 : remainingDistance(route, stepIndex, position);
 
   return {
-    state, message, busy, start, end, advance, reroute,
+    state, message, busy, start, end, cancel, advance, reroute,
     open: state === "active" || state === "off-route",
     following: state === "active" && following,
     recenterRequest,

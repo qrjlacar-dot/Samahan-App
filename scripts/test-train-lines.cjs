@@ -146,7 +146,7 @@ test("outside walking boundary is rejected and cancelled walking routes are not 
 test("GPS trip starts with permission, advances manually and stops tracking on arrival", async () => {
   const { react, render } = require("./helpers/hook-harness.cjs")();
   const alerts = [];
-  const loadHook = createLoader({ react, "react-native": { Alert: { alert: (...args) => alerts.push(args) } } });
+  const loadHook = createLoader({ react, "react-native": { Alert: { alert: (...args) => alerts.push(args) } }, "../services/notifications": { notifyTripCompleted: async () => ({}), notifyTripCancelled: async () => ({}) } });
   const { useTrainTrip } = loadHook(root("hooks/useTrainTrip.js"));
   const route = guide("lrt2-anonas", "gateway-mall");
   let watches = 0, stops = 0;
@@ -180,7 +180,7 @@ test("GPS trip starts with permission, advances manually and stops tracking on a
 
 test("a fresh Cubao-area fix near Anonas starts live train guidance with a remaining distance", async () => {
   const { react, render } = require("./helpers/hook-harness.cjs")();
-  const loadHook = createLoader({ react, "react-native": { Alert: { alert() {} } } });
+  const loadHook = createLoader({ react, "react-native": { Alert: { alert() {} } }, "../services/notifications": { notifyTripCompleted: async () => ({}), notifyTripCancelled: async () => ({}) } });
   const { useTrainTrip } = loadHook(root("hooks/useTrainTrip.js"));
   const route = guide("lrt2-anonas", "lrt2-cubao");
   const fix = {
@@ -207,7 +207,7 @@ test("a fresh Cubao-area fix near Anonas starts live train guidance with a remai
 
 test("denied GPS retains offline guide and never opens a watcher", async () => {
   const { react, render } = require("./helpers/hook-harness.cjs")();
-  const loadHook = createLoader({ react, "react-native": { Alert: { alert() {} } } });
+  const loadHook = createLoader({ react, "react-native": { Alert: { alert() {} } }, "../services/notifications": { notifyTripCompleted: async () => ({}), notifyTripCancelled: async () => ({}) } });
   const { useTrainTrip } = loadHook(root("hooks/useTrainTrip.js"));
   const route = guide("lrt2-anonas", "gateway-mall");
   let watches = 0;
@@ -228,7 +228,7 @@ test("denied GPS retains offline guide and never opens a watcher", async () => {
 
 test("three accurate off-route GPS fixes offer offline recalculation", async () => {
   const { react, render } = require("./helpers/hook-harness.cjs")();
-  const loadHook = createLoader({ react, "react-native": { Alert: { alert() {} } } });
+  const loadHook = createLoader({ react, "react-native": { Alert: { alert() {} } }, "../services/notifications": { notifyTripCompleted: async () => ({}), notifyTripCancelled: async () => ({}) } });
   const { useTrainTrip } = loadHook(root("hooks/useTrainTrip.js"));
   const route = guide("lrt2-cubao", "gateway-mall");
   const startFix = {

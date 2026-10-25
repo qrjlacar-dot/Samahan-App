@@ -30,25 +30,22 @@ import { styles } from "../../styles/notifications.styles";
 const FILTERS = [
   { label: "All", category: null },
   { label: "Trips", category: "trips" },
-  { label: "Safety", category: "safety" },
-  { label: "Favorites", category: "favorites" },
 ];
 
-const CATEGORY_ICONS = {
-  trips: "bus-outline",
-  safety: "shield-checkmark-outline",
-  favorites: "heart-outline",
-};
+const EMPTY_MESSAGE =
+  "Your completed and cancelled trips will appear here.";
 
-const EMPTY_MESSAGES = {
-  all: "No notifications yet. Saving a favorite or arriving at a destination will show up here.",
-  trips:
-    "No trip notifications yet. Arriving at a destination will show up here.",
-  safety:
-    "No safety alerts. Verified safety alerts will appear here when they are available.",
-  favorites:
-    "No favorite notifications yet. Save a journey from Directions and it will show up here.",
-};
+function iconFor(item) {
+  if (item.eventId?.startsWith("trip-cancelled:")) {
+    return "close-circle-outline";
+  }
+
+  if (item.eventId?.startsWith("trip-completed:")) {
+    return "checkmark-circle-outline";
+  }
+
+  return "bus-outline";
+}
 
 function startOfDay(date) {
   return new Date(
@@ -160,14 +157,16 @@ export default function NotificationsScreen() {
     }, [load]),
   );
 
+  // This page is only for trip updates. Older saved notifications of other
+  // kinds (for example "Favorite saved") are not shown.
   const visible = useMemo(
     () =>
-      filter.category
-        ? notifications.filter(
-            (item) =>
-              item.category === filter.category,
-          )
-        : notifications,
+      notifications.filter(
+        (item) =>
+          item.category === "trips" &&
+          (!filter.category ||
+            item.category === filter.category),
+      ),
     [notifications, filter],
   );
 
@@ -234,8 +233,7 @@ export default function NotificationsScreen() {
     }
   };
 
-  const emptyMessage =
-    EMPTY_MESSAGES[filter.category ?? "all"];
+  const emptyMessage = EMPTY_MESSAGE;
 
   return (
     <SafeAreaView
@@ -297,9 +295,10 @@ export default function NotificationsScreen() {
       >
         {status === "ready" && !enabled && (
           <Text style={styles.offNotice}>
-            Notifications are off. New alerts will
-            not be added until you turn them on in
-            Profile.
+            Phone notifications are off. Trip
+            updates are still saved here. Turn them
+            on in Profile to also get them on your
+            phone.
           </Text>
         )}
 
@@ -364,11 +363,7 @@ export default function NotificationsScreen() {
                 >
                   <View style={styles.rowIcon}>
                     <Ionicons
-                      name={
-                        CATEGORY_ICONS[
-                          item.category
-                        ]
-                      }
+                      name={iconFor(item)}
                       size={scale(20)}
                       color={COLORS.pink}
                     />

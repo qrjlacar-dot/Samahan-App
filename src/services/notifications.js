@@ -4,6 +4,7 @@ import {
   TICKET_TYPES,
   TRAVEL_MODES,
 } from "../constants/commute";
+import { showPhoneNotification } from "./phoneNotifications";
 
 const NOTIFICATIONS_PREFIX = "samahan:notifications:v1:";
 const PREFERENCES_PREFIX = "samahan:notification-preferences:v1:";
@@ -164,28 +165,20 @@ export async function loadNotifications(uid) {
   return items.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
-/**
- * Returns the stored notification, or null when notifications are switched
- * off. The same eventId never creates a second notification, so retries and
- * repeated callbacks are safe.
- * @param {string} uid
- * @param {import('../types/commute').NotificationInput} notification
- * @returns {Promise<import('../types/commute').AppNotification | null>}
- */
-export async function addNotification(uid, notification) {
+// Saves one notification. Trip updates are ALWAYS saved here, whether or not
+// phone notifications are on. The same eventId never creates a second copy.
+function storeNotification(uid, notification) {
   requireUid(uid);
   if (!isValidInput(notification)) {
     throw new Error(
       "A notification needs an eventId, a category, a title, a body, and a valid target.",
     );
   }
-  return enqueue(`items:${uid}`, async () => {
-    const preferences = await readPreferences(uid);
-    if (!preferences.enabled) return null;
 
+  return enqueue(`items:${uid}`, async () => {
     const items = await readAll(uid);
     const existing = items.find((item) => item.eventId === notification.eventId);
-    if (existing) return existing; // duplicate event: no second copy
+    if (existing) return { notification: existing, created: false };
 
     const created = {
       id: `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -198,8 +191,19 @@ export async function addNotification(uid, notification) {
       readAt: null,
     };
     await writeAll(uid, [created, ...items].slice(0, MAX_STORED));
-    return created;
+    return { notification: created, created: true };
   });
+}
+
+/**
+ * Returns the stored notification. The same eventId never creates a second
+ * notification, so retries and repeated callbacks are safe.
+ * @param {string} uid
+ * @param {import('../types/commute').NotificationInput} notification
+ * @returns {Promise<import('../types/commute').AppNotification>}
+ */
+export async function addNotification(uid, notification) {
+  return (await storeNotification(uid, notification)).notification;
 }
 
 /**
@@ -241,7 +245,8 @@ export async function getNotificationPreferences(uid) {
 }
 
 /**
- * Switching off only stops NEW events. Notifications already stored stay.
+ * enabled = show PHONE notifications. Switching it off never stops trip
+ * updates from being saved in the Notifications page.
  * @param {string} uid
  * @param {import('../types/commute').NotificationPreferences} preferences
  * @returns {Promise<import('../types/commute').NotificationPreferences>}
@@ -284,53 +289,90 @@ export async function markNotificationPermissionAsked(uid) {
   await AsyncStorage.setItem(promptKey(uid), "asked");
 }
 
-// ---------- event helpers for Member 1 (arrival) and Member 3 (favorites) ----------
-// They never throw: a notification problem must not break saving a favorite
-// or finishing a trip. They return the stored notification, or null.
+// ---------- trip updates (Completed / Cancelled) ----------
+// Both are saved in the Notifications page first, always. Then, only for a
+// NEW update, a phone notification is shown when the Profile switch is on
+// and the phone has granted permission. They never throw: a notification
+// problem must not break a trip.
 
-function placeLabel(place) {
-  return place?.name?.trim() || "your destination";
+const MODE_LABELS = {
+  walk: "walking",
+  train: "train",
+  bus: "bus",
+  jeep: "jeepney",
+};
+
+function destinationLabel(journey) {
+  return journey?.destination?.name?.trim() || "your destination";
 }
 
-/**
- * Call once after a NEW favorite is saved successfully.
- * @param {string} uid
- * @param {import('../types/commute').SavedFavorite} favorite
- */
-export async function notifyFavoriteSaved(uid, favorite) {
-  try {
-    if (!favorite || !isNonEmptyString(favorite.id)) return null;
-    return await addNotification(uid, {
-      eventId: `favorite-saved:${favorite.id}`,
-      category: "favorites",
-      title: "Favorite saved",
-      body: `${placeLabel(favorite.origin)} to ${placeLabel(favorite.destination)} was added to your favorites.`,
-      target: { screen: "favorites" },
-    });
-  } catch {
-    return null;
-  }
+function tripText(kind, journey) {
+  const mode = MODE_LABELS[journey?.preferredMode];
+  const trip = mode ? `${mode} trip` : "trip";
+  const where = destinationLabel(journey);
+
+  return kind === "completed"
+    ? {
+        title: "Trip completed",
+        body: `Your ${trip} to ${where} is complete.`,
+      }
+    : {
+        title: "Trip cancelled",
+        body: `Your ${trip} to ${where} was cancelled.`,
+      };
 }
 
-/**
- * Call once when an active trip is confirmed arrived. tripId must stay the
- * same for the whole trip (for example the time the trip started), so GPS
- * repeats cannot create more than one arrival notification.
- * @param {string} uid
- * @param {{ tripId: string, journey: import('../types/commute').FavoriteInput }} arrival
- */
-export async function notifyArrival(uid, arrival) {
+async function notifyTrip(uid, update, kind) {
   try {
-    if (!arrival || !isNonEmptyString(arrival.tripId)) return null;
-    const journey = isValidJourney(arrival.journey) ? arrival.journey : null;
-    return await addNotification(uid, {
-      eventId: `arrival:${arrival.tripId}`,
+    if (!update || !isNonEmptyString(update.tripId)) return null;
+
+    const journey = isValidJourney(update.journey) ? update.journey : null;
+    const { title, body } = tripText(kind, journey);
+
+    const { notification, created } = await storeNotification(uid, {
+      eventId: `trip-${kind}:${update.tripId}`,
       category: "trips",
-      title: "You have arrived",
-      body: `You arrived at ${placeLabel(journey?.destination)}.`,
+      title,
+      body,
       target: journey ? { screen: "directions", journey } : null,
     });
+
+    if (created) {
+      try {
+        const preferences = await readPreferences(uid);
+        if (preferences.enabled) {
+          await showPhoneNotification({
+            title,
+            body,
+            data: { notificationId: notification.id, kind },
+          });
+        }
+      } catch {
+        // The update is already saved; the phone notification is optional.
+      }
+    }
+
+    return notification;
   } catch {
     return null;
   }
+}
+
+/**
+ * Call once, only when the whole trip is finished. tripId must stay the same
+ * for the whole trip so repeated GPS callbacks cannot create a second one.
+ * @param {string} uid
+ * @param {{ tripId: string, journey: import('../types/commute').FavoriteInput }} trip
+ */
+export function notifyTripCompleted(uid, trip) {
+  return notifyTrip(uid, trip, "completed");
+}
+
+/**
+ * Call once, only after the user confirmed they want to cancel the trip.
+ * @param {string} uid
+ * @param {{ tripId: string, journey: import('../types/commute').FavoriteInput }} trip
+ */
+export function notifyTripCancelled(uid, trip) {
+  return notifyTrip(uid, trip, "cancelled");
 }

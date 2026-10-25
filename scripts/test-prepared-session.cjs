@@ -15,7 +15,7 @@ function fixture(options = {}) {
   class TestDate extends Date { constructor(...args) { super(...(args.length ? args : [clock])); } static now() { return clock; } }
   const timers = new Map(); let timerId = 0; let h;
   const { react, render } = hookHarness();
-  const notifications = [], requests = [], routeChanges = [];
+  const notifications = [], cancelled = [], requests = [], routeChanges = [];
   const mockRoutes = async (request, config) => {
     requests.push({ request, config });
     if (options.routes) return options.routes(request, config);
@@ -24,7 +24,10 @@ function fixture(options = {}) {
   const load = createLoader({
     react,
     "../services/routes": { getRoutes: mockRoutes },
-    "../services/notifications": { notifyArrival: async (...args) => { notifications.push(args); return {}; } },
+    "../services/notifications": {
+      notifyTripCompleted: async (...args) => { notifications.push(args); return {}; },
+      notifyTripCancelled: async (...args) => { cancelled.push(args); return {}; },
+    },
   }, {
     Date: TestDate,
     setInterval(fn) { timers.set(++timerId, fn); return timerId; },
@@ -43,7 +46,7 @@ function fixture(options = {}) {
     for (const fn of [...timers.values()]) fn();
     h.flush();
   };
-  return { h, fix, advance, requests, notifications, routeChanges };
+  return { h, fix, advance, requests, notifications, cancelled, routeChanges };
 }
 const settle = async () => { await new Promise((resolve) => setImmediate(resolve)); };
 
@@ -55,7 +58,7 @@ test("Start enables following; Recenter restores it after a pan", async () => {
   f.h.result.recenter(); f.h.flush(); assert.equal(f.h.result.following, true); assert.equal(f.h.result.recenterRequest, request + 1);
   f.h.dispose();
 });
-test("arrival transitions once and creates one notification for the original journey", async () => {
+test("arrival transitions once and creates one completed-trip update for the original journey", async () => {
   const f = fixture(); await f.h.result.start(); f.h.flush();
   f.advance(6000, b); assert.equal(f.h.result.state, "active");
   f.advance(6000, b); assert.equal(f.h.result.state, "arrived");

@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   ScrollView,
   Switch,
   Text,
@@ -22,6 +23,10 @@ import {
   getNotificationPreferences,
   setNotificationPreferences,
 } from "../../services/notifications";
+import {
+  getPhonePermission,
+  requestPhonePermission,
+} from "../../services/phoneNotifications";
 import { styles } from "../../styles/profile.styles";
 
 export default function Profile() {
@@ -36,28 +41,35 @@ export default function Profile() {
   const [preferencesLoading, setPreferencesLoading] = useState(true);
   const savingPreference = useRef(false);
 
-  // Load the saved choice for the signed-in account (defaults to on).
-  useEffect(() => {
-    if (!uid) return;
+  // The switch means "phone notifications". It shows on only when the account
+  // choice is on AND the phone has not blocked notifications for SAMAHAN.
+  // Refreshed every time this tab opens (for example after the phone settings).
+  useFocusEffect(
+    useCallback(() => {
+      if (!uid) return undefined;
 
-    let active = true;
-    setPreferencesLoading(true);
+      let active = true;
 
-    getNotificationPreferences(uid)
-      .then((preferences) => {
-        if (active) setIsNotificationsEnabled(preferences.enabled);
-      })
-      .catch(() => {
-        // Keep the default; the switch still works.
-      })
-      .finally(() => {
-        if (active) setPreferencesLoading(false);
-      });
+      Promise.all([getNotificationPreferences(uid), getPhonePermission()])
+        .then(([preferences, permission]) => {
+          if (active && !savingPreference.current) {
+            setIsNotificationsEnabled(
+              preferences.enabled && permission !== "denied",
+            );
+          }
+        })
+        .catch(() => {
+          // Keep the current value; the switch still works.
+        })
+        .finally(() => {
+          if (active) setPreferencesLoading(false);
+        });
 
-    return () => {
-      active = false;
-    };
-  }, [uid]);
+      return () => {
+        active = false;
+      };
+    }, [uid]),
+  );
 
   const toggleNotifications = async (nextValue) => {
     if (!uid || savingPreference.current) return;
@@ -67,6 +79,26 @@ export default function Profile() {
     setIsNotificationsEnabled(nextValue);
 
     try {
+      if (nextValue) {
+        const permission = await requestPhonePermission();
+
+        if (permission === "denied") {
+          setIsNotificationsEnabled(false);
+          Alert.alert(
+            "Notifications are blocked",
+            "Turn on notifications for SAMAHAN in your phone settings to get trip updates on your phone. Trip updates are still saved in Notifications.",
+            [
+              { text: "Not now", style: "cancel" },
+              {
+                text: "Open settings",
+                onPress: () => Linking.openSettings(),
+              },
+            ],
+          );
+          return;
+        }
+      }
+
       await setNotificationPreferences(uid, { enabled: nextValue });
     } catch {
       setIsNotificationsEnabled(previousValue);

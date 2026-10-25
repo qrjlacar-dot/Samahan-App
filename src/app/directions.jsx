@@ -152,6 +152,8 @@ export default function Directions() {
     snapshot, refreshLocation,
   });
   const trainTrip = useTrainTrip({
+    uid: user?.uid,
+    journey,
     route: route?.preferredMode === "train" ? route : null,
     snapshot, refreshLocation, startTracking, stopTracking,
     onRouteChange: setRoute,
@@ -163,6 +165,12 @@ export default function Directions() {
     busTrip.end();
     trainTrip.end();
   }, [walkingTrip.end, busTrip.end, trainTrip.end]);
+  // Only used after the user confirmed they want to stop an open trip.
+  const cancelTrips = useCallback(() => {
+    walkingTrip.cancel();
+    busTrip.cancel();
+    trainTrip.cancel();
+  }, [walkingTrip.cancel, busTrip.cancel, trainTrip.cancel]);
 
   useEffect(() => {
     if (selectedMode !== "train" || origin || locationText.trim()) return;
@@ -205,7 +213,9 @@ export default function Directions() {
     (leaveScreen = false) => {
       Alert.alert(
         "End trip?",
-        "Your trip will end. You can start another trip from its starting point.",
+        trip.state === "arrived"
+          ? "Your trip will end. You can start another trip from its starting point."
+          : "Your trip will end and be marked as cancelled. You can start another trip from its starting point.",
         [
           {
             text: "Keep trip",
@@ -215,7 +225,7 @@ export default function Directions() {
             text: "End trip",
             style: "destructive",
             onPress: () => {
-              endTrips();
+              cancelTrips();
               setMapControlsOpen(false);
 
               if (leaveScreen) router.back();
@@ -224,7 +234,7 @@ export default function Directions() {
         ],
       );
     },
-    [endTrips, router],
+    [cancelTrips, router, trip.state],
   );
 
   useFocusEffect(

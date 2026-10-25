@@ -15,8 +15,8 @@ function fixture({ noWalk = false, refresh, selectedRoute } = {}) {
   let clock = Date.now();
   class Clock extends Date { constructor(...args) { super(...(args.length ? args : [clock])); } static now() { return clock; } }
   const { react, render } = hookHarness();
-  const timers = new Map(), notifications = []; let timer = 0, h;
-  const load = createLoader({ react, '../services/notifications': { notifyArrival: async (...args) => notifications.push(args) } }, {
+  const timers = new Map(), notifications = [], cancelled = []; let timer = 0, h;
+  const load = createLoader({ react, '../services/notifications': { notifyTripCompleted: async (...args) => notifications.push(args), notifyTripCancelled: async (...args) => { cancelled.push(args); return {}; } } }, {
     Date: Clock, setInterval: fn => { timers.set(++timer, fn); return timer; }, clearInterval: id => timers.delete(id),
   });
   const { useBusTrip } = load(path.join(root, 'src/hooks/useBusTrip.js'));
@@ -25,7 +25,7 @@ function fixture({ noWalk = false, refresh, selectedRoute } = {}) {
   h = render(useBusTrip, { uid: 'account', route: selected, journey: { ...selected, ticketType: 'regular' }, snapshot: fix(selected.origin.coordinate), refreshLocation: () => refresh ? refresh() : Promise.resolve(h.props.snapshot) });
   const advance = (ms, coordinate, accuracy = 10) => { clock += ms; if (coordinate) h.props = { ...h.props, snapshot: fix(coordinate, accuracy) }; for (const fn of [...timers.values()]) fn(); h.flush(); };
   const action = async name => { const result = await h.result[name](); h.flush(); return result; };
-  return { h, fix, advance, action, notifications, timers };
+  return { h, fix, advance, action, notifications, cancelled, timers };
 }
 
 test('bus trip walks to boarding, waits for confirmation, tracks ride, alights, then finishes once', async () => {
@@ -184,5 +184,43 @@ test('Anonas-bound GPS guidance waits for boarding and alighting before completi
   f.advance(6000, bus.end);
   assert.equal(f.h.result.state, 'arrived'); assert.equal(f.notifications.length, 1);
   f.advance(6000, bus.end); assert.equal(f.notifications.length, 1);
+  f.h.dispose();
+});
+
+test('bus: confirming the end of an active trip records one cancelled update and no completion', async () => {
+  const f = fixture();
+  assert.equal(await f.action('start'), true);
+  f.advance(1000, b);
+  f.h.result.cancel(); f.h.flush();
+  assert.equal(f.h.result.state, 'idle');
+  assert.equal(f.cancelled.length, 1);
+  assert.equal(f.cancelled[0][0], 'account');
+  assert.equal(f.cancelled[0][1].journey.preferredMode, 'bus');
+  assert.equal(f.notifications.length, 0);
+  f.h.result.cancel(); f.h.flush();
+  assert.equal(f.cancelled.length, 1);
+  f.h.dispose();
+});
+
+test('bus: a plain end records nothing, and ending after arrival is not a cancellation', async () => {
+  const plain = fixture();
+  await plain.action('start');
+  plain.h.result.end(); plain.h.flush();
+  assert.equal(plain.cancelled.length, 0);
+  assert.equal(plain.notifications.length, 0);
+  plain.h.dispose();
+
+  const f = fixture();
+  await f.action('start');
+  f.advance(1000, b);
+  await f.action('confirmStage');
+  f.advance(5000, c);
+  await f.action('confirmStage');
+  f.advance(6000, d); f.advance(6000, d);
+  assert.equal(f.h.result.state, 'arrived');
+  assert.equal(f.notifications.length, 1);
+  f.h.result.cancel(); f.h.flush();
+  assert.equal(f.cancelled.length, 0);
+  assert.equal(f.notifications.length, 1);
   f.h.dispose();
 });

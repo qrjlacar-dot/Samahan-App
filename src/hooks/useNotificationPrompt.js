@@ -9,6 +9,7 @@ import {
   setNotificationPreferences,
   shouldAskNotificationPermission,
 } from "../services/notifications";
+import { requestPhonePermission } from "../services/phoneNotifications";
 
 const SHOW_DELAY_MS = 1500;
 
@@ -31,8 +32,13 @@ function isLocationStepFinished(snapshot) {
 
 /**
  * Asks "Allow notifications?" once per account, after the Location step.
- * Allow = notifications on. Don't allow = notifications off.
- * The answer uses the same saved setting as the Profile switch.
+ * Allow turns phone notifications on; Don't allow turns them off. The answer
+ * uses the same saved setting as the Profile switch. Trip updates are saved in
+ * the Notifications page either way.
+ *
+ * When this app build can show phone notifications, Allow also shows the
+ * phone's own permission question. If the phone says no, the setting is saved
+ * as off. In a build without that module nothing extra happens.
  */
 export function useNotificationPrompt() {
   const { user } = useAuth();
@@ -61,6 +67,8 @@ export function useNotificationPrompt() {
         await markNotificationPermissionAsked(uid);
         if (!active || AppState.currentState !== "active") return;
 
+        // A different account (or a closed screen) must never be changed by
+        // an answer to the previous account's question.
         const save = (enabled) => {
           if (!active) return;
           setNotificationPreferences(uid, { enabled }).catch(() => {
@@ -71,9 +79,15 @@ export function useNotificationPrompt() {
           });
         };
 
+        const allow = async () => {
+          if (!active) return;
+          const permission = await requestPhonePermission();
+          save(permission !== "denied");
+        };
+
         Alert.alert(
           "Allow notifications?",
-          "SAMAHAN can notify you when you save a favorite or arrive at your destination. You can change this anytime in Profile.",
+          "SAMAHAN can notify you when a trip is completed or cancelled. You can change this anytime in Profile.",
           [
             {
               text: "Don't allow",
@@ -82,7 +96,9 @@ export function useNotificationPrompt() {
             },
             {
               text: "Allow",
-              onPress: () => save(true),
+              onPress: () => {
+                void allow();
+              },
             },
           ],
           { cancelable: false },

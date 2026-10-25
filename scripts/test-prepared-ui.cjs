@@ -189,7 +189,7 @@ test("map focus starts a watch outside Cubao and retains it when crossing the bo
 });
 
 test(
-  "Directions reopens a saved journey, calculates a fresh route, and saves a real favorite notification",
+  "Directions reopens a saved journey, calculates a fresh route, and saves a real favorite without a notification",
   async () => {
     const { react, runtime, render } = hookHarness();
     const data = new Map();
@@ -326,11 +326,10 @@ test(
       1,
     );
 
+    // Saving a favorite shows an in-app popup; it no longer creates a notification.
     assert.equal(
-      JSON.parse(
-        data.get("samahan:notifications:v1:account-a"),
-      ).length,
-      1,
+      data.get("samahan:notifications:v1:account-a"),
+      undefined,
     );
 
     let controls = nodes(

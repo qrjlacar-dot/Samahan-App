@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Alert } from "react-native";
 import { findFavorite, removeFavorite, saveFavorite } from "../services/favorites";
-import { notifyFavoriteSaved } from "../services/notifications";
+
+function routeLabel(journey) {
+  const from = journey.origin?.name || "Your starting point";
+  const to = journey.destination?.name || "your destination";
+  return `${from} to ${to}`;
+}
 
 export function useJourneyFavorites(uid, journey) {
   const [saved, setSaved] = useState(null);
@@ -41,9 +47,14 @@ export function useJourneyFavorites(uid, journey) {
         await removeFavorite(uid, existing.id);
       } else {
         favorite = await saveFavorite(uid, journey);
-        await notifyFavoriteSaved(uid, favorite);
       }
       if (token === generation.current) setSaved({ uid, key, favorite });
+      Alert.alert(
+        existing ? "Removed from favorites" : "Added to favorites",
+        existing
+          ? `${routeLabel(journey)} was removed from your favorites.`
+          : `${routeLabel(journey)} was added to your favorites.`,
+      );
     } catch {
       if (token === generation.current) setError("Could not update this favorite. Please try again.");
     } finally {
