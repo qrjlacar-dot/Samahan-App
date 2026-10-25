@@ -274,3 +274,16 @@ test("a walk plus the LRT-2 ride adds up to the train fare", async () => {
   );
   assert.equal(quote.regularTotal, 8);
 });
+
+test("a verified short jeep line is priced at the minimum fare without a measured distance", async () => {
+  const traditional = await quoteFare(
+    route(step({ mode: "jeep", operatorId: "jeep-traditional", distanceMeters: null, withinMinimumFare: true })),
+    "regular",
+  );
+  const discounted = await quoteFare(
+    route(step({ mode: "jeep", operatorId: "jeep-modern", distanceMeters: null, withinMinimumFare: true })),
+    "discounted",
+  );
+  assert.equal(traditional.selectedTotal, 14);
+  assert.equal(discounted.selectedTotal, 14);
+});
