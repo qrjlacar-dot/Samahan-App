@@ -1,18 +1,17 @@
-import { Linking } from "react-native";
-import FareSummary from "./FareSummary";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  Text,
+  Linking, Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
+import { TRAIN_RIDE_FARES, farePairKey } from "../../data/trainFares";
 import { styles } from "../../styles/directions.styles";
+import FareSummary from "./FareSummary";
+import ProviderAttribution from "./ProviderAttribution";
 import TripSummaryBadge, {
   formatDistance,
   formatDuration,
 } from "./TripSummaryBadge";
-import ProviderAttribution from "./ProviderAttribution";
-import { TRAIN_RIDE_FARES, farePairKey } from "../../data/trainFares";
 
 export default function TripDetailsCard({
   route,
@@ -186,7 +185,7 @@ export default function TripDetailsCard({
               ? "Approximate route. Check platform signs and current service before travelling."
               : route.preferredMode === "walk"
                 ? "Walking times are estimates. Keep Location turned on during your trip."
-                : "Transport preview only. Check service availability and the correct platform before travelling."}
+                 : ""}
           </Text>
 
           {!isTrain && (route.warnings ?? []).map((warning, index) => (

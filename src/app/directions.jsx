@@ -26,18 +26,20 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BackButton } from "../components/BackButton";
 import { CommuteMap } from "../components/CommuteMap";
+import JeepTypeToggle from "../components/directions/JeepTypeToggle";
 import LocationInputCard from "../components/directions/LocationInputCard";
 import MapControls from "../components/directions/MapControls";
 import ModeSelector from "../components/directions/ModeSelector";
 import TicketToggle from "../components/directions/TicketToggle";
-import TripDetailsCard from "../components/directions/TripDetailsCard";
 import TrainNavigationControls from "../components/directions/TrainNavigationControls";
+import TripDetailsCard from "../components/directions/TripDetailsCard";
 import WalkingNavigationBanner from "../components/directions/WalkingNavigationBanner";
 import { useAuth } from "../context/AuthContext";
+import { useJeepTrip } from "../hooks/useJeepTrip";
 import { useJourneyFavorites } from "../hooks/useJourneyFavorites";
 import { useMapLocation } from "../hooks/useMapLocation";
-import { useWalkingTrip } from "../hooks/useWalkingTrip";
 import { useTrainTrip } from "../hooks/useTrainTrip";
+import { useWalkingTrip } from "../hooks/useWalkingTrip";
 import { currentLocationPlace } from "../services/deviceLocation";
 import { parseJourneyParam } from "../services/journeys";
 import { getRoutes, searchTrainAndWalkingPlaces } from "../services/routes";
@@ -84,11 +86,17 @@ export default function Directions() {
     refreshLocation,
     startTracking,
     stopTracking,
-  } = useMapLocation({ trackWhenFocused: selectedMode !== "train" });
+  } = useMapLocation({
+    trackWhenFocused: selectedMode !== "train" && selectedMode !== "jeep",
+  });
 
   const [ticketType, setTicketType] = useState(
     incoming?.ticketType || "discounted",
   );
+
+  const [jeepType, setJeepType] = useState("jeep-traditional");
+  const jeepTypeRef = useRef(jeepType);
+  jeepTypeRef.current = jeepType;
 
   const [origin, setOrigin] = useState(
     incoming?.origin || null,
@@ -156,7 +164,20 @@ export default function Directions() {
     onRouteChange: setRoute,
   });
 
-  const activeTrip = selectedMode === "train" ? trainTrip : trip;
+  const jeepTrip = useJeepTrip({
+    route,
+    snapshot,
+    refreshLocation,
+    startTracking,
+    stopTracking,
+  });
+
+  const activeTrip =
+    selectedMode === "train"
+      ? trainTrip
+      : selectedMode === "jeep"
+        ? jeepTrip
+        : trip;
 
   useEffect(() => {
     if (selectedMode !== "train" || origin || locationText.trim()) return;
@@ -174,7 +195,12 @@ export default function Directions() {
     route ? journey : null,
   );
 
-  const locked = trip.open || trip.busy || trainTrip.open;
+  const locked =
+    trip.open ||
+    trip.busy ||
+    trainTrip.open ||
+    jeepTrip.open ||
+    jeepTrip.busy;
 
   const showNavigation = Boolean(
     activeTrip.progress &&
@@ -199,7 +225,11 @@ export default function Directions() {
   const confirmEndTrip = useCallback(
     (leaveScreen = false) => {
       Alert.alert(
-        selectedMode === "train" ? "End train trip?" : "End walking trip?",
+        selectedMode === "train"
+          ? "End train trip?"
+          : selectedMode === "jeep"
+            ? "End jeep trip?"
+            : "End walking trip?",
         "Your navigation session will end. You can start another trip from its starting point.",
         [
           {
@@ -212,6 +242,7 @@ export default function Directions() {
             onPress: () => {
               trip.end();
               trainTrip.end();
+              jeepTrip.end();
               setMapControlsOpen(false);
 
               if (leaveScreen) router.back();
@@ -220,7 +251,7 @@ export default function Directions() {
         ],
       );
     },
-    [trip.end, trainTrip.end, router, selectedMode],
+    [trip.end, trainTrip.end, jeepTrip.end, router, selectedMode],
   );
 
   useFocusEffect(
@@ -338,6 +369,7 @@ export default function Directions() {
     setBrowseFollowing(false);
     trip.end();
     trainTrip.end();
+    jeepTrip.end();
 
     request.current?.abort();
     request.current = null;
@@ -346,7 +378,7 @@ export default function Directions() {
     setLoading(false);
     setError("");
     setMapControlsOpen(false);
-  }, [trip.end, trainTrip.end]);
+  }, [trip.end, trainTrip.end, jeepTrip.end]);
 
   const calculateRoute = useCallback(
     async (choices) => {
@@ -356,6 +388,7 @@ export default function Directions() {
       Keyboard.dismiss();
       trip.end();
       trainTrip.end();
+      jeepTrip.end();
 
       request.current?.abort();
 
@@ -368,9 +401,12 @@ export default function Directions() {
       setMapControlsOpen(false);
 
       try {
-        const routes = await getRoutes(choices, {
-          signal: controller.signal,
-        });
+        const routes = await getRoutes(
+          choices.preferredMode === "jeep"
+            ? { ...choices, operatorId: jeepTypeRef.current }
+            : choices,
+          { signal: controller.signal },
+        );
 
         if (
           request.current !== controller ||
@@ -402,7 +438,7 @@ export default function Directions() {
         }
       }
     },
-    [trip.end, trainTrip.end, snapTo],
+    [trip.end, trainTrip.end, jeepTrip.end, snapTo],
   );
 
   useEffect(() => {
@@ -479,6 +515,13 @@ export default function Directions() {
 
   const startTrainTrip = async () => {
     if (await trainTrip.start()) {
+      setBrowseFollowing(false);
+      snapTo(MAX_TRANSLATE);
+    }
+  };
+
+  const startJeepTrip = async () => {
+    if (await jeepTrip.start()) {
       setBrowseFollowing(false);
       snapTo(MAX_TRANSLATE);
     }
@@ -848,6 +891,102 @@ export default function Directions() {
                 trip={trainTrip}
                 onStart={startTrainTrip}
                 onEnd={() => confirmEndTrip()}
+              />
+            )}
+
+            {route?.preferredMode === "jeep" && (
+              <View
+                style={[styles.tripCard, navigationStyles.tripControlsCard]}
+              >
+                <Text
+                  style={[styles.tripTitle, navigationStyles.tripControlsTitle]}
+                >
+                  {jeepTrip.state === "arrived"
+                    ? "You have arrived"
+                    : jeepTrip.state === "active"
+                      ? "Jeep trip active"
+                      : "Ready to travel?"}
+                </Text>
+
+                <Text
+                  style={[
+                    styles.searchHint,
+                    navigationStyles.tripControlsDescription,
+                  ]}
+                >
+                  {jeepTrip.state === "active"
+                    ? "Follow the map. Your trip updates automatically as you move."
+                    : "Start near your selected origin. Keep SAMAHAN open during your trip."}
+                </Text>
+
+                {!!jeepTrip.message && (
+                  <Text
+                    style={[styles.searchHint, { marginBottom: 12 }]}
+                    accessibilityLiveRegion="polite"
+                  >
+                    {jeepTrip.message}
+                  </Text>
+                )}
+
+                {jeepTrip.state === "idle" && (
+                  <TouchableOpacity
+                    style={[
+                      styles.findRouteButton,
+                      navigationStyles.tripControlButton,
+                      jeepTrip.busy && styles.disabledButton,
+                    ]}
+                    disabled={jeepTrip.busy}
+                    accessibilityRole="button"
+                    onPress={startJeepTrip}
+                  >
+                    {jeepTrip.busy ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.findRouteText}>Start trip</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+
+               
+
+                {(jeepTrip.open || jeepTrip.state === "arrived") && (
+                  <TouchableOpacity
+                    style={[
+                      styles.findRouteButton,
+                      navigationStyles.tripControlButton,
+                      navigationStyles.endTripButton,
+                      navigationStyles.tripControlButtonSpacing,
+                    ]}
+                    accessibilityRole="button"
+                    onPress={() =>
+                      jeepTrip.state === "arrived"
+                        ? jeepTrip.end()
+                        : confirmEndTrip()
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.findRouteText,
+                        navigationStyles.endTripText,
+                      ]}
+                    >
+                      End trip
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {selectedMode === "jeep" && (
+              <JeepTypeToggle
+                value={jeepType}
+                onChange={(next) => {
+                  if (next !== jeepType) {
+                    invalidateRoute();
+                    jeepTypeRef.current = next;
+                    setJeepType(next);
+                  }
+                }}
               />
             )}
 
