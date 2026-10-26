@@ -8,12 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  Alert,
-  AppState,
-  Linking,
-  Platform,
-} from "react-native";
+import { Alert, AppState, Linking, Platform } from "react-native";
 import { LOCATION_STATUS } from "../constants/commute";
 import {
   LOCATION_LABELS,
@@ -43,9 +38,7 @@ async function readLocationServicesEnabled() {
   try {
     const native = require("expo-location");
 
-    if (
-      typeof native.hasServicesEnabledAsync !== "function"
-    ) {
+    if (typeof native.hasServicesEnabledAsync !== "function") {
       return null;
     }
 
@@ -55,27 +48,18 @@ async function readLocationServicesEnabled() {
   }
 }
 
-export function LocationProvider({
-  children,
-  signedIn = true,
-}) {
+export function LocationProvider({ children, signedIn = true }) {
   const pathname = usePathname();
 
-  const screen =
-    pathname?.replace(/\/\([^/]+\)/g, "") || "/";
+  const screen = pathname?.replace(/\/\([^/]+\)/g, "") || "/";
 
-  const isIntroScreen = [
-    "/",
-    "/onboarding",
-    "/onboarding2",
-    "/onboarding3",
-  ].includes(screen);
+  const isIntroScreen = ["/", "/onboarding", "/onboarding2", "/onboarding3"].includes(screen);
 
   const isLoginScreen = screen === "/login";
 
-  const canReadPosition =
-    signedIn && !isIntroScreen && !isLoginScreen;
+  const canReadPosition = signedIn && !isIntroScreen && !isLoginScreen;
 
+  // Share one tracker and retain permission decisions across visible screens.
   const trackerRef = useRef(null);
   const signedInRef = useRef(signedIn);
   const isLoginRef = useRef(isLoginScreen);
@@ -85,9 +69,7 @@ export function LocationProvider({
   const promptVisibleRef = useRef(false);
   const loginCheckTokenRef = useRef(0);
 
-  const [snapshot, setSnapshot] = useState(
-    createInitialSnapshot,
-  );
+  const [snapshot, setSnapshot] = useState(createInitialSnapshot);
 
   signedInRef.current = signedIn;
   isLoginRef.current = isLoginScreen;
@@ -113,10 +95,10 @@ export function LocationProvider({
     }
   }, [signedIn]);
 
+  // Prompts: avoid overlapping system dialogs and repeated accuracy questions.
   const requestEnableLocation = useCallback(() => {
     if (
-      (!isLoginRef.current &&
-        !canReadPositionRef.current) ||
+      (!isLoginRef.current && !canReadPositionRef.current) ||
       promptVisibleRef.current ||
       AppState.currentState !== "active"
     ) {
@@ -135,9 +117,7 @@ export function LocationProvider({
 
       try {
         if (Platform.OS === "android") {
-          await Linking.sendIntent(
-            "android.settings.LOCATION_SOURCE_SETTINGS",
-          );
+          await Linking.sendIntent("android.settings.LOCATION_SOURCE_SETTINGS");
         } else {
           await Linking.openSettings();
         }
@@ -173,8 +153,7 @@ export function LocationProvider({
   const checkLoginLocation = useCallback(async () => {
     const token = ++loginCheckTokenRef.current;
 
-    const enabled =
-      await readLocationServicesEnabled();
+    const enabled = await readLocationServicesEnabled();
 
     if (
       token !== loginCheckTokenRef.current ||
@@ -186,10 +165,7 @@ export function LocationProvider({
 
     if (enabled === true) {
       servicesPromptedRef.current = false;
-    } else if (
-      enabled === false &&
-      !servicesPromptedRef.current
-    ) {
+    } else if (enabled === false && !servicesPromptedRef.current) {
       requestEnableLocation();
     }
   }, [requestEnableLocation]);
@@ -208,25 +184,13 @@ export function LocationProvider({
     if (isIntroScreen || isLoginScreen) {
       tracker.suspend();
 
-      if (
-        isLoginScreen &&
-        AppState.currentState === "active"
-      ) {
+      if (isLoginScreen && AppState.currentState === "active") {
         checkLoginLocation();
       }
-    } else if (
-      canReadPosition &&
-      AppState.currentState === "active"
-    ) {
+    } else if (canReadPosition && AppState.currentState === "active") {
       tracker.refresh();
     }
-  }, [
-    signedIn,
-    isIntroScreen,
-    isLoginScreen,
-    canReadPosition,
-    checkLoginLocation,
-  ]);
+  }, [signedIn, isIntroScreen, isLoginScreen, canReadPosition, checkLoginLocation]);
 
   useEffect(() => {
     const suspend = () => {
@@ -245,11 +209,7 @@ export function LocationProvider({
     const resume = () => {
       const tracker = trackerRef.current;
 
-      if (
-        !tracker ||
-        !wasInBackgroundRef.current ||
-        AppState.currentState !== "active"
-      ) {
+      if (!tracker || !wasInBackgroundRef.current || AppState.currentState !== "active") {
         return;
       }
 
@@ -257,34 +217,24 @@ export function LocationProvider({
 
       if (isLoginRef.current) {
         checkLoginLocation();
-      } else if (
-        signedInRef.current &&
-        canReadPositionRef.current
-      ) {
+      } else if (signedInRef.current && canReadPositionRef.current) {
         tracker.resume();
       }
     };
 
-    const stateSubscription = AppState.addEventListener(
-      "change",
-      (state) => {
-        if (state === "background") {
-          suspend();
-        } else if (state === "active") {
-          resume();
-        }
-      },
-    );
+    const stateSubscription = AppState.addEventListener("change", (state) => {
+      if (state === "background") {
+        suspend();
+      } else if (state === "active") {
+        resume();
+      }
+    });
 
     const blurSubscription =
-      Platform.OS === "android"
-        ? AppState.addEventListener("blur", suspend)
-        : null;
+      Platform.OS === "android" ? AppState.addEventListener("blur", suspend) : null;
 
     const focusSubscription =
-      Platform.OS === "android"
-        ? AppState.addEventListener("focus", resume)
-        : null;
+      Platform.OS === "android" ? AppState.addEventListener("focus", resume) : null;
 
     return () => {
       stateSubscription.remove();
@@ -310,13 +260,9 @@ export function LocationProvider({
     ) {
       requestEnableLocation();
     }
-  }, [
-    canReadPosition,
-    snapshot.status,
-    snapshot.label,
-    requestEnableLocation,
-  ]);
+  }, [canReadPosition, snapshot.status, snapshot.label, requestEnableLocation]);
 
+  // Public actions: expose location reads and tracking through the context.
   const refreshLocation = useCallback(() => {
     const tracker = trackerRef.current;
 
@@ -324,9 +270,7 @@ export function LocationProvider({
       return Promise.resolve(null);
     }
 
-    return tracker
-      ? tracker.refresh()
-      : Promise.resolve(null);
+    return tracker ? tracker.refresh() : Promise.resolve(null);
   }, []);
 
   const startTracking = useCallback(async (options) => {
@@ -349,32 +293,16 @@ export function LocationProvider({
       stopTracking,
       requestEnableLocation,
     }),
-    [
-      snapshot,
-      refreshLocation,
-      startTracking,
-      stopTracking,
-      requestEnableLocation,
-    ],
+    [snapshot, refreshLocation, startTracking, stopTracking, requestEnableLocation],
   );
 
-  return (
-    <LocationContext.Provider value={value}>
-      {children}
-    </LocationContext.Provider>
-  );
+  return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;
 }
 
-export function AuthenticatedLocationProvider({
-  children,
-}) {
+export function AuthenticatedLocationProvider({ children }) {
   const auth = useAuth();
 
-  return (
-    <LocationProvider signedIn={Boolean(auth && auth.user)}>
-      {children}
-    </LocationProvider>
-  );
+  return <LocationProvider signedIn={Boolean(auth && auth.user)}>{children}</LocationProvider>;
 }
 
 export function useLocation() {

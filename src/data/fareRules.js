@@ -83,7 +83,8 @@ export const FARE_RULES = Object.freeze({
         note: "LRTA 2026 Annex A/B single-journey fare, effective March 23, 2026. The 50% blanket discount already applies to everyone; no additional 20% discount. Beep stored-value fare: PHP 7.50.",
       },
     },
-    sourceUrl: "https://www.lrta.gov.ph/wp-content/uploads/2026/03/Citizens-Charter-Handbook-2026-2nd-Edition.pdf",
+    sourceUrl:
+      "https://www.lrta.gov.ph/wp-content/uploads/2026/03/Citizens-Charter-Handbook-2026-2nd-Edition.pdf",
     verifiedAt: "2026-10-24",
     note: "Only listed station pairs have a fare. Others are not verified.",
   },

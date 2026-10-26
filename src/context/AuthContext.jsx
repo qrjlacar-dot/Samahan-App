@@ -1,8 +1,13 @@
 import { onIdTokenChanged } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { getAccountIdentity, isGoogleAccount, profileErrorMessage, syncAccountProfile } from "../services/account";
-import { auth, db } from "../services/firebase";
+import {
+  getAccountIdentity,
+  isGoogleAccount,
+  profileErrorMessage,
+  syncAccountProfile,
+} from "../services/auth/account";
+import { auth, db } from "../services/auth/firebase";
 
 const AuthContext = createContext(null);
 
@@ -20,23 +25,33 @@ export function AuthProvider({ children }) {
     mounted.current = true;
     const unsubscribe = onIdTokenChanged(auth, (nextUser) => {
       setSession({ user: nextUser, initializing: false });
-      setProfile((previous) => previous?.uid === nextUser?.uid ? previous : null);
-      setFailure((previous) => previous?.uid === nextUser?.uid ? previous : null);
+      setProfile((previous) => (previous?.uid === nextUser?.uid ? previous : null));
+      setFailure((previous) => (previous?.uid === nextUser?.uid ? previous : null));
     });
-    return () => { mounted.current = false; unsubscribe(); };
+    return () => {
+      mounted.current = false;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
     if (!user) return;
     let active = true;
-    const unsubscribe = onSnapshot(doc(db, "users", user.uid), (snapshot) => {
-      if (!active) return;
-      setProfile(snapshot.exists() ? { ...snapshot.data(), uid: user.uid } : null);
-      setFailure(null);
-    }, (error) => {
-      if (active) setFailure({ uid: user.uid, message: profileErrorMessage(error) });
-    });
-    return () => { active = false; unsubscribe(); };
+    const unsubscribe = onSnapshot(
+      doc(db, "users", user.uid),
+      (snapshot) => {
+        if (!active) return;
+        setProfile(snapshot.exists() ? { ...snapshot.data(), uid: user.uid } : null);
+        setFailure(null);
+      },
+      (error) => {
+        if (active) setFailure({ uid: user.uid, message: profileErrorMessage(error) });
+      },
+    );
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [user?.uid, attempt]);
 
   const retryProfile = useCallback(async () => {
@@ -56,19 +71,24 @@ export function AuthProvider({ children }) {
       }
     } finally {
       if (pending.current === uid) pending.current = null;
-      if (mounted.current) setSyncingUid((value) => value === uid ? null : value);
+      if (mounted.current) setSyncingUid((value) => (value === uid ? null : value));
     }
   }, [user?.uid]);
 
   const identity = getAccountIdentity(user, profile?.uid === user?.uid ? profile : null);
 
   return (
-    <AuthContext.Provider value={{
-      user, initializing, identity, isGoogle: isGoogleAccount(user),
-      profileError: failure?.uid === user?.uid ? failure?.message || "" : "",
-      profileSyncing: !!user && syncingUid === user.uid,
-      retryProfile,
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        initializing,
+        identity,
+        isGoogle: isGoogleAccount(user),
+        profileError: failure?.uid === user?.uid ? failure?.message || "" : "",
+        profileSyncing: !!user && syncingUid === user.uid,
+        retryProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

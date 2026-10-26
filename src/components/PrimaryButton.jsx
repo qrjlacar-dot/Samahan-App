@@ -1,11 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-} from "react-native";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { scale } from "../constants/scale";
 import { COLORS } from "../constants/theme";
 import { styles } from "../styles/common.styles";
@@ -29,8 +24,7 @@ export function PrimaryButton({
   const isDisabled = disabled || isLoading;
 
   const textColor =
-    StyleSheet.flatten([styles.primaryButtonText, textStyle])?.color ||
-    COLORS.cardBg;
+    StyleSheet.flatten([styles.primaryButtonText, textStyle])?.color || COLORS.cardBg;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -40,6 +34,7 @@ export function PrimaryButton({
     };
   }, []);
 
+  // Guard repeated taps while an asynchronous screen action is still running.
   const handlePress = async (event) => {
     if (disabled || loading || processingRef.current) return;
 
@@ -61,11 +56,7 @@ export function PrimaryButton({
 
   return (
     <TouchableOpacity
-      style={[
-        styles.primaryButton,
-        style,
-        disabled && !isLoading && styles.disabledButton,
-      ]}
+      style={[styles.primaryButton, style, disabled && !isLoading && styles.disabledButton]}
       onPress={handlePress}
       disabled={isDisabled}
       activeOpacity={activeOpacity}
@@ -77,11 +68,7 @@ export function PrimaryButton({
       }}
     >
       {isLoading ? (
-        <ActivityIndicator
-          size="small"
-          color={textColor}
-          style={styles.primaryButtonIcon}
-        />
+        <ActivityIndicator size="small" color={textColor} style={styles.primaryButtonIcon} />
       ) : iconName ? (
         <Ionicons
           name={iconName}
@@ -91,9 +78,7 @@ export function PrimaryButton({
         />
       ) : null}
 
-      <Text style={[styles.primaryButtonText, textStyle]}>
-        {title}
-      </Text>
+      <Text style={[styles.primaryButtonText, textStyle]}>{title}</Text>
     </TouchableOpacity>
   );
 }

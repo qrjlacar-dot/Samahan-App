@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { OnboardingPage } from "../components/OnboardingPage";
+import { OnboardingPage } from "../components/onboarding/OnboardingPage";
 import { IMAGES } from "../constants/images";
 
 export default function Onboarding2Screen() {

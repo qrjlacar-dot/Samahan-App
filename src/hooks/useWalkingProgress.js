@@ -1,13 +1,8 @@
 import { useEffect, useState } from "react";
 import { getWalkingProgress } from "../services/walkingProgress";
 
-export function useWalkingProgress(
-  route,
-  snapshot,
-  tripState,
-) {
-  const [storedProgress, setStoredProgress] =
-    useState(null);
+export function useWalkingProgress(route, snapshot, tripState) {
+  const [storedProgress, setStoredProgress] = useState(null);
 
   useEffect(() => {
     if (!route || tripState === "idle") {
@@ -18,30 +13,13 @@ export function useWalkingProgress(
     if (tripState !== "active") return;
 
     setStoredProgress((previous) => {
-      const saved =
-        previous?.route === route
-          ? previous.value
-          : null;
+      const saved = previous?.route === route ? previous.value : null;
 
-      const value = getWalkingProgress(
-        route,
-        snapshot,
-        saved,
-      );
+      const value = getWalkingProgress(route, snapshot, saved);
 
-      return (
-        previous?.route === route &&
-        value === saved
-      )
-        ? previous
-        : { route, value };
+      return previous?.route === route && value === saved ? previous : { route, value };
     });
   }, [route, snapshot, tripState]);
 
-  return (
-    tripState !== "idle" &&
-    storedProgress?.route === route
-  )
-    ? storedProgress.value
-    : null;
+  return tripState !== "idle" && storedProgress?.route === route ? storedProgress.value : null;
 }

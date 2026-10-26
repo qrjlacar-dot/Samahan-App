@@ -58,9 +58,7 @@ export function distanceMeters(a, b) {
 
   const h =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.latitude)) *
-      Math.cos(toRad(b.latitude)) *
-      Math.sin(dLon / 2) ** 2;
+    Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * Math.sin(dLon / 2) ** 2;
 
   return 2 * earthRadius * Math.asin(Math.min(1, Math.sqrt(h)));
 }
@@ -84,10 +82,7 @@ function nearestLandmark(coordinate) {
   for (const item of LANDMARKS) {
     const distance = distanceMeters(coordinate, item.coordinate);
 
-    if (
-      distance <= item.radiusMeters &&
-      (!best || distance < best.distance)
-    ) {
+    if (distance <= item.radiusMeters && (!best || distance < best.distance)) {
       best = { item, distance };
     }
   }
@@ -106,9 +101,7 @@ export async function resolveLocationLabel(coordinate) {
 
   const landmark = nearestLandmark(coordinate);
 
-  return landmark
-    ? `Near ${landmark.name}`
-    : LOCATION_LABELS.insideArea;
+  return landmark ? `Near ${landmark.name}` : LOCATION_LABELS.insideArea;
 }
 
 export function createLabelCache(resolve, reuseMeters) {
@@ -152,12 +145,7 @@ function makeSnapshot(status, position, label, inServiceArea) {
 }
 
 export function createInitialSnapshot() {
-  return makeSnapshot(
-    LOCATION_STATUS.IDLE,
-    null,
-    LOCATION_LABELS.finding,
-    null,
-  );
+  return makeSnapshot(LOCATION_STATUS.IDLE, null, LOCATION_LABELS.finding, null);
 }
 
 function unavailableSnapshot(label) {
@@ -170,12 +158,7 @@ function unavailableSnapshot(label) {
 }
 
 function deniedSnapshot() {
-  return makeSnapshot(
-    LOCATION_STATUS.DENIED,
-    null,
-    LOCATION_LABELS.denied,
-    null,
-  );
+  return makeSnapshot(LOCATION_STATUS.DENIED, null, LOCATION_LABELS.denied, null);
 }
 
 function toIsoTimestamp(value) {
@@ -191,14 +174,9 @@ function readFix(fix) {
 
   if (!isValidCoordinate(coords)) return null;
 
-  const accuracy = Number.isFinite(coords.accuracy)
-    ? coords.accuracy
-    : null;
+  const accuracy = Number.isFinite(coords.accuracy) ? coords.accuracy : null;
 
-  const heading =
-    Number.isFinite(coords.heading) && coords.heading >= 0
-      ? coords.heading
-      : null;
+  const heading = Number.isFinite(coords.heading) && coords.heading >= 0 ? coords.heading : null;
 
   return {
     position: {
@@ -208,9 +186,7 @@ function readFix(fix) {
       headingDegrees: heading,
       timestamp: toIsoTimestamp(fix.timestamp),
     },
-    poor:
-      accuracy !== null &&
-      accuracy > MAX_ACCEPTABLE_ACCURACY_METERS,
+    poor: accuracy !== null && accuracy > MAX_ACCEPTABLE_ACCURACY_METERS,
   };
 }
 
@@ -230,10 +206,7 @@ function withTimeout(promise, ms) {
   let timer;
 
   const timeout = new Promise((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error("Location request timed out.")),
-      ms,
-    );
+    timer = setTimeout(() => reject(new Error("Location request timed out.")), ms);
   });
 
   return Promise.race([promise, timeout]).finally(() => {
@@ -241,9 +214,7 @@ function withTimeout(promise, ms) {
   });
 }
 
-export async function requestForegroundLocation(
-  { requestPermission = true } = {},
-) {
+export async function requestForegroundLocation({ requestPermission = true } = {}) {
   const native = getNativeLocation();
 
   if (!native) return unavailableSnapshot();
@@ -270,9 +241,7 @@ export async function requestForegroundLocation(
       return unavailableSnapshot(LOCATION_LABELS.servicesOff);
     }
 
-    const accuracy = native.Accuracy
-      ? native.Accuracy.High
-      : undefined;
+    const accuracy = native.Accuracy ? native.Accuracy.High : undefined;
 
     const fix = await withTimeout(
       native.getCurrentPositionAsync({
@@ -290,10 +259,7 @@ export async function requestForegroundLocation(
       return unavailableSnapshot(LOCATION_LABELS.weakSignal);
     }
 
-    return await snapshotFromReading(
-      reading,
-      resolveLocationLabel,
-    );
+    return await snapshotFromReading(reading, resolveLocationLabel);
   } catch {
     return unavailableSnapshot();
   }
@@ -303,9 +269,7 @@ export async function watchForegroundLocation(onUpdate, onError) {
   const native = getNativeLocation();
 
   if (!native) {
-    const error = new Error(
-      "expo-location is not available in this build.",
-    );
+    const error = new Error("expo-location is not available in this build.");
 
     error.code = "location/unavailable";
     throw error;
@@ -317,9 +281,7 @@ export async function watchForegroundLocation(onUpdate, onError) {
 
   const labelFor = createLabelCache();
 
-  const accuracy = native.Accuracy
-    ? native.Accuracy.High
-    : undefined;
+  const accuracy = native.Accuracy ? native.Accuracy.High : undefined;
 
   const subscription = await native.watchPositionAsync(
     {
@@ -337,10 +299,7 @@ export async function watchForegroundLocation(onUpdate, onError) {
 
         if (!reading || reading.poor) return;
 
-        const snapshot = await snapshotFromReading(
-          reading,
-          labelFor,
-        );
+        const snapshot = await snapshotFromReading(reading, labelFor);
 
         if (removed || mine <= delivered) return;
 
@@ -432,8 +391,7 @@ export function createLocationTracker(onSnapshot) {
 
     if (
       next.status === LOCATION_STATUS.DENIED ||
-      (next.status === LOCATION_STATUS.UNAVAILABLE &&
-        next.label === LOCATION_LABELS.servicesOff)
+      (next.status === LOCATION_STATUS.UNAVAILABLE && next.label === LOCATION_LABELS.servicesOff)
     ) {
       stopWatching();
     }
@@ -456,10 +414,7 @@ export function createLocationTracker(onSnapshot) {
     if (disposed || token !== watchToken) return;
 
     if (
-      ![
-        LOCATION_STATUS.READY,
-        LOCATION_STATUS.OUTSIDE_AREA,
-      ].includes(snapshot.status) ||
+      ![LOCATION_STATUS.READY, LOCATION_STATUS.OUTSIDE_AREA].includes(snapshot.status) ||
       !snapshot.position
     ) {
       starting = false;
@@ -479,10 +434,7 @@ export function createLocationTracker(onSnapshot) {
     let created;
 
     try {
-      created = await watchForegroundLocation(
-        onUpdate,
-        onError,
-      );
+      created = await watchForegroundLocation(onUpdate, onError);
     } catch {
       if (!disposed && token === watchToken) {
         starting = false;

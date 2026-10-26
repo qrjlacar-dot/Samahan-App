@@ -10,16 +10,16 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
-    marginBottom: scale(28)
+    marginBottom: scale(28),
   },
   logoIcon: {
     marginRight: scale(2),
     width: scale(56),
-    height: scale(56)
+    height: scale(56),
   },
   wordmark: {
     width: scale(145),
-    height: scale(56)
+    height: scale(56),
   },
   draftBadge: {
     alignSelf: "flex-start",
@@ -29,13 +29,13 @@ export const styles = StyleSheet.create({
     borderRadius: scale(8),
     backgroundColor: "#FCE8F2",
     color: COLORS.pink,
-    fontWeight: "bold"
+    fontWeight: "bold",
   },
   body: {
     marginTop: scale(20),
     fontSize: scale(15),
     lineHeight: scale(24),
     color: COLORS.textDark,
-    textAlign: "justify"
-  }
+    textAlign: "justify",
+  },
 });

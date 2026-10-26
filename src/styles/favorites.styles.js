@@ -1,11 +1,6 @@
 import { StyleSheet } from "react-native";
 import { scale, scaleFont } from "../constants/scale";
-import {
-  COLORS,
-  FONT_SIZES,
-  RADIUS,
-  SPACING,
-} from "../constants/theme";
+import { COLORS, FONT_SIZES, RADIUS, SPACING } from "../constants/theme";
 
 const LOCAL_COLORS = {
   pinkSoft: "#F7DCEB",

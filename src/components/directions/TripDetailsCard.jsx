@@ -1,18 +1,14 @@
 import { TRAIN_RIDE_FARES, farePairKey } from "../../data/trainFares";
-import { busTimelineSteps, simplifyWalkingInstruction } from "../../services/busPresentation";
+import {
+  busTimelineSteps,
+  simplifyWalkingInstruction,
+} from "../../services/routing/busPresentation";
 import { Linking } from "react-native";
 import FareSummary from "./FareSummary";
 import { Ionicons } from "@expo/vector-icons";
-import {
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import { styles } from "../../styles/directions.styles";
-import TripSummaryBadge, {
-  formatDistance,
-  formatDuration,
-} from "./TripSummaryBadge";
+import TripSummaryBadge, { formatDistance, formatDuration } from "./TripSummaryBadge";
 import ProviderAttribution from "./ProviderAttribution";
 
 export default function TripDetailsCard({
@@ -30,26 +26,22 @@ export default function TripDetailsCard({
   if (!route && routeError) return null;
   const isTrain = route?.preferredMode === "train";
   const busJourney = route?.preferredMode === "bus" || route?.requestedMode === "bus";
-  const timelineSteps = busJourney ? busTimelineSteps(route) : route?.steps ?? [];
-  const currentStep = busJourney && tripState === "arrived"
-    ? timelineSteps.length - 1 : progress?.stepIndex ?? 0;
+  const timelineSteps = busJourney ? busTimelineSteps(route) : (route?.steps ?? []);
+  const currentStep =
+    busJourney && tripState === "arrived" ? timelineSteps.length - 1 : (progress?.stepIndex ?? 0);
 
   const summaryRoute = progress
     ? {
         ...route,
-        distanceMeters:
-          progress.remainingDistanceMeters,
-        durationSeconds:
-          progress.remainingDurationSeconds,
+        distanceMeters: progress.remainingDistanceMeters,
+        durationSeconds: progress.remainingDurationSeconds,
       }
     : route;
 
   return (
     <View style={styles.tripCard}>
       <View style={styles.tripHeader}>
-        <Text style={styles.tripTitle}>
-          Trip Details
-        </Text>
+        <Text style={styles.tripTitle}>Trip Details</Text>
 
         {route && onToggleFavorite && (
           <TouchableOpacity
@@ -59,15 +51,7 @@ export default function TripDetailsCard({
             style={{ opacity: favoriteBusy ? 0.5 : 1 }}
             accessibilityLabel="Toggle favorite"
           >
-            <Ionicons
-              name={
-                isFavorite
-                  ? "heart"
-                  : "heart-outline"
-              }
-              size={22}
-              color="#C76C9B"
-            />
+            <Ionicons name={isFavorite ? "heart" : "heart-outline"} size={22} color="#C76C9B" />
           </TouchableOpacity>
         )}
       </View>
@@ -83,56 +67,49 @@ export default function TripDetailsCard({
       ) : (
         <>
           <TripSummaryBadge route={summaryRoute} />
-          {!!route.recommendation && <Text style={[styles.searchHint, { marginBottom: 12 }]}>{route.recommendation}</Text>}
+          {!!route.recommendation && (
+            <Text style={[styles.searchHint, { marginBottom: 12 }]}>{route.recommendation}</Text>
+          )}
           {!!favoriteError && <Text style={styles.routeError}>{favoriteError}</Text>}
           <FareSummary route={route} ticketType={ticketType} />
 
-          {isTrain && route.trainStopCount > 0 && <Text style={styles.searchHint}>
-            {route.nextTrainDirection} · {route.trainStopCount} stop(s)
-          </Text>}
-          {isTrain && route.trainStopCount === 0 && <Text style={styles.searchHint}>
-            Both places are closest to the same train station, so this trip is walking-only. No train fare.
-          </Text>}
+          {isTrain && route.trainStopCount > 0 && (
+            <Text style={styles.searchHint}>
+              {route.nextTrainDirection} · {route.trainStopCount} stop(s)
+            </Text>
+          )}
+          {isTrain && route.trainStopCount === 0 && (
+            <Text style={styles.searchHint}>
+              Both places are closest to the same train station, so this trip is walking-only. No
+              train fare.
+            </Text>
+          )}
           {progress && (
-            <Text
-              style={[
-                styles.searchHint,
-                { marginBottom: 12 },
-              ]}
-            >
-              {busJourney && tripState === "arrived" ? "Trip complete" : <>
-              {tripState === "paused"
-                ? "Paused · Last estimate"
-                : "Remaining"}
-              {" · "}
-              Step {progress.stepIndex + 1} of{" "}
-              {progress.stepCount}
-              </>}
+            <Text style={[styles.searchHint, { marginBottom: 12 }]}>
+              {busJourney && tripState === "arrived" ? (
+                "Trip complete"
+              ) : (
+                <>
+                  {tripState === "paused" ? "Paused · Last estimate" : "Remaining"}
+                  {" · "}
+                  Step {progress.stepIndex + 1} of {progress.stepCount}
+                </>
+              )}
             </Text>
           )}
 
           <Text style={styles.routeEndpoints}>
-            {route.origin.name} →{" "}
-            {route.destination.name}
+            {route.origin.name} → {route.destination.name}
           </Text>
 
           <View style={styles.timelineContainer}>
             {timelineSteps.map((step, index) => (
-              <View
-                key={step.id}
-                style={styles.timelineItem}
-              >
+              <View key={step.id} style={styles.timelineItem}>
                 {index < timelineSteps.length - 1 && (
-                  <View
-                    style={
-                      styles.verticalDottedConnector
-                    }
-                  />
+                  <View style={styles.verticalDottedConnector} />
                 )}
 
-                <View
-                  style={styles.timelineIconColumn}
-                >
+                <View style={styles.timelineIconColumn}>
                   <View
                     style={
                       index === currentStep && (!step.displayArrival || tripState === "arrived")
@@ -155,28 +132,36 @@ export default function TripDetailsCard({
                     style={[
                       styles.stopTitle,
                       progress &&
-                        index === currentStep && (!step.displayArrival || tripState === "arrived") && {
+                        index === currentStep &&
+                        (!step.displayArrival || tripState === "arrived") && {
                           color: "#C76C9B",
                           fontWeight: "700",
                         },
                     ]}
                   >
-                    {step.mode === "walk" ? simplifyWalkingInstruction(step.instruction) : step.instruction}
+                    {step.mode === "walk"
+                      ? simplifyWalkingInstruction(step.instruction)
+                      : step.instruction}
                   </Text>
 
                   <Text style={styles.stopSubtitle}>
-                    {formatDistance(
-                      step.distanceMeters,
+                    {formatDistance(step.distanceMeters)}
+                    {!isTrain && Number.isFinite(step.durationSeconds) && !step.displayArrival && (
+                      <>
+                        {" · "}
+                        {formatDuration(step.durationSeconds)}
+                      </>
                     )}
-                    {!isTrain && Number.isFinite(step.durationSeconds) && !step.displayArrival && <>
-                      {" · "}{formatDuration(step.durationSeconds)}
-                    </>}
                   </Text>
                   {isTrain && step.mode === "train" && (
                     <View style={styles.farePill}>
-                      <Text style={styles.fareText}>{Number.isFinite(TRAIN_RIDE_FARES[farePairKey(...(step.stationIds ?? []))]?.[ticketType])
-                        ? `₱${TRAIN_RIDE_FARES[farePairKey(...(step.stationIds ?? []))][ticketType].toFixed(2)}`
-                        : "Confirm fare"}</Text>
+                      <Text style={styles.fareText}>
+                        {Number.isFinite(
+                          TRAIN_RIDE_FARES[farePairKey(...(step.stationIds ?? []))]?.[ticketType],
+                        )
+                          ? `₱${TRAIN_RIDE_FARES[farePairKey(...(step.stationIds ?? []))][ticketType].toFixed(2)}`
+                          : "Confirm fare"}
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -188,23 +173,30 @@ export default function TripDetailsCard({
             {isTrain
               ? "Approximate route. Check platform signs and current service before travelling."
               : route.preferredMode === "walk"
-              ? "Walking times are estimates. Keep Location turned on during your trip."
-              : route.preferredMode === "bus"
-                ? "Follow the boarding and drop-off instructions. Check the signboard and tell the conductor your stopping point before boarding."
-                : "Check service availability and the correct platform before travelling."}
+                ? "Walking times are estimates. Keep Location turned on during your trip."
+                : route.preferredMode === "bus"
+                  ? "Follow the boarding and drop-off instructions. Check the signboard and tell the conductor your stopping point before boarding."
+                  : "Jeepney preview. Confirm the placard, permitted stops, and service availability with the driver."}
           </Text>
 
-          {(isTrain ? (route.warnings ?? []).filter(note => /walking leg|offline|unavailable/i.test(note)) : route.warnings ?? []).map((warning, index) => (
-            <Text
-              key={index}
-              style={styles.searchHint}
-            >
+          {(isTrain
+            ? (route.warnings ?? []).filter((note) => /walking leg|offline|unavailable/i.test(note))
+            : (route.warnings ?? [])
+          ).map((warning, index) => (
+            <Text key={index} style={styles.searchHint}>
               {warning}
             </Text>
           ))}
 
           {[...new Set(route.steps.map((step) => step.sourceUrl).filter(Boolean))].map((url) => (
-            <Text key={url} style={styles.searchHint} accessibilityRole="link" onPress={() => Linking.openURL(url).catch(() => {})}>Transport route source</Text>
+            <Text
+              key={url}
+              style={styles.searchHint}
+              accessibilityRole="link"
+              onPress={() => Linking.openURL(url).catch(() => {})}
+            >
+              Transport route source
+            </Text>
           ))}
           <ProviderAttribution />
         </>

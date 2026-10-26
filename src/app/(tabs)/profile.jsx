@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   Linking,
   ScrollView,
   Switch,
@@ -15,18 +16,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ProfileAvatar } from "../../components/ProfileAvatar";
 import { useAuth } from "../../context/AuthContext";
 import { COLORS } from "../../constants/theme";
-import {
-  accountErrorMessage,
-  signOutAccount,
-} from "../../services/account";
+import { accountErrorMessage, signOutAccount } from "../../services/auth/account";
 import {
   getNotificationPreferences,
   setNotificationPreferences,
 } from "../../services/notifications";
-import {
-  getPhonePermission,
-  requestPhonePermission,
-} from "../../services/phoneNotifications";
+import { getPhonePermission, requestPhonePermission } from "../../services/phoneNotifications";
 import { styles } from "../../styles/profile.styles";
 
 export default function Profile() {
@@ -35,8 +30,7 @@ export default function Profile() {
   const uid = user?.uid;
 
   const [signingOut, setSigningOut] = useState(false);
-  const [isNotificationsEnabled, setIsNotificationsEnabled] =
-    useState(true);
+  const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
 
   const [preferencesLoading, setPreferencesLoading] = useState(true);
   const savingPreference = useRef(false);
@@ -50,23 +44,27 @@ export default function Profile() {
 
       let active = true;
 
-      Promise.all([getNotificationPreferences(uid), getPhonePermission()])
-        .then(([preferences, permission]) => {
-          if (active && !savingPreference.current) {
-            setIsNotificationsEnabled(
-              preferences.enabled && permission !== "denied",
-            );
-          }
-        })
-        .catch(() => {
-          // Keep the current value; the switch still works.
-        })
-        .finally(() => {
-          if (active) setPreferencesLoading(false);
-        });
+      const refreshPreferences = () =>
+        Promise.all([getNotificationPreferences(uid), getPhonePermission()])
+          .then(([preferences, permission]) => {
+            if (active && !savingPreference.current) {
+              setIsNotificationsEnabled(preferences.enabled && permission === "granted");
+            }
+          })
+          .catch(() => {
+            // Keep the current value; the switch still works.
+          })
+          .finally(() => {
+            if (active) setPreferencesLoading(false);
+          });
 
+      void refreshPreferences();
+      const subscription = AppState?.addEventListener("change", (state) => {
+        if (state === "active") void refreshPreferences();
+      });
       return () => {
         active = false;
+        subscription?.remove();
       };
     }, [uid]),
   );
@@ -102,10 +100,7 @@ export default function Profile() {
       await setNotificationPreferences(uid, { enabled: nextValue });
     } catch {
       setIsNotificationsEnabled(previousValue);
-      Alert.alert(
-        "Could not save",
-        "Your notification setting was not changed. Please try again.",
-      );
+      Alert.alert("Could not save", "Your notification setting was not changed. Please try again.");
     } finally {
       savingPreference.current = false;
     }
@@ -114,31 +109,27 @@ export default function Profile() {
   const handleSignOut = () => {
     if (signingOut) return;
 
-    Alert.alert(
-      "Sign Out",
-      "Are you sure you want to sign out?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Sign Out",
-          style: "destructive",
-          onPress: async () => {
-            setSigningOut(true);
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          setSigningOut(true);
 
-            try {
-              await signOutAccount();
-              router.replace("/(auth)/login");
-            } catch (error) {
-              setSigningOut(false);
-              Alert.alert("Error", accountErrorMessage(error));
-            }
-          },
+          try {
+            await signOutAccount();
+            router.replace("/(auth)/login");
+          } catch (error) {
+            setSigningOut(false);
+            Alert.alert("Error", accountErrorMessage(error));
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   return (
@@ -153,9 +144,7 @@ export default function Profile() {
         </View>
 
         <View style={styles.identity}>
-          <Text style={styles.userName}>
-            {identity.name}
-          </Text>
+          <Text style={styles.userName}>{identity.name}</Text>
 
           {!!identity.email && (
             <Text style={styles.userEmail} selectable>
@@ -166,9 +155,20 @@ export default function Profile() {
 
         {!!profileError && (
           <View style={styles.syncCard}>
-            <Text style={styles.syncMessage} accessibilityLiveRegion="polite">{profileError}</Text>
-            <TouchableOpacity onPress={retryProfile} disabled={profileSyncing} accessibilityRole="button" style={styles.syncButton}>
-              {profileSyncing ? <ActivityIndicator color={COLORS.pink} /> : <Text style={styles.syncButtonText}>Retry sync</Text>}
+            <Text style={styles.syncMessage} accessibilityLiveRegion="polite">
+              {profileError}
+            </Text>
+            <TouchableOpacity
+              onPress={retryProfile}
+              disabled={profileSyncing}
+              accessibilityRole="button"
+              style={styles.syncButton}
+            >
+              {profileSyncing ? (
+                <ActivityIndicator color={COLORS.pink} />
+              ) : (
+                <Text style={styles.syncButtonText}>Retry sync</Text>
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -181,40 +181,19 @@ export default function Profile() {
             onPress={() => router.push("/profile/edit")}
           >
             <View style={styles.menuLeft}>
-              <Ionicons
-                name="card-outline"
-                size={22}
-                color={COLORS.pink}
-              />
+              <Ionicons name="card-outline" size={22} color={COLORS.pink} />
 
-              <Text style={styles.menuText}>
-                Edit Profile Information
-              </Text>
+              <Text style={styles.menuText}>Edit Profile Information</Text>
             </View>
 
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color="#CCCCCC"
-            />
+            <Ionicons name="chevron-forward" size={18} color="#CCCCCC" />
           </TouchableOpacity>
 
-          <View
-            style={[
-              styles.menuItem,
-              isGoogle && styles.lastMenuItem,
-            ]}
-          >
+          <View style={[styles.menuItem, isGoogle && styles.lastMenuItem]}>
             <View style={styles.menuLeft}>
-              <Ionicons
-                name="notifications-outline"
-                size={22}
-                color={COLORS.pink}
-              />
+              <Ionicons name="notifications-outline" size={22} color={COLORS.pink} />
 
-              <Text style={styles.menuText}>
-                Notifications
-              </Text>
+              <Text style={styles.menuText}>Notifications</Text>
             </View>
 
             <Switch
@@ -222,9 +201,7 @@ export default function Profile() {
                 false: "#E0E0E0",
                 true: "#E8A5C8",
               }}
-              thumbColor={
-                isNotificationsEnabled ? COLORS.pink : "#F4F3F4"
-              }
+              thumbColor={isNotificationsEnabled ? COLORS.pink : "#F4F3F4"}
               disabled={signingOut || preferencesLoading}
               onValueChange={toggleNotifications}
               value={isNotificationsEnabled}
@@ -239,22 +216,12 @@ export default function Profile() {
               onPress={() => router.push("/profile/reset")}
             >
               <View style={styles.menuLeft}>
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={22}
-                  color={COLORS.pink}
-                />
+                <Ionicons name="lock-closed-outline" size={22} color={COLORS.pink} />
 
-                <Text style={styles.menuText}>
-                  Reset Password
-                </Text>
+                <Text style={styles.menuText}>Reset Password</Text>
               </View>
 
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color="#CCCCCC"
-              />
+              <Ionicons name="chevron-forward" size={18} color="#CCCCCC" />
             </TouchableOpacity>
           )}
         </View>
@@ -271,16 +238,10 @@ export default function Profile() {
           }}
         >
           {signingOut && (
-            <ActivityIndicator
-              size="small"
-              color="#E57373"
-              style={styles.signOutIndicator}
-            />
+            <ActivityIndicator size="small" color="#E57373" style={styles.signOutIndicator} />
           )}
 
-          <Text style={styles.signOutText}>
-            Sign out
-          </Text>
+          <Text style={styles.signOutText}>Sign out</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

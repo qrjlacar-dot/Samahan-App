@@ -11,16 +11,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import {
-  FloatingInput,
-  PrimaryButton,
-} from "../../components/common";
+import { FloatingInput, PrimaryButton } from "../../components/common";
 import { IMAGES } from "../../constants/images";
-import {
-  accountErrorMessage,
-  loginWithEmail,
-} from "../../services/account";
-import { canSignInWithGoogle } from "../../services/google-auth";
+import { accountErrorMessage, loginWithEmail } from "../../services/auth/account";
+import { canSignInWithGoogle } from "../../services/auth/google-auth";
 import { styles } from "../../styles/login.styles";
 
 export default function LoginScreen() {
@@ -42,6 +36,7 @@ export default function LoginScreen() {
     }
   };
 
+  // Authentication: keep form feedback separate from the sign-in request.
   const handleLogin = async () => {
     if (submitting.current) return;
 
@@ -94,15 +89,9 @@ export default function LoginScreen() {
           >
             <View style={styles.card}>
               <View style={styles.logoRow}>
-                <Image
-                  source={IMAGES.logo}
-                  style={styles.logoIcon}
-                />
+                <Image source={IMAGES.logo} style={styles.logoIcon} />
 
-                <Image
-                  source={IMAGES.wordmark}
-                  style={styles.wordmark}
-                />
+                <Image source={IMAGES.wordmark} style={styles.wordmark} />
               </View>
 
               <View style={styles.content}>
@@ -145,14 +134,10 @@ export default function LoginScreen() {
 
                 <TouchableOpacity
                   disabled={loading}
-                  onPress={() =>
-                    router.push("/(auth)/reset-password")
-                  }
+                  onPress={() => router.push("/(auth)/reset-password")}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.forgotText}>
-                    Forgot Password?
-                  </Text>
+                  <Text style={styles.forgotText}>Forgot Password?</Text>
                 </TouchableOpacity>
 
                 <PrimaryButton
@@ -165,9 +150,7 @@ export default function LoginScreen() {
                 <View style={styles.dividerRow}>
                   <View style={styles.dividerLine} />
 
-                  <Text style={styles.dividerText}>
-                    Or continue with
-                  </Text>
+                  <Text style={styles.dividerText}>Or continue with</Text>
 
                   <View style={styles.dividerLine} />
                 </View>
@@ -182,29 +165,20 @@ export default function LoginScreen() {
                   }}
                   activeOpacity={0.8}
                 >
-                  <Image
-                    source={IMAGES.googleIcon}
-                    style={styles.googleIcon}
-                  />
+                  <Image source={IMAGES.googleIcon} style={styles.googleIcon} />
 
-                  <Text style={styles.googleButtonText}>
-                    Google
-                  </Text>
+                  <Text style={styles.googleButtonText}>Google</Text>
                 </TouchableOpacity>
 
                 <View style={styles.signupRow}>
-                  <Text style={styles.signupText}>
-                    Don't have an account?{" "}
-                  </Text>
+                  <Text style={styles.signupText}>Don't have an account? </Text>
 
                   <TouchableOpacity
                     disabled={loading}
                     onPress={() => router.push("/(auth)/sign-up")}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.signupLink}>
-                      Sign Up
-                    </Text>
+                    <Text style={styles.signupLink}>Sign Up</Text>
                   </TouchableOpacity>
                 </View>
               </View>

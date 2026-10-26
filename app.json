@@ -48,6 +48,12 @@
         {
           "locationWhenInUsePermission": "SAMAHAN uses your location to show where you are and to guide your commute."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "trip-updates"
+        }
       ]
     ],
     "experiments": {

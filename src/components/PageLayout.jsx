@@ -14,10 +14,7 @@ export function PageLayout({
   const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView
-      style={styles.page}
-      edges={["left", "right", "bottom"]}
-    >
+    <SafeAreaView style={styles.page} edges={["left", "right", "bottom"]}>
       <View style={[styles.header, { paddingTop: insets.top + scale(8) }]}>
         <BackButton onPress={onBack} />
       </View>

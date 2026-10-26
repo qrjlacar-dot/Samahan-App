@@ -1,23 +1,10 @@
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  useFocusEffect,
-  useLocalSearchParams,
-  useRouter,
-} from "expo-router";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import {
-  ActivityIndicator,
   Alert,
   Animated,
   BackHandler,
-  Dimensions,
   Keyboard,
-  PanResponder,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -25,104 +12,80 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BackButton } from "../components/BackButton";
-import { CommuteMap } from "../components/CommuteMap";
+import { CommuteMap } from "../components/maps/CommuteMap";
+import GuidedTripControls from "../components/directions/controls/GuidedTripControls";
+import JeepTypeToggle from "../components/directions/controls/JeepTypeToggle";
 import LocationInputCard from "../components/directions/LocationInputCard";
-import MapControls from "../components/directions/MapControls";
-import ModeSelector from "../components/directions/ModeSelector";
-import TicketToggle from "../components/directions/TicketToggle";
-import TrainNavigationControls from "../components/directions/TrainNavigationControls";
+import MapControls from "../components/directions/controls/MapControls";
+import ModeSelector from "../components/directions/controls/ModeSelector";
+import TicketToggle from "../components/directions/controls/TicketToggle";
+import TripActionButton from "../components/directions/controls/TripActionButton";
 import TripDetailsCard from "../components/directions/TripDetailsCard";
+import WalkingBusTripControls from "../components/directions/controls/WalkingBusTripControls";
 import WalkingNavigationBanner from "../components/directions/WalkingNavigationBanner";
 import { useAuth } from "../context/AuthContext";
+import { useBusTrip } from "../hooks/useBusTrip";
+import { useDirectionsSheet } from "../hooks/useDirectionsSheet";
+import { useJeepTrip } from "../hooks/useJeepTrip";
 import { useJourneyFavorites } from "../hooks/useJourneyFavorites";
 import { useMapLocation } from "../hooks/useMapLocation";
-import { useBusTrip } from "../hooks/useBusTrip";
-import { useWalkingTrip } from "../hooks/useWalkingTrip";
 import { useTrainTrip } from "../hooks/useTrainTrip";
+import { useWalkingTrip } from "../hooks/useWalkingTrip";
+import { busReturnNotice } from "../services/routing/busPresentation";
 import { currentLocationPlace } from "../services/deviceLocation";
 import { parseJourneyParam } from "../services/journeys";
+import { holdTripNotifications } from "../services/phoneNotifications";
 import { getRoutes, searchTrainAndWalkingPlaces } from "../services/routes";
-import { busReturnNotice } from "../services/busPresentation";
 import { styles } from "../styles/directions.styles";
 import { styles as navigationStyles } from "../styles/walking-navigation.styles";
-
-const SCREEN_HEIGHT = Dimensions.get("window").height;
-const MAX_TRANSLATE = Math.max(0, SCREEN_HEIGHT - 180);
 
 export default function Directions() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { user } = useAuth();
 
-  const journeyParam = Array.isArray(params.journey)
-    ? params.journey[0]
-    : params.journey;
+  // Saved selections and screen state.
+  const journeyParam = Array.isArray(params.journey) ? params.journey[0] : params.journey;
 
-  const incoming = useMemo(
-    () => parseJourneyParam(journeyParam),
-    [journeyParam],
-  );
+  const incoming = useMemo(() => parseJourneyParam(journeyParam), [journeyParam]);
 
-  const initialY =
-    params.collapsed === "true" ? MAX_TRANSLATE : 0;
+  const [selectedMode, setSelectedMode] = useState(incoming?.preferredMode || "walk");
 
-  const translateY = useRef(
-    new Animated.Value(initialY),
-  ).current;
+  const { snapshot, refreshLocation, startTracking, stopTracking } = useMapLocation({
+    trackWhenFocused: selectedMode !== "train",
+  });
 
-  const lastY = useRef(initialY);
-  const dragStart = useRef(initialY);
-
-  const [isExpanded, setIsExpanded] = useState(
-    params.collapsed !== "true",
-  );
-
-  const [selectedMode, setSelectedMode] = useState(
-    incoming?.preferredMode || "walk",
-  );
-
-  const { snapshot, refreshLocation, startTracking, stopTracking } =
-    useMapLocation({ trackWhenFocused: selectedMode !== "train" });
-
-  const [ticketType, setTicketType] = useState(
-    incoming?.ticketType || "discounted",
-  );
-
-  const [origin, setOrigin] = useState(
-    incoming?.origin || null,
-  );
-
-  const [destination, setDestination] = useState(
-    incoming?.destination || null,
-  );
-
-  const [locationText, setLocationText] = useState(
-    incoming?.origin.name || "",
-  );
-
-  const [destinationText, setDestinationText] = useState(
-    incoming?.destination.name || "",
-  );
+  const [jeepType, setJeepType] = useState(incoming?.operatorId || "jeep-traditional");
+  const jeepTypeRef = useRef(jeepType);
+  jeepTypeRef.current = jeepType;
+  const [ticketType, setTicketType] = useState(incoming?.ticketType || "discounted");
+  const [origin, setOrigin] = useState(incoming?.origin || null);
+  const [destination, setDestination] = useState(incoming?.destination || null);
+  const [locationText, setLocationText] = useState(incoming?.origin.name || "");
+  const [destinationText, setDestinationText] = useState(incoming?.destination.name || "");
 
   const [route, setRoute] = useState(null);
+  useFocusEffect(
+    useCallback(() => {
+      if (!route) return undefined;
+      return holdTripNotifications(user?.uid);
+    }, [user?.uid, route?.id]),
+  );
   const returnNotice = busReturnNotice(route);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fitRequest, setFitRequest] = useState(0);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  const [mapControlsOpen, setMapControlsOpen] =
-    useState(false);
-
-  const [browseFollowing, setBrowseFollowing] =
-    useState(!incoming);
-
-  const [
-    browseRecenterRequest,
-    setBrowseRecenterRequest,
-  ] = useState(0);
+  const [mapControlsOpen, setMapControlsOpen] = useState(false);
+  const [browseFollowing, setBrowseFollowing] = useState(!incoming);
+  const [browseRecenterRequest, setBrowseRecenterRequest] = useState(0);
 
   const request = useRef(null);
+  const hideMapControls = useCallback(() => setMapControlsOpen(false), []);
+  const { translateY, isExpanded, snapTo, panHandlers, collapsedOffset, sheetHeight } =
+    useDirectionsSheet({
+      initiallyCollapsed: params.collapsed === "true",
+      onInteract: hideMapControls,
+    });
 
   const journey = useMemo(
     () =>
@@ -132,11 +95,13 @@ export default function Directions() {
             destination,
             preferredMode: selectedMode,
             ticketType,
+            ...(selectedMode === "jeep" ? { operatorId: jeepType } : {}),
           }
         : null,
-    [origin, destination, selectedMode, ticketType],
+    [origin, destination, selectedMode, ticketType, jeepType],
   );
 
+  // Each mode keeps its own trip controller; only the selected route is active.
   const walkingTrip = useWalkingTrip({
     uid: user?.uid,
     journey,
@@ -147,68 +112,79 @@ export default function Directions() {
   });
 
   const busTrip = useBusTrip({
-    uid: user?.uid, journey,
+    uid: user?.uid,
+    journey,
     route: route?.preferredMode === "bus" ? route : null,
-    snapshot, refreshLocation,
+    snapshot,
+    refreshLocation,
   });
   const trainTrip = useTrainTrip({
     uid: user?.uid,
     journey,
     route: route?.preferredMode === "train" ? route : null,
-    snapshot, refreshLocation, startTracking, stopTracking,
+    snapshot,
+    refreshLocation,
+    startTracking,
+    stopTracking,
     onRouteChange: setRoute,
   });
-  const trip = route?.preferredMode === "train" ? trainTrip
-    : route?.preferredMode === "bus" ? busTrip : walkingTrip;
+  const jeepTrip = useJeepTrip({
+    uid: user?.uid,
+    journey,
+    route: route?.preferredMode === "jeep" ? route : null,
+    snapshot,
+    refreshLocation,
+    startTracking,
+    stopTracking,
+    onRouteChange: setRoute,
+  });
+  const tripsByMode = { walk: walkingTrip, bus: busTrip, train: trainTrip, jeep: jeepTrip };
+  const trip = tripsByMode[route?.preferredMode] || walkingTrip;
   const endTrips = useCallback(() => {
     walkingTrip.end();
     busTrip.end();
     trainTrip.end();
-  }, [walkingTrip.end, busTrip.end, trainTrip.end]);
+    jeepTrip.end();
+  }, [walkingTrip.end, busTrip.end, trainTrip.end, jeepTrip.end]);
   // Only used after the user confirmed they want to stop an open trip.
   const cancelTrips = useCallback(() => {
     walkingTrip.cancel();
     busTrip.cancel();
     trainTrip.cancel();
-  }, [walkingTrip.cancel, busTrip.cancel, trainTrip.cancel]);
+    jeepTrip.cancel();
+  }, [walkingTrip.cancel, busTrip.cancel, trainTrip.cancel, jeepTrip.cancel]);
 
   useEffect(() => {
     if (selectedMode !== "train" || origin || locationText.trim()) return;
-    if (!Number.isFinite(snapshot.position?.accuracyMeters) || snapshot.position.accuracyMeters > 70) return;
+    if (
+      !Number.isFinite(snapshot.position?.accuracyMeters) ||
+      snapshot.position.accuracyMeters > 70
+    )
+      return;
     try {
       const here = currentLocationPlace(snapshot);
       setOrigin(here);
       setLocationText(here.name);
-    } catch { /* GPS is optional; a starting point can be searched. */ }
+    } catch {
+      /* GPS is optional; a starting point can be searched. */
+    }
   }, [selectedMode, snapshot, origin, locationText]);
 
-  const favorite = useJourneyFavorites(
-    user?.uid,
-    route ? journey : null,
-  );
+  const favorite = useJourneyFavorites(user?.uid, route ? journey : null);
 
-  const locked = walkingTrip.open || walkingTrip.busy || busTrip.open || busTrip.busy || trainTrip.open || trainTrip.busy;
+  const locked =
+    walkingTrip.open ||
+    walkingTrip.busy ||
+    busTrip.open ||
+    busTrip.busy ||
+    trainTrip.open ||
+    trainTrip.busy ||
+    jeepTrip.open ||
+    jeepTrip.busy;
 
-  const showNavigation = Boolean(
-    trip.progress &&
-      (trip.open || trip.state === "arrived"),
-  );
+  const showNavigation = Boolean(trip.progress && (trip.open || trip.state === "arrived"));
 
-  const snapTo = useCallback(
-    (toValue) => {
-      setMapControlsOpen(false);
-      setIsExpanded(toValue === 0);
-
-      Animated.spring(translateY, {
-        toValue,
-        useNativeDriver: true,
-        bounciness: 0,
-        speed: 14,
-      }).start();
-    },
-    [translateY],
-  );
-
+  // Confirm explicit cancellation before stopping navigation or leaving.
   const confirmEndTrip = useCallback(
     (leaveScreen = false) => {
       Alert.alert(
@@ -241,113 +217,30 @@ export default function Directions() {
     useCallback(() => {
       if (!trip.open && !mapControlsOpen) return;
 
-      const subscription = BackHandler.addEventListener(
-        "hardwareBackPress",
-        () => {
-          if (mapControlsOpen) {
-            setMapControlsOpen(false);
-          } else {
-            confirmEndTrip(true);
-          }
+      const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+        if (mapControlsOpen) {
+          setMapControlsOpen(false);
+        } else {
+          confirmEndTrip(true);
+        }
 
-          return true;
-        },
-      );
+        return true;
+      });
 
       return () => subscription.remove();
-    }, [
-      trip.open,
-      mapControlsOpen,
-      confirmEndTrip,
-    ]),
+    }, [trip.open, mapControlsOpen, confirmEndTrip]),
   );
 
-  useEffect(() => {
-    const shown = Keyboard.addListener(
-      "keyboardDidShow",
-      (event) =>
-        setKeyboardHeight(event.endCoordinates.height),
-    );
-
-    const hidden = Keyboard.addListener(
-      "keyboardDidHide",
-      () => setKeyboardHeight(0),
-    );
-
-    return () => {
-      shown.remove();
-      hidden.remove();
-    };
-  }, []);
-
-  useEffect(() => {
-    const listener = translateY.addListener(
-      ({ value }) => {
-        lastY.current = value;
-      },
-    );
-
-    return () => {
-      translateY.removeListener(listener);
+  // Cancel an unfinished route request when this screen closes.
+  useEffect(
+    () => () => {
       request.current?.abort();
       request.current = null;
-    };
-  }, [translateY]);
+    },
+    [],
+  );
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-
-      onMoveShouldSetPanResponder: (_, gesture) =>
-        Math.abs(gesture.dy) > 3,
-
-      onPanResponderGrant: () => {
-        setMapControlsOpen(false);
-        translateY.stopAnimation();
-        dragStart.current = lastY.current;
-      },
-
-      onPanResponderMove: (_, gesture) => {
-        translateY.setValue(
-          Math.max(
-            0,
-            Math.min(
-              MAX_TRANSLATE,
-              dragStart.current + gesture.dy,
-            ),
-          ),
-        );
-      },
-
-      onPanResponderRelease: (_, gesture) => {
-        const position = Math.max(
-          0,
-          Math.min(
-            MAX_TRANSLATE,
-            dragStart.current + gesture.dy,
-          ),
-        );
-
-        if (gesture.dy > 50 || gesture.vy > 0.3) {
-          snapTo(MAX_TRANSLATE);
-        } else if (
-          gesture.dy < -50 ||
-          gesture.vy < -0.3
-        ) {
-          snapTo(0);
-        } else {
-          snapTo(
-            position > MAX_TRANSLATE / 2
-              ? MAX_TRANSLATE
-              : 0,
-          );
-        }
-      },
-
-      onPanResponderTerminate: () => snapTo(0),
-    }),
-  ).current;
-
+  // Input changes invalidate old routes and cancel any outstanding request.
   const invalidateRoute = useCallback(() => {
     setBrowseFollowing(false);
     endTrips();
@@ -361,6 +254,7 @@ export default function Directions() {
     setMapControlsOpen(false);
   }, [endTrips]);
 
+  // Only the latest search may update the map and itinerary.
   const calculateRoute = useCallback(
     async (choices) => {
       if (!choices) return;
@@ -380,31 +274,28 @@ export default function Directions() {
       setMapControlsOpen(false);
 
       try {
-        const routes = await getRoutes(choices, {
-          signal: controller.signal,
-        });
+        const routes = await getRoutes(
+          choices.preferredMode === "jeep"
+            ? { ...choices, operatorId: jeepTypeRef.current }
+            : choices,
+          {
+            signal: controller.signal,
+          },
+        );
 
-        if (
-          request.current !== controller ||
-          controller.signal.aborted
-        ) {
+        if (request.current !== controller || controller.signal.aborted) {
           return;
         }
 
         if (!routes[0]) {
-          throw new Error(
-            "No route was found for these places.",
-          );
+          throw new Error("No route was found for these places.");
         }
 
         setRoute(routes[0]);
         setFitRequest((value) => value + 1);
-        snapTo(MAX_TRANSLATE);
+        snapTo(collapsedOffset);
       } catch (failure) {
-        if (
-          request.current === controller &&
-          failure.name !== "AbortError"
-        ) {
+        if (request.current === controller && failure.name !== "AbortError") {
           setError(failure.message);
         }
       } finally {
@@ -421,9 +312,7 @@ export default function Directions() {
     if (!journeyParam) return;
 
     if (!incoming) {
-      setError(
-        "This saved journey could not be opened. Select your places again.",
-      );
+      setError("This saved journey could not be opened. Select your places again.");
       return;
     }
 
@@ -433,14 +322,14 @@ export default function Directions() {
     setDestinationText(incoming.destination.name);
     setSelectedMode(incoming.preferredMode);
     setTicketType(incoming.ticketType);
+    const incomingJeepType = incoming.operatorId || "jeep-traditional";
+    jeepTypeRef.current = incomingJeepType;
+    setJeepType(incomingJeepType);
 
     void calculateRoute(incoming);
-  }, [
-    journeyParam,
-    incoming,
-    calculateRoute,
-  ]);
+  }, [journeyParam, incoming, calculateRoute]);
 
+  // Editing and selection handlers preserve the active-trip input lock.
   const editOrigin = (value) => {
     if (locked) return;
 
@@ -485,18 +374,16 @@ export default function Directions() {
   const startTrip = async () => {
     if (await trip.start()) {
       setBrowseFollowing(false);
-      snapTo(MAX_TRANSLATE);
+      snapTo(collapsedOffset);
     }
   };
 
-  const canSearch = Boolean(
-    journey && !loading && !locked,
-  );
+  const canSearch = Boolean(journey && !loading && !locked);
 
   const sheetTitle =
     trip.state === "active"
       ? "Trip active"
-      : (trip.state === "paused" || trip.state === "off-route")
+      : trip.state === "paused" || trip.state === "off-route"
         ? "Trip paused"
         : trip.state === "rerouting"
           ? "Updating route"
@@ -504,6 +391,7 @@ export default function Directions() {
             ? "You have arrived"
             : "Directions";
 
+  // Compose the map, draggable sheet, reusable controls and trip details.
   return (
     <View style={styles.container}>
       <View style={styles.mapContainer}>
@@ -515,19 +403,11 @@ export default function Directions() {
           route={route}
           fitRequest={fitRequest}
           contentBottomInset={110}
-          followUser={
-            trip.open || trip.busy
-              ? trip.following
-              : browseFollowing
-          }
+          followUser={trip.open || trip.busy ? trip.following : browseFollowing}
           followHeading={trip.state === "active"}
           followZoom={18}
-          recenterRequest={
-            trip.recenterRequest + browseRecenterRequest
-          }
-          onMapPress={() =>
-            setMapControlsOpen(false)
-          }
+          recenterRequest={trip.recenterRequest + browseRecenterRequest}
+          onMapPress={() => setMapControlsOpen(false)}
           onUserPan={() => {
             setBrowseFollowing(false);
             trip.stopFollowing();
@@ -538,11 +418,7 @@ export default function Directions() {
 
       <BackButton
         style={styles.backButton}
-        onPress={() =>
-          trip.open
-            ? confirmEndTrip(true)
-            : router.back()
-        }
+        onPress={() => (trip.open ? confirmEndTrip(true) : router.back())}
         activeOpacity={0.8}
         iconSize={22}
         iconColor="#333333"
@@ -551,10 +427,7 @@ export default function Directions() {
       />
 
       {!isExpanded && showNavigation && (
-        <View
-          pointerEvents="box-none"
-          style={navigationStyles.overlay}
-        >
+        <View pointerEvents="box-none" style={navigationStyles.overlay}>
           <WalkingNavigationBanner
             route={route}
             progress={trip.progress}
@@ -571,9 +444,7 @@ export default function Directions() {
       {!isExpanded && (
         <MapControls
           expanded={mapControlsOpen}
-          onToggle={() =>
-            setMapControlsOpen((value) => !value)
-          }
+          onToggle={() => setMapControlsOpen((value) => !value)}
           hasRoute={Boolean(route)}
           hasPosition={Boolean(snapshot.position)}
           onFit={() => {
@@ -589,9 +460,7 @@ export default function Directions() {
               trip.recenter();
             } else {
               setBrowseFollowing(true);
-              setBrowseRecenterRequest(
-                (value) => value + 1,
-              );
+              setBrowseRecenterRequest((value) => value + 1);
             }
           }}
         />
@@ -602,45 +471,33 @@ export default function Directions() {
         style={[
           styles.bottomSheet,
           {
-            height: Math.max(
-              200,
-              SCREEN_HEIGHT - 90 - keyboardHeight,
-            ),
+            height: sheetHeight,
             transform: [{ translateY }],
           },
         ]}
       >
-        <View {...panResponder.panHandlers}>
+        <View {...panHandlers}>
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={() => {
               Keyboard.dismiss();
 
-              snapTo(
-                isExpanded ? MAX_TRANSLATE : 0,
-              );
+              snapTo(isExpanded ? collapsedOffset : 0);
             }}
             style={styles.dragHeader}
           >
             <View style={styles.dragHandle} />
-            <Text style={styles.sheetTitle}>
-              {sheetTitle}
-            </Text>
+            <Text style={styles.sheetTitle}>{sheetTitle}</Text>
           </TouchableOpacity>
         </View>
 
-        <SafeAreaView
-          edges={["bottom"]}
-          style={styles.sheetContent}
-        >
+        <SafeAreaView edges={["bottom"]} style={styles.sheetContent}>
           <ScrollView
             removeClippedSubviews={false}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets
-            contentContainerStyle={
-              styles.scrollContainerStyle
-            }
+            contentContainerStyle={styles.scrollContainerStyle}
           >
             <View
               collapsable={false}
@@ -654,8 +511,10 @@ export default function Directions() {
                     invalidateRoute();
                     setSelectedMode(mode);
                     if (mode === "train" || selectedMode === "train") {
-                      setOrigin(null); setDestination(null);
-                      setLocationText(""); setDestinationText("");
+                      setOrigin(null);
+                      setDestination(null);
+                      setLocationText("");
+                      setDestinationText("");
                     }
                   }
                 }}
@@ -673,212 +532,69 @@ export default function Directions() {
               />
             </View>
 
-            <TouchableOpacity
-              style={[
-                styles.findRouteButton,
-                !canSearch && styles.disabledButton,
-              ]}
+            <TripActionButton
+              title={selectedMode === "walk" ? "Find walking route" : "Find transport route"}
+              style={!canSearch && styles.disabledButton}
               disabled={!canSearch}
-              accessibilityRole="button"
+              loading={loading}
               accessibilityLabel={
-                selectedMode === "walk"
-                  ? "Find walking route"
-                  : "Find transport route"
+                selectedMode === "walk" ? "Find walking route" : "Find transport route"
               }
               onPress={() => calculateRoute(journey)}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.findRouteText}>
-                  {selectedMode === "walk"
-                    ? "Find walking route"
-                    : "Find transport route"}
-                </Text>
-              )}
-            </TouchableOpacity>
+            />
 
             {!!error && (
-              <Text
-                style={styles.routeError}
-                accessibilityLiveRegion="polite"
-              >
+              <Text style={styles.routeError} accessibilityLiveRegion="polite">
                 {error}
               </Text>
             )}
 
             {["walk", "bus"].includes(route?.preferredMode) && (
-              <View
-                style={[
-                  styles.tripCard,
-                  navigationStyles.tripControlsCard,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.tripTitle,
-                    navigationStyles.tripControlsTitle,
-                  ]}
-                >
-                  {trip.state === "arrived"
-                    ? "You have arrived"
-                    : trip.state === "active"
-                      ? "Trip active"
-                      : trip.state === "paused"
-                        ? "Trip paused"
-                        : trip.state === "rerouting"
-                          ? "Updating walking route"
-                          : route.preferredMode === "bus" ? "Ready for your bus trip?" : "Ready to walk?"}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.searchHint,
-                    navigationStyles.tripControlsDescription,
-                  ]}
-                >
-                  {trip.state === "arrived"
-                    ? "Your trip is complete."
-                    : trip.state === "active"
-                      ? trip.following
-                        ? "The map is following your location and phone direction."
-                        : "Open Map controls, then tap Recenter to follow your location again."
-                      : trip.state === "paused"
-                        ? route.preferredMode === "bus"
-                          ? "Check your location and bus route, then resume. End this trip to choose a different route."
-                          : "Check your location, then resume or update the route."
-                        : trip.state === "rerouting"
-                          ? "Finding a new walking route from your current location."
-                          : "Start near the selected starting point. Keep SAMAHAN open during your trip."}
-                </Text>
-
-                {!!returnNotice && trip.state !== "arrived" && (
-                  <Text accessibilityLiveRegion="polite" style={[
-                    styles.searchHint,
-                    { color: "#704658", backgroundColor: "#FAEDF3", borderRadius: 12, padding: 12, marginBottom: 12 },
-                  ]}>{returnNotice}</Text>
-                )}
-
-                {route.preferredMode === "bus" && trip.open && (
-                  <Text style={[styles.searchHint, { marginBottom: 12 }]}>{trip.instruction}</Text>
-                )}
-                {trip.actionLabel && (
-                  <TouchableOpacity style={[styles.findRouteButton, { marginBottom: 12 }]}
-                    accessibilityRole="button" disabled={trip.busy} onPress={trip.confirmStage}>
-                    <Text style={styles.findRouteText}>{trip.busy ? "Checking location…" : trip.actionLabel}</Text>
-                  </TouchableOpacity>
-                )}
-
-                {!!trip.message && (
-                  <Text
-                    style={[
-                      styles.searchHint,
-                      { marginBottom: 12 },
-                    ]}
-                    accessibilityLiveRegion="polite"
-                  >
-                    {trip.message}
-                  </Text>
-                )}
-
-                {trip.state === "rerouting" && (
-                  <ActivityIndicator color="#C76C9B" />
-                )}
-
-                {["idle", "paused"].includes(
-                  trip.state,
-                ) && (
-                  <TouchableOpacity
-                    style={[
-                      styles.findRouteButton,
-                      navigationStyles.tripControlButton,
-                      trip.busy && styles.disabledButton,
-                    ]}
-                    disabled={trip.busy}
-                    accessibilityRole="button"
-                    onPress={startTrip}
-                  >
-                    {trip.busy ? (
-                      <ActivityIndicator color="#FFFFFF" />
-                    ) : (
-                      <Text style={styles.findRouteText}>
-                        {trip.state === "paused"
-                          ? "Resume trip"
-                          : "Start trip"}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                )}
-
-                {trip.state === "paused" && route.preferredMode === "walk" && (
-                  <TouchableOpacity
-                    style={[
-                      styles.findRouteButton,
-                      navigationStyles.tripControlButton,
-                      navigationStyles.tripControlButtonSpacing,
-                    ]}
-                    disabled={trip.busy}
-                    accessibilityRole="button"
-                    onPress={() => trip.reroute()}
-                  >
-                    <Text style={styles.findRouteText}>
-                      Update route from my location
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {trip.open && (
-                  <TouchableOpacity
-                    style={[
-                      styles.findRouteButton,
-                      navigationStyles.tripControlButton,
-                      navigationStyles.endTripButton,
-                      trip.state === "paused" &&
-                        navigationStyles.tripControlButtonSpacing,
-                    ]}
-                    accessibilityRole="button"
-                    onPress={() => confirmEndTrip()}
-                  >
-                    <Text
-                      style={[
-                        styles.findRouteText,
-                        navigationStyles.endTripText,
-                      ]}
-                    >
-                      End trip
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {trip.state === "arrived" && (
-                  <TouchableOpacity
-                    style={[
-                      styles.findRouteButton,
-                      navigationStyles.tripControlButton,
-                    ]}
-                    accessibilityRole="button"
-                    onPress={() => {
-                      invalidateRoute();
-                      snapTo(0);
-                    }}
-                  >
-                    <Text style={styles.findRouteText}>
-                      Plan another trip
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+              <WalkingBusTripControls
+                mode={route.preferredMode}
+                trip={trip}
+                returnNotice={returnNotice}
+                onStart={startTrip}
+                onEnd={() => confirmEndTrip()}
+                onPlanAnother={() => {
+                  invalidateRoute();
+                  snapTo(0);
+                }}
+              />
             )}
 
             {route?.preferredMode === "train" && (
-              <TrainNavigationControls trip={trainTrip} onStart={startTrip} onEnd={() => confirmEndTrip()} />
+              <GuidedTripControls
+                trip={trainTrip}
+                onStart={startTrip}
+                onEnd={() => confirmEndTrip()}
+              />
+            )}
+
+            {route?.preferredMode === "jeep" && (
+              <GuidedTripControls
+                mode="jeep"
+                trip={jeepTrip}
+                onStart={startTrip}
+                onEnd={() => confirmEndTrip()}
+              />
+            )}
+
+            {selectedMode === "jeep" && (
+              <JeepTypeToggle
+                value={jeepType}
+                onChange={(next) => {
+                  if (!locked && next !== jeepType) {
+                    invalidateRoute();
+                    jeepTypeRef.current = next;
+                    setJeepType(next);
+                  }
+                }}
+              />
             )}
 
             {route && route.preferredMode !== "walk" && (
-              <TicketToggle
-                ticketType={ticketType}
-                onSelectTicketType={setTicketType}
-              />
+              <TicketToggle ticketType={ticketType} onSelectTicketType={setTicketType} />
             )}
 
             <TripDetailsCard
@@ -891,9 +607,7 @@ export default function Directions() {
               isFavorite={favorite.isFavorite}
               favoriteBusy={favorite.busy}
               favoriteError={favorite.error}
-              onToggleFavorite={
-                user?.uid ? favorite.toggle : null
-              }
+              onToggleFavorite={user?.uid ? favorite.toggle : null}
             />
           </ScrollView>
         </SafeAreaView>

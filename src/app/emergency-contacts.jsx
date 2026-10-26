@@ -79,10 +79,7 @@ export default function EmergencyContactsScreen() {
 
       return true;
     } catch {
-      Alert.alert(
-        "Error",
-        "Could not save emergency contacts. Please try again.",
-      );
+      Alert.alert("Error", "Could not save emergency contacts. Please try again.");
 
       return false;
     } finally {
@@ -116,10 +113,7 @@ export default function EmergencyContactsScreen() {
       phone: cleanedPhone,
     };
 
-    const saved = await persistContacts((currentContacts) => [
-      ...currentContacts,
-      newContact,
-    ]);
+    const saved = await persistContacts((currentContacts) => [...currentContacts, newContact]);
 
     if (saved) {
       setName("");
@@ -128,24 +122,20 @@ export default function EmergencyContactsScreen() {
   };
 
   const deleteContact = (contact) => {
-    Alert.alert(
-      "Delete contact?",
-      `Remove ${contact.name} from your emergency contacts?`,
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () =>
-            persistContacts((currentContacts) =>
-              currentContacts.filter((item) => item.id !== contact.id),
-            ),
-        },
-      ],
-    );
+    Alert.alert("Delete contact?", `Remove ${contact.name} from your emergency contacts?`, [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () =>
+          persistContacts((currentContacts) =>
+            currentContacts.filter((item) => item.id !== contact.id),
+          ),
+      },
+    ]);
   };
 
   const callNumber = async (number) => {
@@ -160,9 +150,7 @@ export default function EmergencyContactsScreen() {
     <PageLayout contentStyle={styles.content}>
       <Text style={styles.title}>Emergency Contacts</Text>
 
-      <Text style={styles.subtitle}>
-        Save people you can quickly contact in an emergency.
-      </Text>
+      <Text style={styles.subtitle}>Save people you can quickly contact in an emergency.</Text>
 
       <View style={styles.addCard}>
         <Text style={styles.sectionTitle}>Add Personal Contact</Text>
@@ -203,15 +191,9 @@ export default function EmergencyContactsScreen() {
         </Text>
       ) : contacts.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Ionicons
-            name="people-outline"
-            size={scale(32)}
-            color={COLORS.pink}
-          />
+          <Ionicons name="people-outline" size={scale(32)} color={COLORS.pink} />
 
-          <Text style={styles.emptyText}>
-            No personal emergency contacts yet.
-          </Text>
+          <Text style={styles.emptyText}>No personal emergency contacts yet.</Text>
         </View>
       ) : (
         contacts.map((contact) => (
@@ -244,11 +226,7 @@ export default function EmergencyContactsScreen() {
               accessibilityState={{ disabled: isSaving }}
               hitSlop={4}
             >
-              <Ionicons
-                name="trash-outline"
-                size={scale(21)}
-                color={COLORS.pink}
-              />
+              <Ionicons name="trash-outline" size={scale(21)} color={COLORS.pink} />
             </Pressable>
           </View>
         ))

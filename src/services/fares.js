@@ -81,7 +81,7 @@ function quoteStep(step, index) {
     return { ...base, note: rule.note };
   }
 
-  if (rule.firstKmMeters != null) {
+  if (rule.firstKmMeters != null && step.withinMinimumFare !== true) {
     const distance = step.distanceMeters;
     if (!Number.isFinite(distance)) {
       return { ...base, note: `${rule.label}: distance unknown, so the fare is unknown.` };
@@ -129,8 +129,7 @@ export async function quoteFare(route, ticketType) {
   const items = route.steps.map(quoteStep);
   const regularTotal = total(items, "regular");
   const discountedTotal = total(items, "discounted");
-  const selectedTotal =
-    ticketType === "discounted" ? discountedTotal : regularTotal;
+  const selectedTotal = ticketType === "discounted" ? discountedTotal : regularTotal;
   const complete = selectedTotal !== null;
 
   let note;

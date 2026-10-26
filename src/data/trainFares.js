@@ -38,17 +38,30 @@ export const farePairKey = (a, b) => [a, b].sort().join("|");
 // All four origins and destinations, including the three railway stations.
 // Walking-only journeys have no fare; reaching/leaving Anonas uses LRT-2.
 export const TRAIN_FARE_TABLE = Object.freeze(
-  Object.fromEntries(TRAIN_PLACES.map((from) => [
-    from.id,
-    Object.freeze(Object.fromEntries(TRAIN_PLACES.map((to) => {
-      const takesLrt = from.id !== to.id &&
-        (from.id === "lrt2-anonas" || to.id === "lrt2-anonas");
-      return [to.id, takesLrt
-        ? Object.freeze({ ...TRAIN_RIDE_FARES["lrt2-anonas|lrt2-cubao"] })
-        : Object.freeze({ regular: 0, discounted: 0, operatorId: null,
-          note: from.id === to.id ? "Same place" : "Walking transfer; no train fare" })];
-    }))),
-  ])),
+  Object.fromEntries(
+    TRAIN_PLACES.map((from) => [
+      from.id,
+      Object.freeze(
+        Object.fromEntries(
+          TRAIN_PLACES.map((to) => {
+            const takesLrt =
+              from.id !== to.id && (from.id === "lrt2-anonas" || to.id === "lrt2-anonas");
+            return [
+              to.id,
+              takesLrt
+                ? Object.freeze({ ...TRAIN_RIDE_FARES["lrt2-anonas|lrt2-cubao"] })
+                : Object.freeze({
+                    regular: 0,
+                    discounted: 0,
+                    operatorId: null,
+                    note: from.id === to.id ? "Same place" : "Walking transfer; no train fare",
+                  }),
+            ];
+          }),
+        ),
+      ),
+    ]),
+  ),
 );
 
 export function trainTripFare(originId, destinationId) {

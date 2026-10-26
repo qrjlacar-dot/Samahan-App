@@ -8,17 +8,10 @@ const trackingOwners = new WeakMap();
 export function useMapLocation({ trackWhenFocused = true } = {}) {
   const location = useLocation();
 
-  const {
-    snapshot,
-    startTracking,
-    stopTracking,
-  } = location;
+  const { snapshot, startTracking, stopTracking } = location;
 
   const canTrack =
-    [
-      LOCATION_STATUS.READY,
-      LOCATION_STATUS.OUTSIDE_AREA,
-    ].includes(snapshot.status) &&
+    [LOCATION_STATUS.READY, LOCATION_STATUS.OUTSIDE_AREA].includes(snapshot.status) &&
     snapshot.position != null;
 
   useFocusEffect(
@@ -38,19 +31,11 @@ export function useMapLocation({ trackWhenFocused = true } = {}) {
       startTracking({ requestPermission: false });
 
       return () => {
-        if (
-          owners.delete(owner) &&
-          owners.size === 0
-        ) {
+        if (owners.delete(owner) && owners.size === 0) {
           stopTracking();
         }
       };
-    }, [
-      canTrack,
-      trackWhenFocused,
-      startTracking,
-      stopTracking,
-    ]),
+    }, [canTrack, trackWhenFocused, startTracking, stopTracking]),
   );
 
   return location;

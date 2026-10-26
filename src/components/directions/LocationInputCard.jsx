@@ -1,20 +1,6 @@
-import {
-  Ionicons,
-  MaterialIcons,
-} from "@expo/vector-icons";
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-import {
-  ActivityIndicator,
-  Keyboard,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Keyboard, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { searchPlaces } from "../../services/routes";
 import { useLocation } from "../../context/LocationContext";
 import { currentLocationPlace } from "../../services/deviceLocation";
@@ -32,23 +18,20 @@ export default function LocationInputCard({
   minQueryLength = 2,
   mapCurrentLocation = currentLocationPlace,
 }) {
+  // State: keep typed searches separate from a pending GPS selection.
   const { refreshLocation } = useLocation();
 
-  const [gettingCurrent, setGettingCurrent] =
-    useState(false);
+  const [gettingCurrent, setGettingCurrent] = useState(false);
 
-  const [currentError, setCurrentError] =
-    useState("");
+  const [currentError, setCurrentError] = useState("");
 
   const currentToken = useRef(0);
   const currentPending = useRef(false);
   const searchToken = useRef(0);
 
-  const [activeField, setActiveField] =
-    useState(null);
+  const [activeField, setActiveField] = useState(null);
 
-  const [suggestions, setSuggestions] =
-    useState([]);
+  const [suggestions, setSuggestions] = useState([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -57,11 +40,9 @@ export default function LocationInputCard({
 
   const requestRef = useRef(null);
 
-  const query =
-    activeField === "origin"
-      ? locationText
-      : destinationText;
+  const query = activeField === "origin" ? locationText : destinationText;
 
+  // Search: debounce typing and ignore responses from older requests.
   useEffect(() => {
     setSuggestions([]);
     setError("");
@@ -97,26 +78,16 @@ export default function LocationInputCard({
           },
         });
 
-        if (
-          !cancelled &&
-          token === searchToken.current
-        ) {
+        if (!cancelled && token === searchToken.current) {
           setSuggestions(results);
           setSearched(true);
         }
       } catch (e) {
-        if (
-          !cancelled &&
-          token === searchToken.current &&
-          e.name !== "AbortError"
-        ) {
+        if (!cancelled && token === searchToken.current && e.name !== "AbortError") {
           setError(e.message);
         }
       } finally {
-        if (
-          !cancelled &&
-          token === searchToken.current
-        ) {
+        if (!cancelled && token === searchToken.current) {
           setLoading(false);
         }
       }
@@ -127,14 +98,7 @@ export default function LocationInputCard({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [
-    activeField,
-    query,
-    retry,
-    gettingCurrent,
-    searchPlacesFn,
-    minQueryLength,
-  ]);
+  }, [activeField, query, retry, gettingCurrent, searchPlacesFn, minQueryLength]);
 
   useEffect(
     () => () => {
@@ -145,6 +109,7 @@ export default function LocationInputCard({
     [],
   );
 
+  // Actions: cancel obsolete work before editing, selecting or switching fields.
   const cancelRequests = () => {
     currentToken.current += 1;
     currentPending.current = false;
@@ -165,11 +130,7 @@ export default function LocationInputCard({
     cancelRequests();
     setActiveField(field);
 
-    (
-      field === "origin"
-        ? setLocationText
-        : setDestinationText
-    )(value);
+    (field === "origin" ? setLocationText : setDestinationText)(value);
   };
 
   const select = (place) => {
@@ -179,6 +140,7 @@ export default function LocationInputCard({
     Keyboard.dismiss();
   };
 
+  // GPS: accept a fix only while it still belongs to the selected field.
   const selectCurrentLocation = async () => {
     const field = activeField;
 
@@ -193,11 +155,7 @@ export default function LocationInputCard({
     setSuggestions([]);
     setError("");
 
-    (
-      field === "origin"
-        ? setLocationText
-        : setDestinationText
-    )("");
+    (field === "origin" ? setLocationText : setDestinationText)("");
 
     Keyboard.dismiss();
 
@@ -212,10 +170,7 @@ export default function LocationInputCard({
       setActiveField(null);
     } catch (error) {
       if (token === currentToken.current) {
-        setCurrentError(
-          error.message ||
-            "Could not read your location. Please try again.",
-        );
+        setCurrentError(error.message || "Could not read your location. Please try again.");
       }
     } finally {
       if (token === currentToken.current) {
@@ -225,6 +180,7 @@ export default function LocationInputCard({
     }
   };
 
+  // Display: keep suggestions and current-location feedback below the input card.
   return (
     <View>
       <View style={styles.locationCard}>
@@ -237,12 +193,8 @@ export default function LocationInputCard({
             <TextInput
               style={styles.textInput}
               value={locationText}
-              onChangeText={(value) =>
-                edit("origin", value)
-              }
-              onFocus={() =>
-                focusField("origin")
-              }
+              onChangeText={(value) => edit("origin", value)}
+              onFocus={() => focusField("origin")}
               placeholder="Starting point"
               placeholderTextColor="#777777"
               accessibilityLabel="Starting point"
@@ -257,22 +209,14 @@ export default function LocationInputCard({
 
           <View style={styles.locationRow}>
             <View style={styles.iconColumn}>
-              <Ionicons
-                name="location"
-                size={18}
-                color="#C76C9B"
-              />
+              <Ionicons name="location" size={18} color="#C76C9B" />
             </View>
 
             <TextInput
               style={styles.textInput}
               value={destinationText}
-              onChangeText={(value) =>
-                edit("destination", value)
-              }
-              onFocus={() =>
-                focusField("destination")
-              }
+              onChangeText={(value) => edit("destination", value)}
+              onFocus={() => focusField("destination")}
               placeholder="Destination"
               placeholderTextColor="#777777"
               accessibilityLabel="Destination"
@@ -292,11 +236,7 @@ export default function LocationInputCard({
           }}
           activeOpacity={0.7}
         >
-          <MaterialIcons
-            name="swap-vert"
-            size={24}
-            color="#555555"
-          />
+          <MaterialIcons name="swap-vert" size={24} color="#555555" />
         </TouchableOpacity>
       </View>
 
@@ -305,9 +245,7 @@ export default function LocationInputCard({
           <View style={styles.searchResultHeader}>
             <Text style={styles.searchHint}>
               Type part of a place or street name, then choose a{" "}
-              {activeField === "origin"
-                ? "starting point"
-                : "destination"} in Cubao or Anonas
+              {activeField === "origin" ? "starting point" : "destination"} in Cubao or Anonas
             </Text>
 
             <TouchableOpacity
@@ -318,11 +256,7 @@ export default function LocationInputCard({
               }}
               accessibilityLabel="Close search suggestions"
             >
-              <Ionicons
-                name="close"
-                size={20}
-                color="#654255"
-              />
+              <Ionicons name="close" size={20} color="#654255" />
             </TouchableOpacity>
           </View>
 
@@ -330,8 +264,7 @@ export default function LocationInputCard({
             style={[
               styles.searchResult,
               {
-                borderBottomWidth:
-                  suggestions.length > 0 ? 1 : 0,
+                borderBottomWidth: suggestions.length > 0 ? 1 : 0,
               },
             ]}
             accessibilityRole="button"
@@ -345,11 +278,7 @@ export default function LocationInputCard({
                 alignItems: "center",
               }}
             >
-              <Ionicons
-                name="locate"
-                size={20}
-                color="#C76C9B"
-              />
+              <Ionicons name="locate" size={20} color="#C76C9B" />
 
               <View
                 style={{
@@ -357,56 +286,37 @@ export default function LocationInputCard({
                   marginLeft: 10,
                 }}
               >
-                <Text style={styles.stopTitle}>
-                  Current location
-                </Text>
+                <Text style={styles.stopTitle}>Current location</Text>
 
                 <Text style={styles.stopSubtitle}>
-                  {gettingCurrent
-                    ? "Getting your location..."
-                    : "Use your phone's latest location"}
+                  {gettingCurrent ? "Getting your location..." : "Use your phone's latest location"}
                 </Text>
               </View>
 
-              {gettingCurrent && (
-                <ActivityIndicator color="#C76C9B" />
-              )}
+              {gettingCurrent && <ActivityIndicator color="#C76C9B" />}
             </View>
           </TouchableOpacity>
 
           {!!currentError && (
-            <Text
-              style={styles.routeError}
-              accessibilityLiveRegion="polite"
-            >
+            <Text style={styles.routeError} accessibilityLiveRegion="polite">
               {currentError}
             </Text>
           )}
 
-          {loading && (
-            <ActivityIndicator color="#C76C9B" />
-          )}
+          {loading && <ActivityIndicator color="#C76C9B" />}
 
           {!!error && (
-            <TouchableOpacity
-              onPress={() =>
-                setRetry((value) => value + 1)
-              }
-            >
-              <Text style={styles.routeError}>
-                {error} Tap to retry.
-              </Text>
+            <TouchableOpacity onPress={() => setRetry((value) => value + 1)}>
+              <Text style={styles.routeError}>{error} Tap to retry.</Text>
             </TouchableOpacity>
           )}
 
-          {searched &&
-            !loading &&
-            !error &&
-            !suggestions.length && (
-              <Text style={styles.searchHint}>
-                No matches found. Try part of the business name, its street, or a nearby landmark. Some places may not be listed in the map data.
-              </Text>
-            )}
+          {searched && !loading && !error && !suggestions.length && (
+            <Text style={styles.searchHint}>
+              No matches found. Try part of the business name, its street, or a nearby landmark.
+              Some places may not be listed in the map data.
+            </Text>
+          )}
 
           {suggestions.map((place) => (
             <TouchableOpacity
@@ -415,19 +325,13 @@ export default function LocationInputCard({
               onPress={() => select(place)}
               accessibilityRole="button"
             >
-              <Text style={styles.stopTitle}>
-                {place.name}
-              </Text>
+              <Text style={styles.stopTitle}>{place.name}</Text>
 
-              <Text style={styles.stopSubtitle}>
-                {place.address}
-              </Text>
+              <Text style={styles.stopSubtitle}>{place.address}</Text>
             </TouchableOpacity>
           ))}
 
-          {!!suggestions.length && searchPlacesFn === searchPlaces && (
-            <ProviderAttribution />
-          )}
+          {!!suggestions.length && searchPlacesFn === searchPlaces && <ProviderAttribution />}
         </View>
       )}
     </View>

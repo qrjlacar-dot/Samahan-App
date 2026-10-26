@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { FloatingInput, PrimaryButton } from "../../components/common";
 import { ProfileAvatar } from "../../components/ProfileAvatar";
-import { accountErrorMessage, registerWithEmail } from "../../services/account";
+import { accountErrorMessage, registerWithEmail } from "../../services/auth/account";
 import { styles } from "../../styles/sign-up.styles";
 
 export default function SignUpScreen() {
@@ -52,9 +52,7 @@ export default function SignUpScreen() {
     } catch (error) {
       Alert.alert(
         "Sign Up failed",
-        error.code === "account/profile-incomplete"
-          ? error.message
-          : accountErrorMessage(error),
+        error.code === "account/profile-incomplete" ? error.message : accountErrorMessage(error),
       );
     } finally {
       submitting.current = false;
@@ -143,9 +141,7 @@ export default function SignUpScreen() {
                 />
 
                 <View style={styles.loginRow}>
-                  <Text style={styles.loginText}>
-                    Already have an account?{" "}
-                  </Text>
+                  <Text style={styles.loginText}>Already have an account? </Text>
 
                   <TouchableOpacity
                     onPress={() => router.push("/(auth)/login")}

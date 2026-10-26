@@ -72,10 +72,7 @@ export function useNotificationPrompt() {
         const save = (enabled) => {
           if (!active) return;
           setNotificationPreferences(uid, { enabled }).catch(() => {
-            Alert.alert(
-              "Could not save",
-              "You can change this anytime in Profile.",
-            );
+            Alert.alert("Could not save", "You can change this anytime in Profile.");
           });
         };
 

@@ -33,7 +33,10 @@ function isValidJourney(journey) {
     isValidPlace(journey.origin) &&
     isValidPlace(journey.destination) &&
     TRAVEL_MODES.includes(journey.preferredMode) &&
-    TICKET_TYPES.includes(journey.ticketType)
+    TICKET_TYPES.includes(journey.ticketType) &&
+    (journey.operatorId == null ||
+      (journey.preferredMode === "jeep" &&
+        ["jeep-traditional", "jeep-modern"].includes(journey.operatorId)))
   );
 }
 
@@ -65,6 +68,7 @@ export function journeyKey(journey) {
     journey.destination.id,
     journey.preferredMode,
     journey.ticketType,
+    ...(journey.preferredMode === "jeep" ? [journey.operatorId || "jeep-traditional"] : []),
   ].join("|");
 }
 
@@ -132,6 +136,9 @@ export async function saveFavorite(uid, journey) {
       destination: clonePlace(journey.destination),
       preferredMode: journey.preferredMode,
       ticketType: journey.ticketType,
+      ...(journey.preferredMode === "jeep"
+        ? { operatorId: journey.operatorId || "jeep-traditional" }
+        : {}),
       createdAt: new Date().toISOString(),
     };
     await writeAll(uid, [favorite, ...items]);
@@ -146,6 +153,9 @@ export async function removeFavorite(uid, favoriteId) {
   storageKey(uid);
   return enqueue(uid, async () => {
     const items = await readAll(uid);
-    await writeAll(uid, items.filter((item) => item.id !== favoriteId));
+    await writeAll(
+      uid,
+      items.filter((item) => item.id !== favoriteId),
+    );
   });
 }

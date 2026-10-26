@@ -1,7 +1,4 @@
-import {
-  distanceMeters,
-  isWithinServiceArea,
-} from "./location";
+import { distanceMeters, isWithinServiceArea } from "./location";
 import { LOCATION_STATUS } from "../constants/commute";
 
 export const MAX_TRIP_FIX_AGE_MS = 30000;
@@ -34,18 +31,9 @@ export function distanceToRouteMeters(position, polyline) {
     const dy = by - ay;
     const squared = dx * dx + dy * dy;
 
-    const t =
-      squared === 0
-        ? 0
-        : Math.max(
-            0,
-            Math.min(1, -(ax * dx + ay * dy) / squared),
-          );
+    const t = squared === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / squared));
 
-    nearest = Math.min(
-      nearest,
-      Math.hypot(ax + t * dx, ay + t * dy),
-    );
+    nearest = Math.min(nearest, Math.hypot(ax + t * dx, ay + t * dy));
   }
 
   return nearest;
@@ -54,24 +42,20 @@ export function distanceToRouteMeters(position, polyline) {
 export function getTripIssue(
   route,
   snapshot,
-  {
-    requireOrigin = true,
-    requireFresh = true,
-    now = Date.now(),
-  } = {},
+  { requireOrigin = true, requireFresh = true, now = Date.now() } = {},
 ) {
   const issue = (code, message) => ({ code, message });
 
   if (!route || !["walk", "bus"].includes(route.preferredMode)) {
-    return issue(
-      "no-route",
-      "Find a walking or bus route before starting your trip.",
-    );
+    return issue("no-route", "Find a walking or bus route before starting your trip.");
   }
 
-  if (route.preferredMode === "bus" && (!Array.isArray(route.steps) ||
-      route.steps.filter(step => step.mode === "bus").length !== 1 ||
-      route.steps.some(step => !["bus", "walk"].includes(step.mode)))) {
+  if (
+    route.preferredMode === "bus" &&
+    (!Array.isArray(route.steps) ||
+      route.steps.filter((step) => step.mode === "bus").length !== 1 ||
+      route.steps.some((step) => !["bus", "walk"].includes(step.mode)))
+  ) {
     return issue("no-route", "Find a complete bus route before starting your trip.");
   }
 
@@ -82,10 +66,7 @@ export function getTripIssue(
     route.polyline.length < 2 ||
     route.polyline.some((point) => !isWithinServiceArea(point))
   ) {
-    return issue(
-      "route-area",
-      "Choose a route fully inside our current service area.",
-    );
+    return issue("route-area", "Choose a route fully inside our current service area.");
   }
 
   if (
@@ -111,26 +92,15 @@ export function getTripIssue(
 
   const accuracy = snapshot.position.accuracyMeters;
 
-  if (
-    !Number.isFinite(accuracy) ||
-    accuracy < 0 ||
-    accuracy > MAX_TRIP_ACCURACY_METERS
-  ) {
-    return issue(
-      "weak-signal",
-      "Wait for a more accurate location reading, then try again.",
-    );
+  if (!Number.isFinite(accuracy) || accuracy < 0 || accuracy > MAX_TRIP_ACCURACY_METERS) {
+    return issue("weak-signal", "Wait for a more accurate location reading, then try again.");
   }
 
   const timestamp = Date.parse(snapshot.position.timestamp);
 
   if (
     requireFresh &&
-    (
-      !Number.isFinite(timestamp) ||
-      now - timestamp > MAX_TRIP_FIX_AGE_MS ||
-      timestamp - now > 5000
-    )
+    (!Number.isFinite(timestamp) || now - timestamp > MAX_TRIP_FIX_AGE_MS || timestamp - now > 5000)
   ) {
     return issue(
       "old-location",
@@ -140,10 +110,7 @@ export function getTripIssue(
 
   if (
     requireOrigin &&
-    distanceMeters(
-      snapshot.position,
-      route.origin.coordinate,
-    ) > START_DISTANCE_METERS
+    distanceMeters(snapshot.position, route.origin.coordinate) > START_DISTANCE_METERS
   ) {
     return issue(
       "far-from-start",
@@ -152,14 +119,14 @@ export function getTripIssue(
   }
 
   if (
-    distanceToRouteMeters(
-      snapshot.position,
-      route.polyline,
-    ) > (route.preferredMode === "bus" ? 150 : ROUTE_DISTANCE_METERS)
+    distanceToRouteMeters(snapshot.position, route.polyline) >
+    (route.preferredMode === "bus" ? 150 : ROUTE_DISTANCE_METERS)
   ) {
     return issue(
       "far-from-route",
-      route.preferredMode === "bus" ? "Move closer to the bus route, then try again." : "Move closer to the walking route, then try again.",
+      route.preferredMode === "bus"
+        ? "Move closer to the bus route, then try again."
+        : "Move closer to the walking route, then try again.",
     );
   }
 

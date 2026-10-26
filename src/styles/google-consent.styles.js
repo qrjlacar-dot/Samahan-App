@@ -21,11 +21,11 @@ export const styles = StyleSheet.create({
   logo: {
     width: scale(76),
     height: scale(76),
-    alignSelf: "center"
+    alignSelf: "center",
   },
   links: {
     marginTop: scale(36),
-    gap: scale(14)
+    gap: scale(14),
   },
   linkCard: {
     flexDirection: "row",
@@ -34,27 +34,27 @@ export const styles = StyleSheet.create({
     borderRadius: scale(16),
     borderWidth: 1,
     borderColor: "#F0D7E3",
-    backgroundColor: "#FFF8FB"
+    backgroundColor: "#FFF8FB",
   },
   linkText: {
     flex: 1,
-    marginLeft: scale(14)
+    marginLeft: scale(14),
   },
   linkTitle: {
     fontSize: scale(16),
     fontWeight: "bold",
-    color: COLORS.textDark
+    color: COLORS.textDark,
   },
   linkDescription: {
     marginTop: scale(3),
     fontSize: scale(12),
-    color: COLORS.textLight
+    color: COLORS.textLight,
   },
   draftNote: {
     marginTop: scale(25),
     fontSize: scale(12),
     color: COLORS.textLight,
-    textAlign: "center"
+    textAlign: "center",
   },
   continueButton: {
     marginTop: scale(28),

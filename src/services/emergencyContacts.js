@@ -1,12 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export const getStorageKey = (userId = "guest") =>
-  `@samahan_emergency_contacts_${userId}`;
+export const getStorageKey = (userId = "guest") => `@samahan_emergency_contacts_${userId}`;
 
 export const cleanPhoneNumber = (number) => number.replace(/[\s-]/g, "");
 
-export const isValidPhoneNumber = (number) =>
-  /^09\d{9}$/.test(cleanPhoneNumber(number));
+export const isValidPhoneNumber = (number) => /^09\d{9}$/.test(cleanPhoneNumber(number));
 
 export async function loadContacts(userId = "guest") {
   const saved = await AsyncStorage.getItem(getStorageKey(userId));

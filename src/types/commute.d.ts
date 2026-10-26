@@ -2,10 +2,7 @@ export type TravelMode = "bus" | "jeep" | "train" | "walk";
 
 export type TicketType = "regular" | "discounted";
 
-export type NotificationCategory =
-  | "trips"
-  | "safety"
-  | "favorites";
+export type NotificationCategory = "trips" | "safety" | "favorites";
 
 export type LocationStatus =
   | "idle"
@@ -39,6 +36,7 @@ export interface RouteRequest {
   destination: Place;
   preferredMode: TravelMode;
   departureTime?: string;
+  operatorId?: string;
 }
 
 export interface RouteStep {
@@ -58,10 +56,13 @@ export interface RouteStep {
   stopCount: number | null;
   operatorId: string | null;
   schematic?: boolean;
+  kind?: "walk" | "ride" | "platform";
+  withinMinimumFare?: boolean;
   sourceUrl?: string;
 }
 
 export interface CommuteRoute {
+  operatorId?: string;
   requestedMode?: TravelMode;
   recommendation?: string;
   id: string;
@@ -111,6 +112,7 @@ export interface LocationHandle {
 }
 
 export interface FavoriteInput {
+  operatorId?: "jeep-traditional" | "jeep-modern";
   origin: Place;
   destination: Place;
   preferredMode: TravelMode;
@@ -156,4 +158,3 @@ export interface NavigationProgress {
   remainingDurationSeconds: number | null;
   lastPositionAt: string | null;
 }
-

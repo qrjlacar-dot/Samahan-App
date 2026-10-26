@@ -8,11 +8,5 @@ export default function TransportIcon({ mode, size, color, imageStyle }) {
     return <Image source={IMAGES[mode]} style={imageStyle} />;
   }
 
-  return (
-    <FontAwesome5
-      name={mode === "walk" ? "walking" : "bus"}
-      size={size}
-      color={color}
-    />
-  );
+  return <FontAwesome5 name={mode === "walk" ? "walking" : "bus"} size={size} color={color} />;
 }

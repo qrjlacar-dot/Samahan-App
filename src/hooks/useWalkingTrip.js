@@ -1,30 +1,13 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { currentLocationPlace } from "../services/deviceLocation";
 import { getRoutes } from "../services/routes";
 import { getTripIssue } from "../services/trips";
-import {
-  notifyTripCancelled,
-  notifyTripCompleted,
-} from "../services/notifications";
-import {
-  updateArrival,
-  updateOffRoute,
-} from "../services/tripArrival";
+import { notifyTripCancelled, notifyTripCompleted } from "../services/notifications";
+import { updateArrival, updateOffRoute } from "../services/tripArrival";
 import { useWalkingProgress } from "./useWalkingProgress";
 
-export function useWalkingTrip({
-  uid,
-  journey,
-  route,
-  snapshot,
-  refreshLocation,
-  onRouteChange,
-}) {
+export function useWalkingTrip({ uid, journey, route, snapshot, refreshLocation, onRouteChange }) {
+  // State: retain the current trip independently of incoming GPS readings.
   const [state, setState] = useState("idle");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -40,11 +23,7 @@ export function useWalkingTrip({
   const offRoute = useRef(null);
   const automaticPause = useRef(null);
 
-  const progress = useWalkingProgress(
-    route,
-    snapshot,
-    state,
-  );
+  const progress = useWalkingProgress(route, snapshot, state);
 
   const end = useCallback(() => {
     generation.current += 1;
@@ -77,21 +56,14 @@ export function useWalkingTrip({
 
     setNow(Date.now());
 
-    const timer = setInterval(
-      () => setNow(Date.now()),
-      2000,
-    );
+    const timer = setInterval(() => setNow(Date.now()), 2000);
 
     return () => clearInterval(timer);
   }, [state]);
 
+  // Start or resume only after checking the latest location fix.
   const start = useCallback(async () => {
-    if (
-      pending.current ||
-      !route ||
-      route.preferredMode !== "walk" ||
-      !uid
-    ) {
+    if (pending.current || !route || route.preferredMode !== "walk" || !uid) {
       return false;
     }
 
@@ -117,9 +89,7 @@ export function useWalkingTrip({
 
       if (!session.current) {
         session.current = {
-          tripId:
-            `trip_${Date.now()}_` +
-            Math.random().toString(36).slice(2, 8),
+          tripId: `trip_${Date.now()}_` + Math.random().toString(36).slice(2, 8),
           journey,
           uid,
           startedPosition: { ...fresh.position },
@@ -139,9 +109,7 @@ export function useWalkingTrip({
       return true;
     } catch {
       if (token === generation.current) {
-        setMessage(
-          "Could not check your location. Please try again.",
-        );
+        setMessage("Could not check your location. Please try again.");
       }
 
       return false;
@@ -153,14 +121,10 @@ export function useWalkingTrip({
     }
   }, [uid, journey, route, refreshLocation]);
 
+  // Rerouting: keep one request active and ignore results after the trip ends.
   const reroute = useCallback(
     async (knownSnapshot = null) => {
-      if (
-        pending.current ||
-        !session.current ||
-        !route ||
-        route.preferredMode !== "walk"
-      ) {
+      if (pending.current || !session.current || !route || route.preferredMode !== "walk") {
         return false;
       }
 
@@ -181,8 +145,7 @@ export function useWalkingTrip({
       setMessage("Updating your walking route…");
 
       try {
-        const fresh =
-          knownSnapshot ?? (await refreshLocation());
+        const fresh = knownSnapshot ?? (await refreshLocation());
 
         if (token !== generation.current) return false;
 
@@ -193,9 +156,7 @@ export function useWalkingTrip({
           fresh.position.accuracyMeters < 0 ||
           fresh.position.accuracyMeters > 50
         ) {
-          throw new Error(
-            "Wait for a more accurate location reading, then update your route.",
-          );
+          throw new Error("Wait for a more accurate location reading, then update your route.");
         }
 
         const routes = await getRoutes(
@@ -207,17 +168,12 @@ export function useWalkingTrip({
           { signal: controller.signal },
         );
 
-        if (
-          token !== generation.current ||
-          controller.signal.aborted
-        ) {
+        if (token !== generation.current || controller.signal.aborted) {
           return false;
         }
 
         if (!routes[0]) {
-          throw new Error(
-            "No updated walking route was found.",
-          );
+          throw new Error("No updated walking route was found.");
         }
 
         arrival.current = null;
@@ -235,10 +191,7 @@ export function useWalkingTrip({
       } catch (error) {
         if (token === generation.current) {
           setState("paused");
-          setMessage(
-            error.message ||
-              "Could not update your route. Please try again.",
-          );
+          setMessage(error.message || "Could not update your route. Please try again.");
         }
 
         return false;
@@ -256,12 +209,7 @@ export function useWalkingTrip({
   useEffect(() => {
     const paused = automaticPause.current;
 
-    if (
-      state !== "paused" ||
-      !paused ||
-      !session.current ||
-      session.current.uid !== uid
-    ) {
+    if (state !== "paused" || !paused || !session.current || session.current.uid !== uid) {
       return;
     }
 
@@ -295,11 +243,7 @@ export function useWalkingTrip({
   }, [uid, state, route, snapshot]);
 
   useEffect(() => {
-    if (
-      state !== "active" ||
-      !session.current ||
-      session.current.uid !== uid
-    ) {
+    if (state !== "active" || !session.current || session.current.uid !== uid) {
       return;
     }
 
@@ -311,17 +255,12 @@ export function useWalkingTrip({
     if (issue?.code === "far-from-route") {
       arrival.current = null;
 
-      offRoute.current = updateOffRoute(
-        offRoute.current,
-        snapshot.position,
-      );
+      offRoute.current = updateOffRoute(offRoute.current, snapshot.position);
 
       if (offRoute.current?.reroute) {
         void reroute(snapshot);
       } else {
-        setMessage(
-          "Checking whether you have left the walking route…",
-        );
+        setMessage("Checking whether you have left the walking route…");
       }
 
       return;
@@ -332,11 +271,9 @@ export function useWalkingTrip({
     if (issue) {
       arrival.current = null;
 
-      automaticPause.current = [
-        "old-location",
-        "weak-signal",
-        "location-unavailable",
-      ].includes(issue.code)
+      automaticPause.current = ["old-location", "weak-signal", "location-unavailable"].includes(
+        issue.code,
+      )
         ? {
             tripId: session.current.tripId,
             timestamp: snapshot?.position?.timestamp,
@@ -352,10 +289,7 @@ export function useWalkingTrip({
     }
 
     setMessage((value) =>
-      value ===
-      "Checking whether you have left the walking route…"
-        ? ""
-        : value,
+      value === "Checking whether you have left the walking route…" ? "" : value,
     );
 
     arrival.current = updateArrival(
@@ -367,10 +301,7 @@ export function useWalkingTrip({
       now,
     );
 
-    if (
-      arrival.current?.arrived &&
-      !session.current.notified
-    ) {
+    if (arrival.current?.arrived && !session.current.notified) {
       session.current.notified = true;
       const finished = session.current;
 
@@ -383,16 +314,7 @@ export function useWalkingTrip({
         journey: finished.journey,
       });
     }
-  }, [
-    uid,
-    state,
-    route,
-    snapshot,
-    progress,
-    now,
-    reroute,
-    following,
-  ]);
+  }, [uid, state, route, snapshot, progress, now, reroute, following]);
 
   // Only after the user confirmed they want to stop. A trip that already
   // finished (notified) is never recorded as cancelled.

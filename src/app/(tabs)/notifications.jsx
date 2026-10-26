@@ -1,19 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import {
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { scale } from "../../constants/scale";
@@ -32,8 +20,7 @@ const FILTERS = [
   { label: "Trips", category: "trips" },
 ];
 
-const EMPTY_MESSAGE =
-  "Your completed and cancelled trips will appear here.";
+const EMPTY_MESSAGE = "Your completed and cancelled trips will appear here.";
 
 function iconFor(item) {
   if (item.eventId?.startsWith("trip-cancelled:")) {
@@ -48,26 +35,18 @@ function iconFor(item) {
 }
 
 function startOfDay(date) {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-  ).getTime();
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
 }
 
 function formatTime(iso) {
   const created = new Date(iso);
 
-  const minutes = Math.floor(
-    (Date.now() - created.getTime()) / 60000,
-  );
+  const minutes = Math.floor((Date.now() - created.getTime()) / 60000);
 
   if (minutes < 1) return "Just now";
   if (minutes < 60) return `${minutes} min ago`;
 
-  if (
-    startOfDay(created) === startOfDay(new Date())
-  ) {
+  if (startOfDay(created) === startOfDay(new Date())) {
     return created.toLocaleTimeString([], {
       hour: "numeric",
       minute: "2-digit",
@@ -83,15 +62,9 @@ function formatTime(iso) {
 function groupByDay(items) {
   const today = startOfDay(new Date());
 
-  const todayItems = items.filter(
-    (item) =>
-      startOfDay(new Date(item.createdAt)) >= today,
-  );
+  const todayItems = items.filter((item) => startOfDay(new Date(item.createdAt)) >= today);
 
-  const earlierItems = items.filter(
-    (item) =>
-      startOfDay(new Date(item.createdAt)) < today,
-  );
+  const earlierItems = items.filter((item) => startOfDay(new Date(item.createdAt)) < today);
 
   return [
     {
@@ -112,6 +85,7 @@ export default function NotificationsScreen() {
   const { user } = useAuth();
   const uid = user?.uid;
 
+  // State: keep account history, filters and pending row actions together.
   const [notifications, setNotifications] = useState([]);
   const [enabled, setEnabled] = useState(true);
   const [status, setStatus] = useState("loading");
@@ -119,6 +93,7 @@ export default function NotificationsScreen() {
   const [busyId, setBusyId] = useState(null);
   const requestId = useRef(0);
 
+  // Loading: ignore results after an account change or a newer refresh.
   const load = useCallback(async () => {
     const id = ++requestId.current;
 
@@ -163,18 +138,14 @@ export default function NotificationsScreen() {
     () =>
       notifications.filter(
         (item) =>
-          item.category === "trips" &&
-          (!filter.category ||
-            item.category === filter.category),
+          item.category === "trips" && (!filter.category || item.category === filter.category),
       ),
     [notifications, filter],
   );
 
-  const sections = useMemo(
-    () => groupByDay(visible),
-    [visible],
-  );
+  const sections = useMemo(() => groupByDay(visible), [visible]);
 
+  // Row actions: mark updates read before opening the related screen.
   const openNotification = async (item) => {
     if (!uid) return;
 
@@ -182,11 +153,7 @@ export default function NotificationsScreen() {
       const readAt = new Date().toISOString();
 
       setNotifications((current) =>
-        current.map((entry) =>
-          entry.id === item.id
-            ? { ...entry, readAt }
-            : entry,
-        ),
+        current.map((entry) => (entry.id === item.id ? { ...entry, readAt } : entry)),
       );
 
       try {
@@ -196,15 +163,11 @@ export default function NotificationsScreen() {
 
     if (item.target?.screen === "favorites") {
       router.navigate("/favorites");
-    } else if (
-      item.target?.screen === "directions"
-    ) {
+    } else if (item.target?.screen === "directions") {
       router.push({
         pathname: "/directions",
         params: {
-          journey: JSON.stringify(
-            item.target.journey,
-          ),
+          journey: JSON.stringify(item.target.journey),
         },
       });
     }
@@ -218,16 +181,9 @@ export default function NotificationsScreen() {
     try {
       await removeNotification(uid, item.id);
 
-      setNotifications((current) =>
-        current.filter(
-          (entry) => entry.id !== item.id,
-        ),
-      );
+      setNotifications((current) => current.filter((entry) => entry.id !== item.id));
     } catch {
-      Alert.alert(
-        "Could not delete",
-        "Please try again.",
-      );
+      Alert.alert("Could not delete", "Please try again.");
     } finally {
       setBusyId(null);
     }
@@ -236,18 +192,11 @@ export default function NotificationsScreen() {
   const emptyMessage = EMPTY_MESSAGE;
 
   return (
-    <SafeAreaView
-      style={styles.page}
-      edges={["top"]}
-    >
+    <SafeAreaView style={styles.page} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>
-          Notifications
-        </Text>
+        <Text style={styles.title}>Notifications</Text>
 
-        <Text style={styles.subtitle}>
-          Stay updated on routes, trips, and alerts!
-        </Text>
+        <Text style={styles.subtitle}>Stay updated on routes, trips, and alerts!</Text>
       </View>
 
       <ScrollView
@@ -257,16 +206,12 @@ export default function NotificationsScreen() {
         contentContainerStyle={styles.pillsRow}
       >
         {FILTERS.map((item) => {
-          const active =
-            item.label === filter.label;
+          const active = item.label === filter.label;
 
           return (
             <TouchableOpacity
               key={item.label}
-              style={[
-                styles.pill,
-                !active && styles.pillInactive,
-              ]}
+              style={[styles.pill, !active && styles.pillInactive]}
               activeOpacity={0.8}
               onPress={() => setFilter(item)}
               accessibilityRole="button"
@@ -274,13 +219,7 @@ export default function NotificationsScreen() {
                 selected: active,
               }}
             >
-              <Text
-                style={[
-                  styles.pillText,
-                  !active &&
-                    styles.pillTextInactive,
-                ]}
-              >
+              <Text style={[styles.pillText, !active && styles.pillTextInactive]}>
                 {item.label}
               </Text>
             </TouchableOpacity>
@@ -295,126 +234,75 @@ export default function NotificationsScreen() {
       >
         {status === "ready" && !enabled && (
           <Text style={styles.offNotice}>
-            Phone notifications are off. Trip
-            updates are still saved here. Turn them
-            on in Profile to also get them on your
-            phone.
+            Phone notifications are off. Trip updates are still saved here. Turn them on in Profile
+            to also get them on your phone.
           </Text>
         )}
 
         {status === "loading" && (
           <View style={styles.stateBox}>
-            <ActivityIndicator
-              color={COLORS.pink}
-            />
+            <ActivityIndicator color={COLORS.pink} />
           </View>
         )}
 
         {status === "error" && (
           <View style={styles.stateBox}>
-            <Text style={styles.stateText}>
-              We could not load your notifications.
-            </Text>
+            <Text style={styles.stateText}>We could not load your notifications.</Text>
 
-            <PrimaryButton
-              title="Try again"
-              onPress={load}
-              style={styles.retryButton}
-            />
+            <PrimaryButton title="Try again" onPress={load} style={styles.retryButton} />
+          </View>
+        )}
+
+        {status === "ready" && sections.length === 0 && (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateText}>{emptyMessage}</Text>
           </View>
         )}
 
         {status === "ready" &&
-          sections.length === 0 && (
-            <View style={styles.stateBox}>
-              <Text style={styles.stateText}>
-                {emptyMessage}
-              </Text>
-            </View>
-          )}
-
-        {status === "ready" &&
           sections.map((section) => (
-            <View
-              key={section.key}
-              style={styles.section}
-            >
-              <Text
-                style={styles.sectionHeader}
-              >
-                {section.label}
-              </Text>
+            <View key={section.key} style={styles.section}>
+              <Text style={styles.sectionHeader}>{section.label}</Text>
 
               {section.items.map((item) => (
                 <TouchableOpacity
                   key={item.id}
                   style={styles.row}
                   activeOpacity={0.7}
-                  onPress={() =>
-                    openNotification(item)
-                  }
+                  onPress={() => openNotification(item)}
                   accessibilityRole="button"
                   accessibilityLabel={`${item.title}. ${item.body}`}
-                  accessibilityHint={
-                    item.readAt
-                      ? undefined
-                      : "Unread"
-                  }
+                  accessibilityHint={item.readAt ? undefined : "Unread"}
                 >
                   <View style={styles.rowIcon}>
-                    <Ionicons
-                      name={iconFor(item)}
-                      size={scale(20)}
-                      color={COLORS.pink}
-                    />
+                    <Ionicons name={iconFor(item)} size={scale(20)} color={COLORS.pink} />
                   </View>
 
                   <View style={styles.rowText}>
                     <Text
-                      style={[
-                        styles.rowTitle,
-                        !item.readAt &&
-                          styles.rowTitleUnread,
-                      ]}
+                      style={[styles.rowTitle, !item.readAt && styles.rowTitleUnread]}
                       numberOfLines={1}
                     >
                       {item.title}
                     </Text>
 
-                    <Text
-                      style={styles.rowBody}
-                      numberOfLines={2}
-                    >
+                    <Text style={styles.rowBody} numberOfLines={2}>
                       {item.body}
                     </Text>
 
-                    <Text style={styles.rowTime}>
-                      {formatTime(item.createdAt)}
-                    </Text>
+                    <Text style={styles.rowTime}>{formatTime(item.createdAt)}</Text>
                   </View>
 
-                  {!item.readAt && (
-                    <View
-                      style={styles.unreadDot}
-                    />
-                  )}
+                  {!item.readAt && <View style={styles.unreadDot} />}
 
                   <TouchableOpacity
                     style={styles.deleteButton}
-                    onPress={() =>
-                      deleteNotification(item)
-                    }
-                    disabled={
-                      busyId === item.id
-                    }
+                    onPress={() => deleteNotification(item)}
+                    disabled={busyId === item.id}
                     accessibilityRole="button"
                     accessibilityLabel="Delete notification"
                   >
-                    <Ionicons
-                      name="trash-outline"
-                      size={scale(20)}
-                      color={COLORS.textLight}
-                    />
+                    <Ionicons name="trash-outline" size={scale(20)} color={COLORS.textLight} />
                   </TouchableOpacity>
                 </TouchableOpacity>
               ))}

@@ -80,14 +80,7 @@ export default function Index() {
 
       animation.stop();
     };
-  }, [
-    screenHeight,
-    backgroundReady,
-    logoReady,
-    logoOpacity,
-    logoScale,
-    logoPosition,
-  ]);
+  }, [screenHeight, backgroundReady, logoReady, logoOpacity, logoScale, logoPosition]);
 
   return (
     <View
@@ -102,10 +95,7 @@ export default function Index() {
         resizeMode="stretch"
         onLoadEnd={() => setBackgroundReady(true)}
         onError={(event) => {
-          console.warn(
-            "Splash background failed to load:",
-            event.nativeEvent.error,
-          );
+          console.warn("Splash background failed to load:", event.nativeEvent.error);
         }}
       />
 
@@ -126,10 +116,7 @@ export default function Index() {
             accessibilityLabel="Samahan"
             onLoadEnd={() => setLogoReady(true)}
             onError={(event) => {
-              console.warn(
-                "Splash logo failed to load:",
-                event.nativeEvent.error,
-              );
+              console.warn("Splash logo failed to load:", event.nativeEvent.error);
             }}
           />
         </Animated.View>

@@ -13,11 +13,7 @@ export function currentLocationPlace(snapshot, now = Date.now()) {
     );
   }
 
-  if (
-    snapshot?.status !== LOCATION_STATUS.READY ||
-    snapshot.inServiceArea !== true ||
-    !position
-  ) {
+  if (snapshot?.status !== LOCATION_STATUS.READY || snapshot.inServiceArea !== true || !position) {
     throw new Error(
       "Your location is not ready. Turn on Location, allow access, and try Current location again.",
     );
@@ -25,22 +21,14 @@ export function currentLocationPlace(snapshot, now = Date.now()) {
 
   const timestamp = Date.parse(position.timestamp);
 
-  if (
-    !Number.isFinite(timestamp) ||
-    now - timestamp > 30000 ||
-    timestamp - now > 5000
-  ) {
-    throw new Error(
-      "A fresh location reading is needed. Try Current location again.",
-    );
+  if (!Number.isFinite(timestamp) || now - timestamp > 30000 || timestamp - now > 5000) {
+    throw new Error("A fresh location reading is needed. Try Current location again.");
   }
 
   return {
     id: `device:${position.latitude},${position.longitude}`,
     name: "Current location",
-    address:
-      `${position.latitude.toFixed(5)}, ` +
-      position.longitude.toFixed(5),
+    address: `${position.latitude.toFixed(5)}, ` + position.longitude.toFixed(5),
     coordinate: {
       latitude: position.latitude,
       longitude: position.longitude,
@@ -50,34 +38,19 @@ export function currentLocationPlace(snapshot, now = Date.now()) {
 }
 
 export function readDeviceHeading(reading) {
-  if (
-    !reading ||
-    !Number.isFinite(reading.accuracy) ||
-    reading.accuracy < 1
-  ) {
+  if (!reading || !Number.isFinite(reading.accuracy) || reading.accuracy < 1) {
     return null;
   }
 
   const heading =
-    Number.isFinite(reading.trueHeading) &&
-    reading.trueHeading >= 0
+    Number.isFinite(reading.trueHeading) && reading.trueHeading >= 0
       ? reading.trueHeading
       : reading.magHeading;
 
-  return (
-    Number.isFinite(heading) &&
-    heading >= 0 &&
-    heading <= 360
-  )
-    ? heading % 360
-    : null;
+  return Number.isFinite(heading) && heading >= 0 && heading <= 360 ? heading % 360 : null;
 }
 
-export function headingBeam(
-  position,
-  heading,
-  radiusMeters = 35,
-) {
+export function headingBeam(position, heading, radiusMeters = 35) {
   if (
     !position ||
     !Number.isFinite(position.latitude) ||
@@ -107,26 +80,19 @@ export function headingBeam(
     const bearing = (heading + offset) * radians;
 
     const nextLat = Math.asin(
-      Math.sin(lat) * Math.cos(distance) +
-      Math.cos(lat) *
-        Math.sin(distance) *
-        Math.cos(bearing),
+      Math.sin(lat) * Math.cos(distance) + Math.cos(lat) * Math.sin(distance) * Math.cos(bearing),
     );
 
     const nextLon =
       lon +
       Math.atan2(
-        Math.sin(bearing) *
-          Math.sin(distance) *
-          Math.cos(lat),
-        Math.cos(distance) -
-          Math.sin(lat) * Math.sin(nextLat),
+        Math.sin(bearing) * Math.sin(distance) * Math.cos(lat),
+        Math.cos(distance) - Math.sin(lat) * Math.sin(nextLat),
       );
 
     points.push({
       latitude: nextLat / radians,
-      longitude:
-        ((nextLon / radians + 540) % 360) - 180,
+      longitude: ((nextLon / radians + 540) % 360) - 180,
     });
   }
 
@@ -161,8 +127,7 @@ export function createHeadingTracker(native, onHeading) {
     const token = generation;
 
     pending = (async () => {
-      const permission =
-        await native.getForegroundPermissionsAsync();
+      const permission = await native.getForegroundPermissionsAsync();
 
       if (permission?.status !== "granted") return;
 
@@ -201,11 +166,7 @@ export function createHeadingTracker(native, onHeading) {
     await pending;
     pending = null;
 
-    if (
-      wanted &&
-      !handle &&
-      token !== generation
-    ) {
+    if (wanted && !handle && token !== generation) {
       await start();
     }
   }
@@ -223,22 +184,17 @@ export function subscribeDeviceHeading(listener) {
     try {
       const native = require("expo-location");
 
-      if (
-        typeof native.watchHeadingAsync !== "function"
-      ) {
+      if (typeof native.watchHeadingAsync !== "function") {
         return () => {};
       }
 
-      sharedTracker = createHeadingTracker(
-        native,
-        (heading) => {
-          latestHeading = heading;
+      sharedTracker = createHeadingTracker(native, (heading) => {
+        latestHeading = heading;
 
-          for (const callback of listeners) {
-            callback(heading);
-          }
-        },
-      );
+        for (const callback of listeners) {
+          callback(heading);
+        }
+      });
     } catch {
       listener(null);
       return () => {};

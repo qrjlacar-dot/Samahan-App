@@ -7,13 +7,18 @@ export function useFareQuote(route, ticketType) {
     let cancelled = false;
     setState(null);
     if (route && route.preferredMode !== "walk") {
-      quoteFare(route, ticketType).then((quote) => {
-        if (!cancelled) setState({ route, ticketType, quote, error: "" });
-      }).catch(() => {
-        if (!cancelled) setState({ route, ticketType, quote: null, error: "Fare estimate unavailable." });
-      });
+      quoteFare(route, ticketType)
+        .then((quote) => {
+          if (!cancelled) setState({ route, ticketType, quote, error: "" });
+        })
+        .catch(() => {
+          if (!cancelled)
+            setState({ route, ticketType, quote: null, error: "Fare estimate unavailable." });
+        });
     }
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [route, ticketType]);
   return state?.route === route && state?.ticketType === ticketType ? state : null;
 }

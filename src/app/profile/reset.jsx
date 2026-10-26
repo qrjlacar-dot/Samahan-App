@@ -1,18 +1,11 @@
-import {
-  FloatingInput,
-  PrimaryButton,
-  PageLayout,
-} from "../../components/common";
+import { FloatingInput, PrimaryButton, PageLayout } from "../../components/common";
 import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { editStyles as styles } from "../../styles/editProfile.styles";
 
 import { useAuth } from "../../context/AuthContext";
-import {
-  accountErrorMessage,
-  changeAccountPassword,
-} from "../../services/account";
+import { accountErrorMessage, changeAccountPassword } from "../../services/auth/account";
 
 export default function ResetPassword() {
   const router = useRouter();

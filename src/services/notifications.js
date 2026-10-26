@@ -1,9 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  NOTIFICATION_CATEGORIES,
-  TICKET_TYPES,
-  TRAVEL_MODES,
-} from "../constants/commute";
+import { NOTIFICATION_CATEGORIES, TICKET_TYPES, TRAVEL_MODES } from "../constants/commute";
 import { showPhoneNotification } from "./phoneNotifications";
 
 const NOTIFICATIONS_PREFIX = "samahan:notifications:v1:";
@@ -110,6 +106,9 @@ function cloneTarget(target) {
       destination: clonePlace(target.journey.destination),
       preferredMode: target.journey.preferredMode,
       ticketType: target.journey.ticketType,
+      ...(target.journey.preferredMode === "jeep"
+        ? { operatorId: target.journey.operatorId || "jeep-traditional" }
+        : {}),
     },
   };
 }
@@ -344,6 +343,8 @@ async function notifyTrip(uid, update, kind) {
           await showPhoneNotification({
             title,
             body,
+            uid,
+            canShow: async () => (await readPreferences(uid)).enabled,
             data: { notificationId: notification.id, kind },
           });
         }

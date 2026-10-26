@@ -1,16 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Alert, Text, View } from "react-native";
-import {
-  FloatingInput,
-  PageLayout,
-  PrimaryButton,
-} from "../../components/common";
+import { FloatingInput, PageLayout, PrimaryButton } from "../../components/common";
 import { scale } from "../../constants/scale";
 import { COLORS } from "../../constants/theme";
 import { styles } from "../../styles/reset-password.styles";
 
-import { accountErrorMessage, sendResetLink } from "../../services/account";
+import { accountErrorMessage, sendResetLink } from "../../services/auth/account";
 
 export default function ResetPasswordScreen() {
   const [email, setEmail] = useState("");
@@ -73,9 +69,7 @@ export default function ResetPasswordScreen() {
 
       <Text style={styles.title}>Reset Password</Text>
 
-      <Text style={styles.subtitle}>
-        Don't worry, we'll help you get back in :{">"}
-      </Text>
+      <Text style={styles.subtitle}>Don't worry, we'll help you get back in :{">"}</Text>
 
       <View style={styles.formContainer}>
         {!!error && <Text style={styles.errorText}>{error}</Text>}
@@ -98,9 +92,7 @@ export default function ResetPasswordScreen() {
           activeOpacity={0.7}
         />
 
-        <Text style={styles.helperText}>
-          Check your inbox and spam folder for the link.
-        </Text>
+        <Text style={styles.helperText}>Check your inbox and spam folder for the link.</Text>
       </View>
     </PageLayout>
   );

@@ -24,7 +24,7 @@ export const styles = StyleSheet.create({
     fontSize: scaleFont(32),
     fontWeight: "bold",
     color: COLORS.pink,
-    textAlign: "center"
+    textAlign: "center",
   },
 
   subtitle: {
@@ -32,7 +32,7 @@ export const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: scale(6),
     marginBottom: scale(20),
-    textAlign: "center"
+    textAlign: "center",
   },
 
   formContainer: {

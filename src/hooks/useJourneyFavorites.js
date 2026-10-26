@@ -23,15 +23,20 @@ export function useJourneyFavorites(uid, journey) {
     setError("");
     setLoading(Boolean(uid && journey));
     if (uid && journey) {
-      findFavorite(uid, journey).then((favorite) => {
-        if (token === generation.current) setSaved({ uid, key, favorite });
-      }).catch(() => {
-        if (token === generation.current) setError("Could not check your saved favorites.");
-      }).finally(() => {
-        if (token === generation.current) setLoading(false);
-      });
+      findFavorite(uid, journey)
+        .then((favorite) => {
+          if (token === generation.current) setSaved({ uid, key, favorite });
+        })
+        .catch(() => {
+          if (token === generation.current) setError("Could not check your saved favorites.");
+        })
+        .finally(() => {
+          if (token === generation.current) setLoading(false);
+        });
     }
-    return () => { generation.current += 1; };
+    return () => {
+      generation.current += 1;
+    };
   }, [uid, key]);
 
   const toggle = useCallback(async () => {
@@ -56,14 +61,17 @@ export function useJourneyFavorites(uid, journey) {
           : `${routeLabel(journey)} was added to your favorites.`,
       );
     } catch {
-      if (token === generation.current) setError("Could not update this favorite. Please try again.");
+      if (token === generation.current)
+        setError("Could not update this favorite. Please try again.");
     } finally {
       busy.current = false;
       if (token === generation.current) setSaving(false);
     }
   }, [uid, journey, key, loading]);
 
-  useEffect(() => { setSaving(false); }, [uid, key]);
+  useEffect(() => {
+    setSaving(false);
+  }, [uid, key]);
 
   return {
     isFavorite: saved?.uid === uid && saved?.key === key && Boolean(saved.favorite),

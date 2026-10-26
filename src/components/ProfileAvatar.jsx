@@ -7,22 +7,14 @@ import { COLORS } from "../constants/theme";
 export function ProfileAvatar({ name = "", photoURL = "", style }) {
   const uri = typeof photoURL === "string" ? photoURL.trim() : "";
 
-  return (
-    <AvatarImage
-      key={uri}
-      name={name}
-      uri={uri}
-      style={style}
-    />
-  );
+  return <AvatarImage key={uri} name={name} uri={uri} style={style} />;
 }
 
 function AvatarImage({ name, uri, style }) {
   const [attempt, setAttempt] = useState(0);
   const [failed, setFailed] = useState(false);
 
-  const initial =
-    Array.from(name.trim())[0]?.toLocaleUpperCase() || "?";
+  const initial = Array.from(name.trim())[0]?.toLocaleUpperCase() || "?";
 
   const handleImageError = () => {
     if (attempt === 0) {
@@ -37,10 +29,7 @@ function AvatarImage({ name, uri, style }) {
   };
 
   return (
-    <View
-      style={[styles.circle, style]}
-      accessibilityLabel={name || "Profile picture"}
-    >
+    <View style={[styles.circle, style]} accessibilityLabel={name || "Profile picture"}>
       {uri && !failed ? (
         <Image
           key={`${uri}-${attempt}`}

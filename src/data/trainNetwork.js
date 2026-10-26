@@ -27,7 +27,8 @@ export const TRAIN_PLACES = Object.freeze([
     coordinate: { latitude: 14.62286, longitude: 121.05313 },
     source: "verified-local",
     serviceStatus: "unverified",
-    accessibility: "Elevator and ramp access is subject to current availability; confirm with staff.",
+    accessibility:
+      "Elevator and ramp access is subject to current availability; confirm with staff.",
   },
   {
     id: "mrt3-cubao",
@@ -39,7 +40,8 @@ export const TRAIN_PLACES = Object.freeze([
     coordinate: { latitude: 14.61947, longitude: 121.05107 },
     source: "local-reference",
     serviceStatus: "unverified",
-    accessibility: "Ask MRT-3 station staff for an accessible transfer; mall lifts may be unavailable.",
+    accessibility:
+      "Ask MRT-3 station staff for an accessible transfer; mall lifts may be unavailable.",
   },
   {
     id: "gateway-mall",
@@ -52,9 +54,7 @@ export const TRAIN_PLACES = Object.freeze([
   },
 ]);
 
-export const TRAIN_STATIONS = Object.freeze(
-  TRAIN_PLACES.filter((place) => place.line),
-);
+export const TRAIN_STATIONS = Object.freeze(TRAIN_PLACES.filter((place) => place.line));
 
 export const TRAIN_PLACE_BY_ID = Object.freeze(
   Object.fromEntries(TRAIN_PLACES.map((place) => [place.id, place])),
@@ -64,14 +64,18 @@ export const TRAIN_SOURCES = Object.freeze({
   stations: "https://www.lrta.gov.ph/distance-between-stations/",
   mrtStations: "https://www.dotrmrt3.gov.ph/about-us",
   walkway: "https://aranetacity.com/transport",
-  accessibility: "https://www.lrta.gov.ph/lrta-conducts-accessibility-inspection-across-lrt-2-stations/",
+  accessibility:
+    "https://www.lrta.gov.ph/lrta-conducts-accessibility-inspection-across-lrt-2-stations/",
   checkedAt: "2026-10-24",
 });
 
 export function searchTrainPlaces(query = "") {
   const needle = String(query).trim().toLowerCase();
-  return Promise.resolve(TRAIN_PLACES.filter((place) =>
-    !needle || `${place.name} ${place.address} ${place.line || ""}`
-      .toLowerCase().includes(needle),
-  ));
+  return Promise.resolve(
+    TRAIN_PLACES.filter(
+      (place) =>
+        !needle ||
+        `${place.name} ${place.address} ${place.line || ""}`.toLowerCase().includes(needle),
+    ),
+  );
 }

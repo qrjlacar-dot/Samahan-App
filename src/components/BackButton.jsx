@@ -13,7 +13,7 @@ export function BackButton({
   activeOpacity = 0.7,
   hitSlop = 4,
   useDefaultStyle = true,
-  accessibilityLabel = "Go back"
+  accessibilityLabel = "Go back",
 }) {
   const router = useRouter();
   return (
@@ -25,11 +25,7 @@ export function BackButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
-      <Ionicons
-        name="arrow-back"
-        size={iconSize}
-        color={iconColor}
-      />
+      <Ionicons name="arrow-back" size={iconSize} color={iconColor} />
     </TouchableOpacity>
   );
 }

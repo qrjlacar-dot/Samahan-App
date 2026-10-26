@@ -17,17 +17,17 @@ export const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2
+      height: 2,
     },
     shadowOpacity: 0.06,
     shadowRadius: 4,
-    elevation: 2
+    elevation: 2,
   },
   inputWrapper: {
     height: scale(50),
     marginBottom: scale(15),
     justifyContent: "center",
-    position: "relative"
+    position: "relative",
   },
   inputField: {
     height: scale(50),
@@ -39,27 +39,27 @@ export const styles = StyleSheet.create({
     fontSize: scaleFont(16),
     color: COLORS.textDark,
     backgroundColor: COLORS.cardBg,
-    textAlignVertical: "center"
+    textAlignVertical: "center",
   },
   inputFieldPassword: {
-    paddingRight: scale(48)
+    paddingRight: scale(48),
   },
   inputFieldFocused: {
-    borderColor: COLORS.pink
+    borderColor: COLORS.pink,
   },
   inputFieldError: {
-    borderColor: COLORS.error
+    borderColor: COLORS.error,
   },
   floatingLabel: {
     position: "absolute",
     left: scale(12),
     backgroundColor: COLORS.cardBg,
     paddingHorizontal: scale(4),
-    zIndex: 1
+    zIndex: 1,
   },
   requiredAsterisk: {
     color: COLORS.error,
-    fontWeight: "bold"
+    fontWeight: "bold",
   },
   eyeIcon: {
     position: "absolute",
@@ -68,7 +68,7 @@ export const styles = StyleSheet.create({
     bottom: 0,
     width: scale(44),
     justifyContent: "center",
-    alignItems: "center"
+    alignItems: "center",
   },
   primaryButtonIcon: {
     marginRight: scale(7),
@@ -79,14 +79,14 @@ export const styles = StyleSheet.create({
     borderRadius: RADIUS.input,
     minHeight: scale(48),
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
   },
   primaryButtonText: {
     color: COLORS.cardBg,
     fontSize: scaleFont(15),
-    fontWeight: "bold"
+    fontWeight: "bold",
   },
   disabledButton: {
-    opacity: 0.5
-  }
+    opacity: 0.5,
+  },
 });

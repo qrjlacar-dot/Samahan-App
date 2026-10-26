@@ -1,15 +1,49 @@
-// Phone (system) notifications use expo-notifications, which is wired in
-// through ./expoNotificationsModule. While that file exports null (the current
-// APK does not contain the module) every function here quietly does nothing:
-// trip updates are still saved in the Notifications page and the app never
-// shows a phone permission question.
-
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import ExpoNotifications from "./expoNotificationsModule";
 
 const CHANNEL_ID = "trip-updates";
 
 let preparing = null;
+const holds = new Map();
+const pending = new Map();
+let backgroundListener = null;
+
+function flushTripNotifications(uid) {
+  const notices = pending.get(uid) ?? [];
+  pending.delete(uid);
+  for (const notice of notices) {
+    void showPhoneNotification({ ...notice, delaySeconds: 3 });
+  }
+}
+
+// Keep system banners out of the route interface. The in-app record is saved
+// immediately; phone alerts follow three seconds after leaving or backgrounding.
+export function holdTripNotifications(uid) {
+  if (!uid) return () => {};
+  holds.set(uid, (holds.get(uid) ?? 0) + 1);
+  if (!backgroundListener && AppState?.addEventListener) {
+    backgroundListener = AppState.addEventListener("change", (state) => {
+      if (state === "background") {
+        for (const account of pending.keys()) flushTripNotifications(account);
+      }
+    });
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    const remaining = (holds.get(uid) ?? 1) - 1;
+    if (remaining > 0) holds.set(uid, remaining);
+    else {
+      holds.delete(uid);
+      flushTripNotifications(uid);
+    }
+    if (!holds.size) {
+      backgroundListener?.remove();
+      backgroundListener = null;
+    }
+  };
+}
 
 function getModule() {
   return ExpoNotifications ?? null;
@@ -88,18 +122,27 @@ export async function requestPhonePermission() {
 }
 
 /**
- * Shows one phone notification now, only when permission is granted.
- * Never throws. Returns true when it was handed to the phone.
+ * Shows or queues one phone notification when permission is granted.
+ * Never throws. Returns true when queued or handed to the phone.
  */
-export async function showPhoneNotification({ title, body, data }) {
+export async function showPhoneNotification({ title, body, data, uid, delaySeconds = 0, canShow }) {
   const Notifications = getModule();
   if (!Notifications) return false;
 
   try {
+    if (canShow && !(await canShow())) return false;
     const current = await Notifications.getPermissionsAsync();
     if (!current.granted) return false;
 
+    if (uid && holds.has(uid) && delaySeconds === 0 && AppState?.currentState !== "background") {
+      const notices = pending.get(uid) ?? [];
+      notices.push({ title, body, data, uid, canShow });
+      pending.set(uid, notices);
+      return true;
+    }
+
     await prepare(Notifications);
+    const seconds = delaySeconds || (uid && AppState?.currentState === "background" ? 3 : 0);
 
     await Notifications.scheduleNotificationAsync({
       content: {
@@ -107,7 +150,14 @@ export async function showPhoneNotification({ title, body, data }) {
         body,
         data: data ?? {},
       },
-      trigger: null,
+      trigger:
+        seconds > 0
+          ? {
+              type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+              seconds,
+              ...(Platform.OS === "android" ? { channelId: CHANNEL_ID } : {}),
+            }
+          : null,
     });
 
     return true;

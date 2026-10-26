@@ -1,9 +1,7 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { AppState, Platform } from "react-native";
-import {
-  subscribeDeviceHeading,
-} from "../services/deviceLocation";
+import { subscribeDeviceHeading } from "../services/deviceLocation";
 
 export function useDeviceHeading(enabled) {
   const [heading, setHeading] = useState(null);
@@ -19,16 +17,11 @@ export function useDeviceHeading(enabled) {
       let closed = false;
 
       const start = () => {
-        if (
-          closed ||
-          unsubscribe ||
-          AppState.currentState !== "active"
-        ) {
+        if (closed || unsubscribe || AppState.currentState !== "active") {
           return;
         }
 
-        unsubscribe =
-          subscribeDeviceHeading(setHeading);
+        unsubscribe = subscribeDeviceHeading(setHeading);
       };
 
       const stop = () => {
@@ -37,26 +30,17 @@ export function useDeviceHeading(enabled) {
         setHeading(null);
       };
 
-      const state = AppState.addEventListener(
-        "change",
-        (value) => {
-          if (value === "active") {
-            start();
-          } else {
-            stop();
-          }
-        },
-      );
+      const state = AppState.addEventListener("change", (value) => {
+        if (value === "active") {
+          start();
+        } else {
+          stop();
+        }
+      });
 
-      const blur =
-        Platform.OS === "android"
-          ? AppState.addEventListener("blur", stop)
-          : null;
+      const blur = Platform.OS === "android" ? AppState.addEventListener("blur", stop) : null;
 
-      const focus =
-        Platform.OS === "android"
-          ? AppState.addEventListener("focus", start)
-          : null;
+      const focus = Platform.OS === "android" ? AppState.addEventListener("focus", start) : null;
 
       start();
 

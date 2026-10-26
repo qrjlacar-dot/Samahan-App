@@ -2,17 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Text, View } from "react-native";
-import {
-  FloatingInput,
-  PageLayout,
-  PrimaryButton,
-} from "../../components/common";
+import { FloatingInput, PageLayout, PrimaryButton } from "../../components/common";
 import { ProfileAvatar } from "../../components/ProfileAvatar";
 import { useAuth } from "../../context/AuthContext";
-import {
-  accountErrorMessage,
-  saveAccountProfile,
-} from "../../services/account";
+import { accountErrorMessage, saveAccountProfile } from "../../services/auth/account";
 import { editStyles as styles } from "../../styles/editProfile.styles";
 
 function GoogleAccountField({ label, value }) {
@@ -25,12 +18,7 @@ function GoogleAccountField({ label, value }) {
 
       <Text style={styles.readOnlyValue}>{value}</Text>
 
-      <Ionicons
-        name="lock-closed-outline"
-        size={18}
-        color="#94828D"
-        style={styles.lockIcon}
-      />
+      <Ionicons name="lock-closed-outline" size={18} color="#94828D" style={styles.lockIcon} />
     </View>
   );
 }
@@ -45,9 +33,7 @@ export default function EditProfile() {
   const [saving, setSaving] = useState(false);
   const [edited, setEdited] = useState(false);
 
-  const emailChanged =
-    !isGoogle &&
-    email.trim().toLowerCase() !== identity.email.toLowerCase();
+  const emailChanged = !isGoogle && email.trim().toLowerCase() !== identity.email.toLowerCase();
 
   useEffect(() => {
     if (!edited) {
@@ -70,21 +56,14 @@ export default function EditProfile() {
     }
 
     if (emailChanged && !currentPassword) {
-      Alert.alert(
-        "Error",
-        "Enter your current password to confirm the email change.",
-      );
+      Alert.alert("Error", "Enter your current password to confirm the email change.");
       return;
     }
 
     setSaving(true);
 
     try {
-      const verificationSent = await saveAccountProfile(
-        name,
-        email,
-        currentPassword,
-      );
+      const verificationSent = await saveAccountProfile(name, email, currentPassword);
 
       setCurrentPassword("");
 
@@ -95,11 +74,9 @@ export default function EditProfile() {
           [{ text: "OK", onPress: () => router.back() }],
         );
       } else {
-        Alert.alert(
-          "Success",
-          "Profile information updated successfully!",
-          [{ text: "OK", onPress: () => router.back() }],
-        );
+        Alert.alert("Success", "Profile information updated successfully!", [
+          { text: "OK", onPress: () => router.back() },
+        ]);
       }
     } catch (error) {
       Alert.alert("Error", accountErrorMessage(error));
@@ -110,9 +87,7 @@ export default function EditProfile() {
 
   return (
     <PageLayout contentStyle={styles.content}>
-      <Text style={styles.editTitle}>
-        Edit Profile Information
-      </Text>
+      <Text style={styles.editTitle}>Edit Profile Information</Text>
 
       <View style={styles.avatarWrapper}>
         <ProfileAvatar
@@ -125,19 +100,13 @@ export default function EditProfile() {
       <View style={styles.formContainer}>
         {isGoogle ? (
           <>
-            <GoogleAccountField
-              label="Name"
-              value={identity.name}
-            />
+            <GoogleAccountField label="Name" value={identity.name} />
 
-            <GoogleAccountField
-              label="Email Address"
-              value={identity.email}
-            />
+            <GoogleAccountField label="Email Address" value={identity.email} />
 
             <Text style={styles.googleAccountNote}>
-              Your name, email address, and profile photo are managed by Google.
-              You can update them in your Google account.
+              Your name, email address, and profile photo are managed by Google. You can update them
+              in your Google account.
             </Text>
           </>
         ) : (

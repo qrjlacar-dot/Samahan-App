@@ -4,8 +4,13 @@ import { scale, scaleFont } from "../constants/scale";
 
 export const styles = StyleSheet.create({
   syncCard: {
-    width: "100%", backgroundColor: "#F8EFF4", borderRadius: scale(16),
-    padding: scale(16), marginBottom: scale(20), borderWidth: 1, borderColor: "#E6C3D5",
+    width: "100%",
+    backgroundColor: "#F8EFF4",
+    borderRadius: scale(16),
+    padding: scale(16),
+    marginBottom: scale(20),
+    borderWidth: 1,
+    borderColor: "#E6C3D5",
   },
   syncMessage: { color: COLORS.textDark, fontSize: scaleFont(14), lineHeight: scale(21) },
   syncButton: { alignSelf: "flex-start", paddingVertical: scale(12), paddingHorizontal: scale(4) },
