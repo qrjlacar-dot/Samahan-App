@@ -80,6 +80,15 @@ export default function Profile() {
       if (nextValue) {
         const permission = await requestPhonePermission();
 
+        if (permission === "unavailable") {
+          setIsNotificationsEnabled(previousValue);
+          Alert.alert(
+            "Could not enable notifications",
+            "Phone notifications are unavailable right now. Check that you are using the updated app build, then try again.",
+          );
+          return;
+        }
+
         if (permission === "denied") {
           setIsNotificationsEnabled(false);
           Alert.alert(

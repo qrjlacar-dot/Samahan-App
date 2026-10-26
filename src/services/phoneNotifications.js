@@ -58,7 +58,7 @@ function prepare(Notifications) {
         handleNotification: async () => ({
           shouldShowBanner: true,
           shouldShowList: true,
-          shouldPlaySound: false,
+          shouldPlaySound: Platform.OS === "android",
           shouldSetBadge: false,
         }),
       });
@@ -66,7 +66,8 @@ function prepare(Notifications) {
       if (Platform.OS === "android") {
         await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
           name: "Trip updates",
-          importance: Notifications.AndroidImportance.DEFAULT,
+          importance: Notifications.AndroidImportance.HIGH,
+          // Omit sound here to use Android's system notification tone.
         });
       }
     })().catch((error) => {
@@ -149,6 +150,12 @@ export async function showPhoneNotification({ title, body, data, uid, delaySecon
         title,
         body,
         data: data ?? {},
+        ...(Platform.OS === "android"
+          ? {
+              sound: true,
+              priority: Notifications.AndroidNotificationPriority.HIGH,
+            }
+          : {}),
       },
       trigger:
         seconds > 0

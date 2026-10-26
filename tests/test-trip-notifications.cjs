@@ -26,13 +26,14 @@ const settle = () => new Promise((resolve) => setImmediate(resolve));
 
 function fakeExpoNotifications(state) {
   return {
-    AndroidImportance: { DEFAULT: 3 },
+    AndroidImportance: { DEFAULT: 3, HIGH: 4 },
+    AndroidNotificationPriority: { HIGH: "high" },
     SchedulableTriggerInputTypes: { TIME_INTERVAL: "timeInterval" },
     setNotificationHandler(handler) {
       state.handler = handler;
     },
     async setNotificationChannelAsync(id, config) {
-      state.calls.push(["channel", id, config.name]);
+      state.calls.push(["channel", id, config.name, config]);
     },
     async getPermissionsAsync() {
       return { granted: state.status === "granted", status: state.status };
@@ -427,7 +428,11 @@ test("train: without a signed-in account nothing is recorded", async () => {
 
 test("a failed train start records nothing", async () => {
   const f = trainFixture({
-    refreshLocation: async () => ({ status: "denied", inServiceArea: false, position: null }),
+    refreshLocation: async () => ({
+      status: "denied",
+      inServiceArea: false,
+      position: null,
+    }),
   });
   assert.equal(await f.h.result.start(), false);
   f.h.flush();
@@ -482,7 +487,11 @@ test("phone permission is checked again when a queued trip alert is released", a
   const state = phoneState({ status: "granted" });
   const phone = loadPhone(state);
   const release = phone.holdTripNotifications("account-a");
-  await phone.showPhoneNotification({ uid: "account-a", title: "Trip completed", body: "Done" });
+  await phone.showPhoneNotification({
+    uid: "account-a",
+    title: "Trip completed",
+    body: "Done",
+  });
   state.status = "denied";
   release();
   await settle();
@@ -501,7 +510,11 @@ test("backgrounding a route releases queued trip alerts without waiting for the 
   };
   const phone = loadPhone(state, { appState });
   const release = phone.holdTripNotifications("account-a");
-  await phone.showPhoneNotification({ uid: "account-a", title: "Done", body: "Trip complete" });
+  await phone.showPhoneNotification({
+    uid: "account-a",
+    title: "Done",
+    body: "Trip complete",
+  });
   assert.equal(state.scheduled.length, 0);
   appState.currentState = "background";
   change("background");
@@ -511,4 +524,49 @@ test("backgrounding a route releases queued trip alerts without waiting for the 
   release();
   await settle();
   assert.equal(state.scheduled.length, 1);
+});
+
+test("Android requests banners and system sound without a custom sound asset", async () => {
+  const state = phoneState({ status: "granted" });
+  const phone = loadPhone(state);
+  assert.equal(
+    await phone.showPhoneNotification({
+      title: "Trip completed",
+      body: "Done",
+      delaySeconds: 3,
+    }),
+    true,
+  );
+  const channel = state.calls.find((call) => call[0] === "channel");
+  assert.equal(channel[1], "trip-updates");
+  assert.equal(channel[3].importance, 4);
+  assert.equal(Object.hasOwn(channel[3], "sound"), false);
+  const behavior = await state.handler.handleNotification();
+  assert.equal(behavior.shouldPlaySound, true);
+  assert.equal(behavior.shouldShowBanner, true);
+  const notification = state.scheduled[0];
+  assert.equal(notification.content.sound, true);
+  assert.equal(notification.content.priority, "high");
+  assert.equal(notification.trigger.channelId, "trip-updates");
+});
+
+test("iOS keeps banner delivery without Android sound or priority options", async () => {
+  const state = phoneState({ status: "granted" });
+  const phone = loadPhone(state, { os: "ios" });
+  assert.equal(
+    await phone.showPhoneNotification({
+      title: "Trip completed",
+      body: "Done",
+      delaySeconds: 3,
+    }),
+    true,
+  );
+  assert.equal(
+    state.calls.some((call) => call[0] === "channel"),
+    false,
+  );
+  assert.equal((await state.handler.handleNotification()).shouldPlaySound, false);
+  assert.equal(Object.hasOwn(state.scheduled[0].content, "sound"), false);
+  assert.equal(Object.hasOwn(state.scheduled[0].content, "priority"), false);
+  assert.equal(Object.hasOwn(state.scheduled[0].trigger, "channelId"), false);
 });

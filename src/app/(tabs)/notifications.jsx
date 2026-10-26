@@ -196,7 +196,7 @@ export default function NotificationsScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Notifications</Text>
 
-        <Text style={styles.subtitle}>Stay updated on routes, trips, and alerts!</Text>
+        <Text style={styles.subtitle}>Keep track of your completed and cancelled trips.</Text>
       </View>
 
       <ScrollView
