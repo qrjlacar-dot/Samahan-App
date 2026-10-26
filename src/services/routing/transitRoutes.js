@@ -90,7 +90,7 @@ export async function getTransitRoutes(
     mode: line.mode,
     kind: "ride",
     withinMinimumFare: line.withinMinimumFare === true,
-    instruction: `Board ${line.name}${direction.headsign ? ` toward ${direction.headsign}` : ""} at ${boarding.name}. Get off at ${alighting.name}.`,
+    instruction: `Board ${line.name} marked ${direction.headsign}.`,
     start: boarding.coordinate,
     end: alighting.coordinate,
     polyline: direction.stops.slice(from, to + 1).map((item) => item.coordinate),

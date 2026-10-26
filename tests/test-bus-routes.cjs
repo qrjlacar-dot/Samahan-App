@@ -77,7 +77,7 @@ test("Anonas to Ali Mall ends the bus at Cubao Terminal Complex and walks to the
   assert.equal(route.steps.at(-1).mode, "walk");
   assert.match(route.steps.at(-1).instruction, /Ali Mall/);
   assert.equal(opts.calls.at(-1).origin.id, "cubao-terminal-complex");
-  assert.match(ride(route).instruction, /Ali Mall.*Cubao Terminal Complex/);
+  assert.equal(ride(route).instruction, "Board a bus marked Ali Mall.");
   assert.equal(ride(route).placards.join("|"), "Ali Mall");
 });
 
@@ -106,7 +106,7 @@ test("Gateway journeys use the straight placard group and end at Gateway", async
   assert.match(route.id, /bus-cubao-gateway/);
   assert.equal(ride(route).alightingStop, BUS_GATEWAY.name);
   assert.equal(ride(route).placards.join("|"), "Cubao|EDSA|Gateway");
-  assert.match(ride(route).instruction, /Cubao, EDSA, or Gateway/);
+  assert.equal(ride(route).instruction, "Board a bus marked Cubao / EDSA / Gateway.");
   assert.doesNotMatch(ride(route).instruction, /P\. Tuazon|turn left/);
   assert.equal(route.steps.at(-1).mode, "bus");
 });
@@ -151,7 +151,8 @@ test("both corridors have separately defined return directions and support retur
     assert.equal(route.preferredMode, "bus");
     assert.match(route.id, new RegExp(lineId));
     assert.equal(ride(route).direction, "anonas-bound");
-    assert.match(ride(route).instruction, /toward Anonas/);
+    assert.equal(ride(route).instruction, "Board a bus marked Cogeo / Parang / Marikina.");
+    assert.equal(ride(route).placards.join("|"), "Cogeo|Parang|Marikina");
     assert.doesNotMatch(ride(route).instruction, /marked Cubao|marked Ali Mall/);
     assert.ok(distanceMeters(ride(route).end, destination.coordinate) <= 350);
   }

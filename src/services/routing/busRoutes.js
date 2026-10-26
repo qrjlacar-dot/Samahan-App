@@ -1,5 +1,5 @@
 import { BUS_LINES, BUS_TERMINAL } from "../../data/busCatalog";
-import { prepareBusWalkSteps, cleanStopName } from "./busPresentation";
+import { prepareBusWalkSteps } from "./busPresentation";
 import { FARE_RULES } from "../../data/fareRules";
 import { distanceMeters, isWithinServiceArea } from "../location";
 
@@ -258,17 +258,14 @@ async function planBusRide(
 
   const id = `local:${line.id}:${boarding.id}:${alighting.id}:${origin.id}:${destination.id}`;
   const polyline = ridePath(line, start, end);
-  const placards =
-    line.placards.length === 1
-      ? line.placards[0]
-      : line.placards.join(", ").replace(/, ([^,]+)$/, ", or $1");
+  const placards = line.placards.join(" / ");
   const ride = {
     id: `${id}:ride`,
     mode: "bus",
     instruction:
-      line.direction === "anonas-bound"
-        ? `Take a bus toward Anonas. Confirm your stop with the conductor. Get off at ${cleanStopName(alighting.name)}.`
-        : `Take a bus marked ${placards}. Get off at ${cleanStopName(alighting.name)}.`,
+      line.placards.length
+        ? `Board a bus marked ${placards}.`
+        : "Board a bus toward Anonas.",
     start: boarding.coordinate,
     end: alighting.coordinate,
     polyline,

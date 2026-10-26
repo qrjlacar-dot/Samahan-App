@@ -53,7 +53,7 @@ export const TRANSIT_LINES = Object.freeze([
     from: "tip-qc",
     to: "gateway-mall",
     headsign: "Gateway Mall",
-    reverseHeadsign: "TIP QC",
+    reverseHeadsign: "Cogeo / Parang / Marikina",
   }),
 
   jeepLine({
@@ -63,7 +63,7 @@ export const TRANSIT_LINES = Object.freeze([
     from: "tip-qc",
     to: "gateway-mall",
     headsign: "Gateway Mall",
-    reverseHeadsign: "TIP QC",
+    reverseHeadsign: "Cogeo / Parang / Marikina",
   }),
 
   jeepLine({
@@ -73,7 +73,7 @@ export const TRANSIT_LINES = Object.freeze([
     from: "tip-qc",
     to: "ali-mall",
     headsign: "Ali Mall",
-    reverseHeadsign: "TIP QC",
+    reverseHeadsign: "Cogeo / Parang / Marikina",
   }),
 
   jeepLine({
@@ -83,6 +83,6 @@ export const TRANSIT_LINES = Object.freeze([
     from: "tip-qc",
     to: "ali-mall",
     headsign: "Ali Mall",
-    reverseHeadsign: "TIP QC",
+    reverseHeadsign: "Cogeo / Parang / Marikina",
   }),
 ]);

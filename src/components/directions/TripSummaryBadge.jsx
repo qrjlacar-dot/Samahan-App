@@ -20,6 +20,8 @@ export default function TripSummaryBadge({ route }) {
   if (!route) return null;
   const modes = route.actualModes?.length ? route.actualModes : [route.preferredMode || "walk"];
   const labels = { walk: "Walk", train: "Train", jeep: "Jeep", bus: "Bus" };
+  const hasDistance = Number.isFinite(route.distanceMeters) && route.distanceMeters > 0;
+  const hasDuration = route.preferredMode !== "train" && Number.isFinite(route.durationSeconds) && route.durationSeconds > 0;
   return (
     <View style={[styles.summaryBadgePill, { flexWrap: "wrap" }]}>
       <TransportIcon
@@ -29,9 +31,13 @@ export default function TripSummaryBadge({ route }) {
         imageStyle={{ width: 16, height: 16, resizeMode: "contain", tintColor: "#C76C9B" }}
       />
       <Text style={styles.badgeText}>{modes.map((mode) => labels[mode] || mode).join(" + ")}</Text>
-      <Text style={styles.badgeDivider}>|</Text>
-      <Text style={styles.badgeDetailText}>{formatDistance(route.distanceMeters)}</Text>
-      {route.preferredMode !== "train" && Number.isFinite(route.durationSeconds) && (
+      {hasDistance && (
+        <>
+          <Text style={styles.badgeDivider}>|</Text>
+          <Text style={styles.badgeDetailText}>{formatDistance(route.distanceMeters)}</Text>
+        </>
+      )}
+      {hasDuration && (
         <>
           <Text style={styles.badgeDivider}>|</Text>
           <Text style={styles.badgeDetailText}>{formatDuration(route.durationSeconds)}</Text>

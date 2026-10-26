@@ -11,6 +11,15 @@ import { styles } from "../../styles/directions.styles";
 import TripSummaryBadge, { formatDistance, formatDuration } from "./TripSummaryBadge";
 import ProviderAttribution from "./ProviderAttribution";
 
+function StepMetrics({ step, isTrain }) {
+  const parts = [];
+  if (Number.isFinite(step.distanceMeters) && step.distanceMeters > 0)
+    parts.push(formatDistance(step.distanceMeters));
+  if (!isTrain && !step.displayArrival && Number.isFinite(step.durationSeconds) && step.durationSeconds > 0)
+    parts.push(formatDuration(step.durationSeconds));
+  return parts.length ? <Text style={styles.stopSubtitle}>{parts.join(" · ")}</Text> : null;
+}
+
 export default function TripDetailsCard({
   route,
   routeError = "",
@@ -144,60 +153,50 @@ export default function TripDetailsCard({
                       : step.instruction}
                   </Text>
 
-                  <Text style={styles.stopSubtitle}>
-                    {formatDistance(step.distanceMeters)}
-                    {!isTrain && Number.isFinite(step.durationSeconds) && !step.displayArrival && (
-                      <>
-                        {" · "}
-                        {formatDuration(step.durationSeconds)}
-                      </>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                    <StepMetrics step={step} isTrain={isTrain} />
+                    {isTrain && step.mode === "train" && (
+                      <View style={[styles.farePill, { alignSelf: "auto" }]}>
+                        <Text style={styles.fareText}>
+                          {Number.isFinite(
+                            TRAIN_RIDE_FARES[farePairKey(...(step.stationIds ?? []))]?.[ticketType],
+                          )
+                            ? `₱${TRAIN_RIDE_FARES[farePairKey(...(step.stationIds ?? []))][ticketType].toFixed(2)}`
+                            : "Confirm fare"}
+                        </Text>
+                      </View>
                     )}
-                  </Text>
-                  {isTrain && step.mode === "train" && (
-                    <View style={styles.farePill}>
-                      <Text style={styles.fareText}>
-                        {Number.isFinite(
-                          TRAIN_RIDE_FARES[farePairKey(...(step.stationIds ?? []))]?.[ticketType],
-                        )
-                          ? `₱${TRAIN_RIDE_FARES[farePairKey(...(step.stationIds ?? []))][ticketType].toFixed(2)}`
-                          : "Confirm fare"}
-                      </Text>
-                    </View>
-                  )}
+                  </View>
                 </View>
               </View>
             ))}
           </View>
 
-          <Text style={styles.searchHint}>
-            {isTrain
-              ? "Approximate route. Check platform signs and current service before travelling."
-              : route.preferredMode === "walk"
-                ? "Walking times are estimates. Keep Location turned on during your trip."
-                : route.preferredMode === "bus"
-                  ? "Follow the boarding and drop-off instructions. Check the signboard and tell the conductor your stopping point before boarding."
-                  : "Jeepney preview. Confirm the placard, permitted stops, and service availability with the driver."}
-          </Text>
-
-          {(isTrain
-            ? (route.warnings ?? []).filter((note) => /walking leg|offline|unavailable/i.test(note))
-            : (route.warnings ?? [])
-          ).map((warning, index) => (
-            <Text key={index} style={styles.searchHint}>
-              {warning}
+          {route.preferredMode === "bus" || route.preferredMode === "jeep" ? (
+            <Text style={styles.searchHint}>
+              Route details are estimates; confirm stops and service with the driver.
             </Text>
-          ))}
-
-          {[...new Set(route.steps.map((step) => step.sourceUrl).filter(Boolean))].map((url) => (
-            <Text
-              key={url}
-              style={styles.searchHint}
-              accessibilityRole="link"
-              onPress={() => Linking.openURL(url).catch(() => {})}
-            >
-              Transport route source
-            </Text>
-          ))}
+          ) : (
+            <>
+              <Text style={styles.searchHint}>
+                {isTrain
+                  ? "Approximate route. Check platform signs and current service before travelling."
+                  : "Walking times are estimates. Keep Location turned on during your trip."}
+              </Text>
+              {(isTrain
+                ? (route.warnings ?? []).filter((note) => /walking leg|offline|unavailable/i.test(note))
+                : (route.warnings ?? [])
+              ).map((warning, index) => (
+                <Text key={index} style={styles.searchHint}>{warning}</Text>
+              ))}
+              {[...new Set(route.steps.map((step) => step.sourceUrl).filter(Boolean))].map((url) => (
+                <Text key={url} style={styles.searchHint} accessibilityRole="link"
+                  onPress={() => Linking.openURL(url).catch(() => {})}>
+                  Transport route source
+                </Text>
+              ))}
+            </>
+          )}
           <ProviderAttribution />
         </>
       )}

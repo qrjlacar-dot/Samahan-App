@@ -129,7 +129,10 @@ test("a short straight-line distance never overrides a long actual walking route
 test("a return bus journey uses Anonas-bound instructions", async () => {
   const [route] = await getBusRoutes(request(BUS_GATEWAY, anonas), { getWalkingRoutes: walking });
   assert.equal(route.preferredMode, "bus");
-  assert.match(route.steps.find((step) => step.mode === "bus").instruction, /toward Anonas/);
+  assert.equal(
+    route.steps.find((step) => step.mode === "bus").instruction,
+    "Board a bus marked Cogeo / Parang / Marikina.",
+  );
 });
 
 function nodes(tree, type) {
@@ -211,7 +214,7 @@ test("bus and walking fallback show the full timeline with one final arrival row
   }
 });
 
-test("bus fare includes its description, ticket type, source link and conductor reminder", async () => {
+test("bus fare shows the amount, source and payment reminder without extra explanations", async () => {
   const { runtime } = hookHarness();
   const opened = [];
   const loader = createLoader({
@@ -248,10 +251,10 @@ test("bus fare includes its description, ticket type, source link and conductor 
       route: { preferredMode: "bus", steps: [{ id: "ride", mode: "bus" }] },
       ticketType,
     });
-    assert.match(text(tree), new RegExp(`Estimated bus fare · ${label}`));
+    assert.match(text(tree), new RegExp(`${label} fare estimate`));
     assert.ok(text(tree).includes(`₱${amount}`));
-    assert.match(text(tree), /first 5 km/);
-    assert.match(text(tree), /conductor before boarding/);
+    assert.doesNotMatch(text(tree), /first 5 km/);
+    assert.match(text(tree), /Confirm the fare with the operator before paying/);
     nodes(tree, "Text")
       .find((node) => node.props.accessibilityRole === "link")
       .props.onPress();
