@@ -105,6 +105,7 @@ export const styles = StyleSheet.create({
   signOutIndicator: {
     marginRight: scale(8),
   },
+  legalLinks: { width: "100%", marginTop: scale(12) },
   signOutText: {
     fontSize: scaleFont(15),
     color: "#E57373",

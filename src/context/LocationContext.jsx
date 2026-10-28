@@ -53,7 +53,12 @@ export function LocationProvider({ children, signedIn = true }) {
 
   const screen = pathname?.replace(/\/\([^/]+\)/g, "") || "/";
 
-  const isIntroScreen = ["/", "/onboarding", "/onboarding2", "/onboarding3"].includes(screen);
+  const isIntroScreen = [
+    "/",
+    "/onboarding",
+    "/onboarding2",
+    "/onboarding3",
+  ].includes(screen);
 
   const isLoginScreen = screen === "/login";
 
@@ -190,7 +195,13 @@ export function LocationProvider({ children, signedIn = true }) {
     } else if (canReadPosition && AppState.currentState === "active") {
       tracker.refresh();
     }
-  }, [signedIn, isIntroScreen, isLoginScreen, canReadPosition, checkLoginLocation]);
+  }, [
+    signedIn,
+    isIntroScreen,
+    isLoginScreen,
+    canReadPosition,
+    checkLoginLocation,
+  ]);
 
   useEffect(() => {
     const suspend = () => {
@@ -209,7 +220,11 @@ export function LocationProvider({ children, signedIn = true }) {
     const resume = () => {
       const tracker = trackerRef.current;
 
-      if (!tracker || !wasInBackgroundRef.current || AppState.currentState !== "active") {
+      if (
+        !tracker ||
+        !wasInBackgroundRef.current ||
+        AppState.currentState !== "active"
+      ) {
         return;
       }
 
@@ -231,10 +246,14 @@ export function LocationProvider({ children, signedIn = true }) {
     });
 
     const blurSubscription =
-      Platform.OS === "android" ? AppState.addEventListener("blur", suspend) : null;
+      Platform.OS === "android"
+        ? AppState.addEventListener("blur", suspend)
+        : null;
 
     const focusSubscription =
-      Platform.OS === "android" ? AppState.addEventListener("focus", resume) : null;
+      Platform.OS === "android"
+        ? AppState.addEventListener("focus", resume)
+        : null;
 
     return () => {
       stateSubscription.remove();
@@ -277,13 +296,38 @@ export function LocationProvider({ children, signedIn = true }) {
     const tracker = trackerRef.current;
 
     if (tracker && canReadPositionRef.current) {
-      await tracker.start(options);
+      return tracker.start(options);
     }
+    return false;
   }, []);
 
-  const stopTracking = useCallback(() => {
-    trackerRef.current?.stop();
+  const stopTracking = useCallback((owner) => {
+    trackerRef.current?.stop(owner);
   }, []);
+
+  // Retry a transient provider failure while a visible map/trip still owns GPS.
+  useEffect(() => {
+    const tracker = trackerRef.current;
+    if (
+      !canReadPosition ||
+      snapshot.status !== LOCATION_STATUS.UNAVAILABLE ||
+      snapshot.label === LOCATION_LABELS.servicesOff ||
+      !tracker?.hasOwners() ||
+      tracker.isTracking() ||
+      AppState.currentState !== "active"
+    )
+      return;
+    const timer = setTimeout(() => {
+      if (
+        AppState.currentState === "active" &&
+        canReadPositionRef.current &&
+        tracker.hasOwners()
+      ) {
+        void tracker.resume();
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [canReadPosition, snapshot]);
 
   const value = useMemo(
     () => ({
@@ -293,16 +337,30 @@ export function LocationProvider({ children, signedIn = true }) {
       stopTracking,
       requestEnableLocation,
     }),
-    [snapshot, refreshLocation, startTracking, stopTracking, requestEnableLocation],
+    [
+      snapshot,
+      refreshLocation,
+      startTracking,
+      stopTracking,
+      requestEnableLocation,
+    ],
   );
 
-  return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;
+  return (
+    <LocationContext.Provider value={value}>
+      {children}
+    </LocationContext.Provider>
+  );
 }
 
 export function AuthenticatedLocationProvider({ children }) {
   const auth = useAuth();
 
-  return <LocationProvider signedIn={Boolean(auth && auth.user)}>{children}</LocationProvider>;
+  return (
+    <LocationProvider signedIn={Boolean(auth && auth.user)}>
+      {children}
+    </LocationProvider>
+  );
 }
 
 export function useLocation() {

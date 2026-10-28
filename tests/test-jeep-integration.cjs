@@ -11,7 +11,9 @@ const { quoteFare } = load(root("services/fares.js"));
 
 async function routeFor(operatorId = "jeep-traditional") {
   const line = TRANSIT_LINES.find(
-    (item) => item.id === `jeep-tip-ali-${operatorId === "jeep-modern" ? "modern" : "traditional"}`,
+    (item) =>
+      item.id ===
+      `jeep-tip-ali-${operatorId === "jeep-modern" ? "modern" : "traditional"}`,
   );
   const [route] = await getTransitRoutes(
     {
@@ -22,7 +24,9 @@ async function routeFor(operatorId = "jeep-traditional") {
     },
     {
       getWalkingRoutes: async () => {
-        throw Error("An exact stop-to-stop ride must not request a walking ride geometry");
+        throw Error(
+          "An exact stop-to-stop ride must not request a walking ride geometry",
+        );
       },
     },
   );
@@ -52,7 +56,15 @@ test("traditional and modern selection use their own fare rule while retaining b
   assert.equal(
     (
       await quoteFare(
-        { steps: [{ mode: "bus", operatorId: "bus-city-aircon", distanceMeters: 1000 }] },
+        {
+          steps: [
+            {
+              mode: "bus",
+              operatorId: "bus-city-aircon",
+              distanceMeters: 1000,
+            },
+          ],
+        },
         "discounted",
       )
     ).selectedTotal,
@@ -60,47 +72,9 @@ test("traditional and modern selection use their own fare rule while retaining b
   );
 });
 
+const guidedFixture = require("./helpers/guided-fixture.cjs");
 function fixture(route, refresh) {
-  const { react, render } = hookHarness();
-  const completed = [],
-    cancelled = [];
-  let tracking = 0,
-    stopped = 0;
-  const fix = (coordinate) => ({
-    status: "ready",
-    inServiceArea: true,
-    position: { ...coordinate, accuracyMeters: 10, timestamp: new Date().toISOString() },
-  });
-  const snapshot = fix(route.origin.coordinate);
-  const { useJeepTrip } = createLoader({
-    react,
-    "react-native": { Alert: { alert() {} } },
-    "../services/routes": { getRoutes: async () => [route] },
-    "../services/notifications": {
-      notifyTripCompleted: async (...args) => completed.push(args),
-      notifyTripCancelled: async (...args) => cancelled.push(args),
-    },
-  })(root("hooks/useJeepTrip.js"));
-  const h = render(useJeepTrip, {
-    uid: "account-a",
-    journey: {
-      origin: route.origin,
-      destination: route.destination,
-      preferredMode: "jeep",
-      ticketType: "regular",
-    },
-    route,
-    snapshot,
-    refreshLocation: refresh || (async () => snapshot),
-    startTracking: async () => {
-      tracking++;
-    },
-    stopTracking: () => {
-      stopped++;
-    },
-    onRouteChange() {},
-  });
-  return { h, fix, completed, cancelled, tracking: () => tracking, stopped: () => stopped };
+  return guidedFixture("jeep", route, { refresh });
 }
 
 test("starting the generated jeep route does not crash and shows a nonzero remaining distance", async () => {
@@ -119,8 +93,13 @@ test("finishing a jeep guide records one completion and ending afterwards never 
   const s = fixture(await routeFor());
   await s.h.result.start();
   s.h.flush();
-  s.h.result.advance();
+  await s.h.result.confirmStage();
   s.h.flush();
+  s.move(6000, s.h.props.route.destination.coordinate);
+  await s.h.result.confirmStage();
+  s.h.flush();
+  s.move(6000, s.h.props.route.destination.coordinate);
+  s.move(6000, s.h.props.route.destination.coordinate);
   assert.equal(s.h.result.state, "arrived");
   assert.equal(s.completed.length, 1);
   assert.equal(s.completed[0][0], "account-a");
@@ -176,9 +155,14 @@ test("saved modern jeep journeys reopen with their class and reject unsupported 
     ticketType: "regular",
     operatorId: "jeep-modern",
   };
-  assert.equal(parseJourneyParam(JSON.stringify(journey)).operatorId, "jeep-modern");
   assert.equal(
-    parseJourneyParam(JSON.stringify({ ...journey, operatorId: "jeep-unlisted" })),
+    parseJourneyParam(JSON.stringify(journey)).operatorId,
+    "jeep-modern",
+  );
+  assert.equal(
+    parseJourneyParam(
+      JSON.stringify({ ...journey, operatorId: "jeep-unlisted" }),
+    ),
     null,
   );
 });

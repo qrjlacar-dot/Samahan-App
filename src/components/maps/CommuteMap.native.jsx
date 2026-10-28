@@ -1,7 +1,12 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import MapView, { Marker, Polygon, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, {
+  Marker,
+  Polygon,
+  Polyline,
+  PROVIDER_GOOGLE,
+} from "react-native-maps";
 import ProviderAttribution from "../directions/ProviderAttribution";
 import { useDeviceHeading } from "../../hooks/useDeviceHeading";
 import { headingBeam } from "../../services/deviceLocation";
@@ -51,7 +56,8 @@ function CommuteMapContent({
     (a.coordinate?.latitude === b.coordinate?.latitude &&
       a.coordinate?.longitude === b.coordinate?.longitude);
   const route =
-    matches(origin, selectedRoute?.origin) && matches(destination, selectedRoute?.destination)
+    matches(origin, selectedRoute?.origin) &&
+    matches(destination, selectedRoute?.destination)
       ? selectedRoute
       : null;
   const routeKey = `${route?.id ?? "none"}:${route?.calculatedAt ?? ""}`;
@@ -61,7 +67,9 @@ function CommuteMapContent({
   const [laidOut, setLaidOut] = useState(false);
   const [mapHeight, setMapHeight] = useState(0);
 
-  const [latitudeDelta, setLatitudeDelta] = useState(CUBAO_REGION.latitudeDelta);
+  const [latitudeDelta, setLatitudeDelta] = useState(
+    CUBAO_REGION.latitudeDelta,
+  );
 
   const centeredOnUser = useRef(false);
   const followingRef = useRef(followUser);
@@ -97,9 +105,18 @@ function CommuteMapContent({
   const heading = useDeviceHeading(active && hasUserPosition);
 
   const beamRadius =
-    mapHeight > 0 ? Math.max(2, Math.min(10000, ((latitudeDelta * 111195) / mapHeight) * 42)) : 140;
+    mapHeight > 0
+      ? Math.max(
+          2,
+          Math.min(10000, ((latitudeDelta * 111195) / mapHeight) * 42),
+        )
+      : 140;
 
-  const beam = headingBeam(userPosition, Number.isFinite(heading) ? heading : 0, beamRadius);
+  const beam = headingBeam(
+    userPosition,
+    Number.isFinite(heading) ? heading : 0,
+    beamRadius,
+  );
 
   const hasRouteSelection = Boolean(origin || destination || route);
 
@@ -127,7 +144,16 @@ function CommuteMapContent({
       },
       400,
     );
-  }, [active, ready, laidOut, hasUserPosition, hasRouteSelection, latitude, longitude, followUser]);
+  }, [
+    active,
+    ready,
+    laidOut,
+    hasUserPosition,
+    hasRouteSelection,
+    latitude,
+    longitude,
+    followUser,
+  ]);
 
   useEffect(() => {
     if (!active || !ready || !laidOut || followingRef.current) {
@@ -160,7 +186,16 @@ function CommuteMapContent({
         400,
       );
     }
-  }, [active, ready, laidOut, origin, destination, route, fitRequest, contentBottomInset]);
+  }, [
+    active,
+    ready,
+    laidOut,
+    origin,
+    destination,
+    route,
+    fitRequest,
+    contentBottomInset,
+  ]);
 
   useEffect(() => {
     if (previewRegion) {
@@ -198,14 +233,24 @@ function CommuteMapContent({
     const entering = followUser && !wasFollowing.current;
 
     const moved =
-      !previous || previous.center.latitude !== latitude || previous.center.longitude !== longitude;
+      !previous ||
+      previous.center.latitude !== latitude ||
+      previous.center.longitude !== longitude;
 
-    if (!requested && !entering && !moved && previous?.zoom === followZoom && difference < 2) {
+    if (
+      !requested &&
+      !entering &&
+      !moved &&
+      previous?.zoom === followZoom &&
+      difference < 2
+    ) {
       return;
     }
 
     const delay =
-      requested || entering ? 0 : Math.max(0, 120 - (Date.now() - lastCameraTime.current));
+      requested || entering
+        ? 0
+        : Math.max(0, 120 - (Date.now() - lastCameraTime.current));
 
     const move = () => {
       if (!followingRef.current && !requested) return;
@@ -296,7 +341,10 @@ function CommuteMapContent({
           onUserPan?.();
         }}
         onRegionChangeComplete={(region, details) => {
-          if (Number.isFinite(region?.latitudeDelta) && region.latitudeDelta > 0) {
+          if (
+            Number.isFinite(region?.latitudeDelta) &&
+            region.latitudeDelta > 0
+          ) {
             setLatitudeDelta(region.latitudeDelta);
           }
 
@@ -310,8 +358,16 @@ function CommuteMapContent({
           <Polygon
             key="user-heading"
             coordinates={beam}
-            fillColor={Number.isFinite(heading) ? "rgba(199, 108, 155, 0.25)" : "transparent"}
-            strokeColor={Number.isFinite(heading) ? "rgba(199, 108, 155, 0.08)" : "transparent"}
+            fillColor={
+              Number.isFinite(heading)
+                ? "rgba(199, 108, 155, 0.25)"
+                : "transparent"
+            }
+            strokeColor={
+              Number.isFinite(heading)
+                ? "rgba(199, 108, 155, 0.08)"
+                : "transparent"
+            }
             strokeWidth={1}
             zIndex={5}
           />
@@ -367,7 +423,7 @@ function CommuteMapContent({
         )}
 
         {route?.steps
-          ?.filter((step) => step.mode === "bus")
+          ?.filter((step) => ["bus", "jeep"].includes(step.mode))
           .flatMap((step) => [
             <Marker
               key={`${routeKey}:${step.id}:boarding`}
@@ -386,7 +442,10 @@ function CommuteMapContent({
           ])}
 
         {route?.stationMarkers
-          ?.filter((station) => station.id !== origin?.id && station.id !== destination?.id)
+          ?.filter(
+            (station) =>
+              station.id !== origin?.id && station.id !== destination?.id,
+          )
           .map((station) => (
             <Marker
               key={`${routeKey}:station:${station.id}`}
@@ -409,7 +468,9 @@ function CommuteMapContent({
                   lineDashPattern={
                     step.schematic
                       ? [12, 8]
-                      : ["bus", "train"].includes(route.preferredMode) && step.mode === "walk"
+                      : ["bus", "train", "jeep"].includes(
+                            route.preferredMode,
+                          ) && step.mode === "walk"
                         ? [4, 6]
                         : undefined
                   }

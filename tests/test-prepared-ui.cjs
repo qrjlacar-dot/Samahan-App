@@ -16,7 +16,10 @@ function nodes(tree, predicate) {
     return tree.flatMap((item) => nodes(item, predicate));
   }
 
-  return [...(predicate(tree) ? [tree] : []), ...nodes(tree.props?.children, predicate)];
+  return [
+    ...(predicate(tree) ? [tree] : []),
+    ...nodes(tree.props?.children, predicate),
+  ];
 }
 
 function nativeMocks() {
@@ -142,13 +145,18 @@ test("Home keeps following live location outside Cubao without enabling heading 
     react,
     "react/jsx-runtime": runtime,
     "react-native": nativeMocks(),
-    "expo-router": { useRouter: () => ({ push: noop }) },
+    "expo-router": {
+      useRouter: () => ({ push: noop }),
+      useFocusEffect: (fn) => react.useEffect(fn, [fn]),
+    },
     "@expo/vector-icons": { Ionicons: "Ionicons" },
     "react-native-safe-area-context": { SafeAreaView: "SafeAreaView" },
     "../../constants/images": { IMAGES: {} },
     "../../styles/home.styles": { styles: {} },
     "../../components/maps/CommuteMap": { CommuteMap: "CommuteMap" },
-    "../../hooks/useMapLocation": { useMapLocation: () => ({ snapshot: current }) },
+    "../../hooks/useMapLocation": {
+      useMapLocation: () => ({ snapshot: current }),
+    },
   });
   const Home = load(path.join(root, "src/app/(tabs)/home.jsx")).default;
   const h = render(Home);
@@ -167,7 +175,11 @@ test("map focus starts a watch outside Cubao and retains it when crossing the bo
   let starts = 0,
     stops = 0;
   const location = {
-    snapshot: { status: "outside-area", inServiceArea: false, position: { ...a } },
+    snapshot: {
+      status: "outside-area",
+      inServiceArea: false,
+      position: { ...a },
+    },
     startTracking: (options) => {
       assert.equal(options.requestPermission, false);
       starts += 1;
@@ -181,10 +193,16 @@ test("map focus starts a watch outside Cubao and retains it when crossing the bo
     "expo-router": { useFocusEffect: (fn) => react.useEffect(fn, [fn]) },
     "../context/LocationContext": { useLocation: () => location },
   });
-  const useMapLocation = load(path.join(root, "src/hooks/useMapLocation.js")).useMapLocation;
+  const useMapLocation = load(
+    path.join(root, "src/hooks/useMapLocation.js"),
+  ).useMapLocation;
   const h = render(useMapLocation);
   assert.equal(starts, 1);
-  location.snapshot = { status: "ready", inServiceArea: true, position: { ...a } };
+  location.snapshot = {
+    status: "ready",
+    inServiceArea: true,
+    position: { ...a },
+  };
   h.flush();
   assert.equal(starts, 1);
   assert.equal(stops, 0);
@@ -220,6 +238,7 @@ test("Directions reopens a saved journey, calculates a fresh route, and saves a 
       SafeAreaView: "SafeAreaView",
     },
     "expo-router": {
+      Stack: { Screen: "StackScreen" },
       useRouter: () => ({ back: noop }),
       useLocalSearchParams: () => ({
         journey: JSON.stringify(journey),
@@ -264,7 +283,9 @@ test("Directions reopens a saved journey, calculates a fresh route, and saves a 
 
   const Screen = load(path.join(root, "src/app/directions.jsx")).default;
 
-  const Details = load(path.join(root, "src/components/directions/TripDetailsCard.jsx")).default;
+  const Details = load(
+    path.join(root, "src/components/directions/TripDetailsCard.jsx"),
+  ).default;
 
   const Controls = load(
     path.join(root, "src/components/directions/controls/MapControls.jsx"),
@@ -297,7 +318,10 @@ test("Directions reopens a saved journey, calculates a fresh route, and saves a 
 
   assert.equal(details.props.isFavorite, true);
 
-  assert.equal(JSON.parse(data.get("samahan:favorites:v1:account-a")).length, 1);
+  assert.equal(
+    JSON.parse(data.get("samahan:favorites:v1:account-a")).length,
+    1,
+  );
 
   // Saving a favorite shows an in-app popup; it no longer creates a notification.
   assert.equal(data.get("samahan:notifications:v1:account-a"), undefined);
@@ -345,7 +369,9 @@ test("native camera follows GPS and phone heading, then Recenter restores the li
     },
   });
 
-  const Wrapper = load(path.join(root, "src/components/maps/CommuteMap.native.jsx")).CommuteMap;
+  const Wrapper = load(
+    path.join(root, "src/components/maps/CommuteMap.native.jsx"),
+  ).CommuteMap;
 
   const wrapper = render(Wrapper, {
     userPosition: snapshot.position,
@@ -359,11 +385,15 @@ test("native camera follows GPS and phone heading, then Recenter restores the li
   const map = () => nodes(h.result, (node) => node.type === "MapView")[0];
 
   const positionMarker = () =>
-    nodes(h.result, (node) => node.type === "Marker" && node.key === "user-position")[0];
+    nodes(
+      h.result,
+      (node) => node.type === "Marker" && node.key === "user-position",
+    )[0];
 
   map().props.ref.current = {
     setCamera: (camera) => calls.push(camera),
-    animateCamera: () => assert.fail("Android following must use direct camera updates"),
+    animateCamera: () =>
+      assert.fail("Android following must use direct camera updates"),
     fitToCoordinates: noop,
     animateToRegion: noop,
   };
@@ -473,7 +503,9 @@ test("map focus changes retain the same content and stop hidden camera updates",
     },
   });
 
-  const Wrapper = load(path.join(root, "src/components/maps/CommuteMap.native.jsx")).CommuteMap;
+  const Wrapper = load(
+    path.join(root, "src/components/maps/CommuteMap.native.jsx"),
+  ).CommuteMap;
 
   const wrapper = render(Wrapper, {
     userPosition: snapshot.position,
@@ -487,11 +519,15 @@ test("map focus changes retain the same content and stop hidden camera updates",
   const map = () => nodes(h.result, (node) => node.type === "MapView")[0];
 
   const positionMarker = () =>
-    nodes(h.result, (node) => node.type === "Marker" && node.key === "user-position")[0];
+    nodes(
+      h.result,
+      (node) => node.type === "Marker" && node.key === "user-position",
+    )[0];
 
   map().props.ref.current = {
     setCamera: (value) => calls.push(value),
-    animateCamera: () => assert.fail("Android following must use direct camera updates"),
+    animateCamera: () =>
+      assert.fail("Android following must use direct camera updates"),
     animateToRegion: noop,
     fitToCoordinates: noop,
   };
@@ -531,9 +567,17 @@ test("map focus changes retain the same content and stop hidden camera updates",
   h.props = wrapper.result.props;
   h.flush();
 
-  assert.equal(wrapper.result.type, content, "focus does not change the component identity");
+  assert.equal(
+    wrapper.result.type,
+    content,
+    "focus does not change the component identity",
+  );
 
-  assert.equal(wrapper.result.key, null, "focus does not force a keyed remount");
+  assert.equal(
+    wrapper.result.key,
+    null,
+    "focus does not force a keyed remount",
+  );
 
   assert.ok(positionMarker(), "position circle remains after returning");
 
@@ -598,14 +642,24 @@ test("switching from a long bus route to a short walk removes bus lines and stop
     },
     "../../hooks/useDeviceHeading": { useDeviceHeading: () => null },
   });
-  const Wrapper = load(path.join(root, "src/components/maps/CommuteMap.native.jsx")).CommuteMap;
-  const origin = { id: "a", name: "A", coordinate: { latitude: 14.6279, longitude: 121.064 } };
+  const Wrapper = load(
+    path.join(root, "src/components/maps/CommuteMap.native.jsx"),
+  ).CommuteMap;
+  const origin = {
+    id: "a",
+    name: "A",
+    coordinate: { latitude: 14.6279, longitude: 121.064 },
+  };
   const gateway = {
     id: "g",
     name: "Gateway",
     coordinate: { latitude: 14.62299, longitude: 121.05308 },
   };
-  const tip = { id: "t", name: "TIP", coordinate: { latitude: 14.6268, longitude: 121.0621 } };
+  const tip = {
+    id: "t",
+    name: "TIP",
+    coordinate: { latitude: 14.6268, longitude: 121.0621 },
+  };
   const bus = {
     id: "bus",
     calculatedAt: "first",
@@ -631,7 +685,13 @@ test("switching from a long bus route to a short walk removes bus lines and stop
     origin,
     destination: tip,
     polyline: [origin.coordinate, tip.coordinate],
-    steps: [{ id: "walk-step", mode: "walk", polyline: [origin.coordinate, tip.coordinate] }],
+    steps: [
+      {
+        id: "walk-step",
+        mode: "walk",
+        polyline: [origin.coordinate, tip.coordinate],
+      },
+    ],
   };
   const wrapper = render(Wrapper, { origin, destination: gateway, route: bus });
   const h = render(wrapper.result.type, wrapper.result.props);
@@ -657,7 +717,11 @@ test("switching from a long bus route to a short walk removes bus lines and stop
   const walkKey = polylines()[0].key;
   h.props = { ...h.props, route: { ...walk, calculatedAt: "third" } };
   h.flush();
-  assert.notEqual(polylines()[0].key, walkKey, "recalculation gets a new native overlay identity");
+  assert.notEqual(
+    polylines()[0].key,
+    walkKey,
+    "recalculation gets a new native overlay identity",
+  );
   h.props = { ...h.props, route: null };
   h.flush();
   assert.equal(polylines().length, 0);

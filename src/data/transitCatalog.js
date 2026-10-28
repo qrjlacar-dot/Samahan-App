@@ -1,4 +1,11 @@
 import { LANDMARKS } from "./serviceArea";
+import {
+  BUS_LINES,
+  BUS_GATEWAY,
+  BUS_TERMINAL,
+  BUS_RETURN_PATH,
+} from "./busCatalog";
+import { projectBusPoint } from "../services/routing/busRoutes";
 
 const stop = (id) => {
   const landmark = LANDMARKS.find((item) => item.id === id);
@@ -11,12 +18,27 @@ const stop = (id) => {
     id: landmark.id,
     name: landmark.name,
     address: "Aurora Boulevard, Quezon City",
-    coordinate: { ...landmark.coordinate },
+    coordinate:
+      id === "tip-qc"
+        ? projectBusPoint(landmark.coordinate, BUS_LINES[0].path).coordinate
+        : id === "gateway-mall"
+          ? { ...BUS_GATEWAY.coordinate }
+          : id === "ali-mall"
+            ? { ...BUS_TERMINAL.coordinate }
+            : { ...landmark.coordinate },
     source: "verified-local",
   };
 };
 
-const jeepLine = ({ id, operatorId, name, from, to, headsign, reverseHeadsign }) => ({
+const jeepLine = ({
+  id,
+  operatorId,
+  name,
+  from,
+  to,
+  headsign,
+  reverseHeadsign,
+}) => ({
   id,
   mode: "jeep",
   operatorId,
@@ -29,6 +51,18 @@ const jeepLine = ({ id, operatorId, name, from, to, headsign, reverseHeadsign })
   sourceUrl: "local-route-data",
   checkedAt: "2026-10-25",
   geometryVerified: false,
+  path: [
+    stop(from).coordinate,
+    ...BUS_LINES.find(
+      (line) =>
+        line.id === (to === "ali-mall" ? "bus-ali-mall" : "bus-cubao-gateway"),
+    ).path.slice(1),
+  ],
+  reversePath: [
+    stop(to).coordinate,
+    ...BUS_RETURN_PATH.slice(to === "gateway-mall" ? 1 : 0, -1),
+    stop(from).coordinate,
+  ],
 });
 
 export const TRANSIT_LINES = Object.freeze([

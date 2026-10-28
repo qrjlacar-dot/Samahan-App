@@ -102,6 +102,7 @@ function profileFixture(permission) {
     },
     "react-native-safe-area-context": { SafeAreaView: "SafeArea" },
     "../../components/ProfileAvatar": { ProfileAvatar: "Avatar" },
+    "../../components/LegalLinks": { LegalLinks: "LegalLinks" },
     "../../context/AuthContext": {
       useAuth: () => ({
         user: { uid: "user" },

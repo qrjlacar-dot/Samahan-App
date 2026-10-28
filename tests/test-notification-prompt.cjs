@@ -6,7 +6,8 @@ const hookHarness = require("./helpers/hook-harness.cjs");
 
 const root = path.resolve(__dirname, "..");
 // The app code runs in a separate vm context, so compare plain copies.
-const same = (actual, expected) => assert.deepEqual(JSON.parse(JSON.stringify(actual)), expected);
+const same = (actual, expected) =>
+  assert.deepEqual(JSON.parse(JSON.stringify(actual)), expected);
 const settle = () => new Promise((resolve) => setImmediate(resolve));
 
 const constants = createLoader()(path.join(root, "src/constants/commute.js"));
@@ -35,9 +36,15 @@ function fixture({
         },
         AppState: { currentState: appState },
       },
-      "../context/AuthContext": { useAuth: () => ({ user: { uid: "account-a" } }) },
-      "../context/LocationContext": { useLocation: () => ({ snapshot: { status, label } }) },
-      "../services/location": { LOCATION_LABELS: { servicesOff: SERVICES_OFF } },
+      "../context/AuthContext": {
+        useAuth: () => ({ user: { uid: "account-a" } }),
+      },
+      "../context/LocationContext": {
+        useLocation: () => ({ snapshot: { status, label } }),
+      },
+      "../services/location": {
+        LOCATION_LABELS: { servicesOff: SERVICES_OFF },
+      },
       "../services/notifications": {
         shouldAskNotificationPermission: async () => shouldAsk,
         markNotificationPermissionAsked: async (uid) => {
@@ -48,7 +55,9 @@ function fixture({
           return value;
         },
       },
-      "../services/phoneNotifications": { requestPhonePermission: async () => permission },
+      "../services/phoneNotifications": {
+        requestPhonePermission: async () => permission,
+      },
     },
     {
       setTimeout(fn) {
@@ -58,7 +67,9 @@ function fixture({
       clearTimeout() {},
     },
   );
-  const { useNotificationPrompt } = load(path.join(root, "src/hooks/useNotificationPrompt.js"));
+  const { useNotificationPrompt } = load(
+    path.join(root, "src/hooks/useNotificationPrompt.js"),
+  );
   const h = render(useNotificationPrompt);
   const run = async () => {
     for (const fn of timers.splice(0)) await fn();
@@ -76,7 +87,10 @@ test("nothing is asked while Location is still being checked", async () => {
 });
 
 test("nothing is asked while the 'turn on Location' pop-up applies", async () => {
-  const f = fixture({ status: LOCATION_STATUS.UNAVAILABLE, label: SERVICES_OFF });
+  const f = fixture({
+    status: LOCATION_STATUS.UNAVAILABLE,
+    label: SERVICES_OFF,
+  });
   assert.equal(f.timers.length, 0);
   f.h.dispose();
 });
@@ -102,7 +116,10 @@ test("after Location is finished the question appears once, with Allow and Don't
 });
 
 test("Location failing without its own pop-up also lets the question appear", async () => {
-  const f = fixture({ status: LOCATION_STATUS.UNAVAILABLE, label: "Weak signal" });
+  const f = fixture({
+    status: LOCATION_STATUS.UNAVAILABLE,
+    label: "Weak signal",
+  });
   await f.run();
   assert.equal(f.alerts.length, 1);
   f.h.dispose();
@@ -132,24 +149,34 @@ test("Don't allow saves phone notifications as off", async () => {
   f.h.dispose();
 });
 
-test("Allow saves on when this build cannot show phone notifications", async () => {
-  const f = fixture({ status: LOCATION_STATUS.READY, permission: "unavailable" });
+test("Allow reports unavailable without saving a misleading enabled preference", async () => {
+  const f = fixture({
+    status: LOCATION_STATUS.READY,
+    permission: "unavailable",
+  });
   await f.run();
   f.alerts[0].buttons[1].onPress();
   await settle();
-  same(f.saved, [["account-a", { enabled: true }]]);
+  same(f.saved, []);
+  assert.equal(f.alerts[1].title, "Could not enable notifications");
   f.h.dispose();
 });
 
 test("Allow saves on when the phone also allows it, and off when the phone refuses", async () => {
-  const granted = fixture({ status: LOCATION_STATUS.READY, permission: "granted" });
+  const granted = fixture({
+    status: LOCATION_STATUS.READY,
+    permission: "granted",
+  });
   await granted.run();
   granted.alerts[0].buttons[1].onPress();
   await settle();
   same(granted.saved, [["account-a", { enabled: true }]]);
   granted.h.dispose();
 
-  const denied = fixture({ status: LOCATION_STATUS.READY, permission: "denied" });
+  const denied = fixture({
+    status: LOCATION_STATUS.READY,
+    permission: "denied",
+  });
   await denied.run();
   denied.alerts[0].buttons[1].onPress();
   await settle();

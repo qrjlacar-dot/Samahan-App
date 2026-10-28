@@ -7,7 +7,9 @@ const hookHarness = require("./helpers/hook-harness.cjs");
 const root = (file) => path.resolve(__dirname, "../src", file);
 const load = createLoader();
 const { TRAIN_PLACE_BY_ID } = load(root("data/trainNetwork.js"));
-const { getTrainGuide, getMultimodalTrainGuide } = load(root("services/routing/trainPlanner.js"));
+const { getTrainGuide, getMultimodalTrainGuide } = load(
+  root("services/routing/trainPlanner.js"),
+);
 const deferred = () => {
   let resolve, reject;
   const promise = new Promise((yes, no) => {
@@ -34,20 +36,23 @@ function trainSession({ routing, refresh } = {}) {
       timestamp: new Date().toISOString(),
     },
   };
-  const { useTrainTrip } = createLoader({
-    react,
-    "react-native": { Alert: { alert() {} } },
-    "../services/notifications": {
-      notifyTripCompleted: async () => ({}),
-      notifyTripCancelled: async () => ({}),
-    },
-    "../services/routes": {
-      getRoutes: (...args) => {
-        calls++;
-        return routing(...args);
+  const { useTrainTrip } = createLoader(
+    {
+      react,
+      "react-native": { Alert: { alert() {} } },
+      "../services/notifications": {
+        notifyTripCompleted: async () => ({}),
+        notifyTripCancelled: async () => ({}),
+      },
+      "../services/routes": {
+        getRoutes: (...args) => {
+          calls++;
+          return routing(...args);
+        },
       },
     },
-  })(root("hooks/useTrainTrip.js"));
+    { setInterval: () => 1, clearInterval() {} },
+  )(root("hooks/useTrainTrip.js"));
   const h = render(useTrainTrip, {
     route,
     snapshot: fix,
@@ -71,6 +76,7 @@ test("ending a train trip prevents a delayed reroute from replacing the next tra
   await s.h.result.start();
   s.h.flush();
   const pending = s.h.result.reroute();
+  await new Promise((resolve) => setImmediate(resolve));
   s.h.result.end();
   s.h.flush();
   waiting.resolve([{ ...s.route, id: "late-train-route" }]);
@@ -88,6 +94,7 @@ test("switching away from Train ignores a delayed reroute error", async () => {
   await s.h.result.start();
   s.h.flush();
   const pending = s.h.result.reroute();
+  await new Promise((resolve) => setImmediate(resolve));
   s.h.props = { ...s.h.props, route: null };
   s.h.flush();
   waiting.reject(new Error("An old request failed"));
@@ -155,9 +162,13 @@ test("an account switch while saving the prompt flag cannot show the old account
         Alert: { alert: (...args) => alerts.push(args) },
         AppState: { currentState: "active" },
       },
-      "../services/phoneNotifications": { requestPhonePermission: async () => "granted" },
+      "../services/phoneNotifications": {
+        requestPhonePermission: async () => "granted",
+      },
       "../context/AuthContext": { useAuth: () => ({ user: { uid } }) },
-      "../context/LocationContext": { useLocation: () => ({ snapshot: { status: "ready" } }) },
+      "../context/LocationContext": {
+        useLocation: () => ({ snapshot: { status: "ready" } }),
+      },
       "../services/notifications": {
         shouldAskNotificationPermission: async () => true,
         markNotificationPermissionAsked: () => {
@@ -191,7 +202,10 @@ test("Directions starts the selected train, bus, jeep or walking navigator after
     Array.isArray(tree)
       ? tree.flatMap((item) => nodes(item, type))
       : tree && typeof tree === "object"
-        ? [...(tree.type === type ? [tree] : []), ...nodes(tree.props?.children, type)]
+        ? [
+            ...(tree.type === type ? [tree] : []),
+            ...nodes(tree.props?.children, type),
+          ]
         : [];
   for (const mode of ["train", "bus", "jeep", "walk"]) {
     const { react, runtime, render } = hookHarness();
@@ -232,6 +246,7 @@ test("Directions starts the selected train, bus, jeep or walking navigator after
       react,
       "react/jsx-runtime": runtime,
       "expo-router": {
+        Stack: { Screen: "StackScreen" },
         useRouter: () => ({ back: noop }),
         useLocalSearchParams: () => ({
           journey: JSON.stringify({
@@ -257,7 +272,9 @@ test("Directions starts the selected train, bus, jeep or walking navigator after
         Alert: { alert: noop },
       },
       "react-native-safe-area-context": { SafeAreaView: "SafeArea" },
-      "../context/AuthContext": { useAuth: () => ({ user: { uid: "account" } }) },
+      "../context/AuthContext": {
+        useAuth: () => ({ user: { uid: "account" } }),
+      },
       "../hooks/useMapLocation": {
         useMapLocation: () => ({
           snapshot: {},
@@ -266,10 +283,16 @@ test("Directions starts the selected train, bus, jeep or walking navigator after
           stopTracking: noop,
         }),
       },
-      "../hooks/useWalkingTrip": { useWalkingTrip: (args) => tripFor("walk", args) },
+      "../hooks/useWalkingTrip": {
+        useWalkingTrip: (args) => tripFor("walk", args),
+      },
       "../hooks/useBusTrip": { useBusTrip: (args) => tripFor("bus", args) },
-      "../services/phoneNotifications": { holdTripNotifications: () => () => {} },
-      "../hooks/useTrainTrip": { useTrainTrip: (args) => tripFor("train", args) },
+      "../services/phoneNotifications": {
+        holdTripNotifications: () => () => {},
+      },
+      "../hooks/useTrainTrip": {
+        useTrainTrip: (args) => tripFor("train", args),
+      },
       "../hooks/useJeepTrip": { useJeepTrip: (args) => tripFor("jeep", args) },
       "../hooks/useJourneyFavorites": { useJourneyFavorites: () => ({}) },
       "../services/routes": { getRoutes: async () => [route] },
@@ -318,7 +341,9 @@ test("Directions starts the selected train, bus, jeep or walking navigator after
       assert.equal(controls.length, 1);
       await controls[0].props.onStart();
     } else {
-      const start = nodes(rendered, "Text").find((item) => item.props.children === "Start trip");
+      const start = nodes(rendered, "Text").find(
+        (item) => item.props.children === "Start trip",
+      );
       assert.ok(start);
       const button = nodes(rendered, "Button").find((item) =>
         nodes(item.props.children, "Text").includes(start),

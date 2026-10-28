@@ -3,49 +3,14 @@ import { COLORS, RADIUS } from "../constants/theme";
 import { scale, scaleFont } from "../constants/scale";
 
 export const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.pageBg,
-  },
-  keyboardContainer: {
-    flex: 1,
-  },
-  pageScroll: {
-    flex: 1,
-  },
-  pageScrollContent: {
-    flexGrow: 1,
-  },
-  page: {
-    flex: 1,
-    backgroundColor: COLORS.pageBg,
-    paddingHorizontal: "6%",
-    paddingVertical: "2.5%",
-    justifyContent: "center",
-  },
-  card: {
-    height: "82%",
+  form: {
     width: "100%",
-    alignSelf: "center",
-    backgroundColor: COLORS.cardBg,
-    borderRadius: RADIUS.card,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    paddingHorizontal: "7%",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 3,
+    paddingTop: scale(40),
+    paddingBottom: scale(8),
   },
   logoRow: {
-    position: "absolute",
-    top: scale(100),
-    left: 0,
-    right: 0,
+    marginTop: 0,
+    marginBottom: scale(36),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -65,12 +30,9 @@ export const styles = StyleSheet.create({
   content: {
     width: "100%",
     alignSelf: "center",
-    flex: 1,
-    justifyContent: "center",
-    paddingTop: scale(110),
   },
   errorContainer: {
-    height: scale(38),
+    minHeight: scale(34),
     justifyContent: "center",
     marginBottom: scale(12),
   },
@@ -84,14 +46,14 @@ export const styles = StyleSheet.create({
     color: COLORS.pink,
     textAlign: "right",
     marginTop: scale(1),
-    marginBottom: scale(20),
+    marginBottom: scale(28),
     fontSize: scaleFont(13),
     fontWeight: "bold",
   },
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: scale(20),
+    marginVertical: scale(26),
   },
   dividerLine: {
     flex: 1,
@@ -127,8 +89,10 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: scale(65),
+    marginTop: scale(36),
   },
+  compactLogoRow: { marginTop: 0, marginBottom: scale(24) },
+  compactSignupRow: { marginTop: scale(28) },
   signupText: {
     color: COLORS.textMuted,
     fontSize: scaleFont(13),

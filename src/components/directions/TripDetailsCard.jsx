@@ -1,4 +1,3 @@
-import { TRAIN_RIDE_FARES, farePairKey } from "../../data/trainFares";
 import {
   busTimelineSteps,
   simplifyWalkingInstruction,
@@ -15,7 +14,12 @@ function StepMetrics({ step, isTrain }) {
   const parts = [];
   if (Number.isFinite(step.distanceMeters) && step.distanceMeters > 0)
     parts.push(formatDistance(step.distanceMeters));
-  if (!isTrain && !step.displayArrival && Number.isFinite(step.durationSeconds) && step.durationSeconds > 0)
+  if (
+    !isTrain &&
+    !step.displayArrival &&
+    Number.isFinite(step.durationSeconds) &&
+    step.durationSeconds > 0
+  )
     parts.push(formatDuration(step.durationSeconds));
   return parts.length ? <Text style={styles.stopSubtitle}>{parts.join(" · ")}</Text> : null;
 }
@@ -34,10 +38,12 @@ export default function TripDetailsCard({
 }) {
   if (!route && routeError) return null;
   const isTrain = route?.preferredMode === "train";
-  const busJourney = route?.preferredMode === "bus" || route?.requestedMode === "bus";
-  const timelineSteps = busJourney ? busTimelineSteps(route) : (route?.steps ?? []);
+  const roadJourney =
+    ["bus", "jeep"].includes(route?.preferredMode) ||
+    ["bus", "jeep"].includes(route?.requestedMode);
+  const timelineSteps = roadJourney ? busTimelineSteps(route) : (route?.steps ?? []);
   const currentStep =
-    busJourney && tripState === "arrived" ? timelineSteps.length - 1 : (progress?.stepIndex ?? 0);
+    roadJourney && tripState === "arrived" ? timelineSteps.length - 1 : (progress?.stepIndex ?? 0);
 
   const summaryRoute = progress
     ? {
@@ -95,7 +101,7 @@ export default function TripDetailsCard({
           )}
           {progress && (
             <Text style={[styles.searchHint, { marginBottom: 12 }]}>
-              {busJourney && tripState === "arrived" ? (
+              {roadJourney && tripState === "arrived" ? (
                 "Trip complete"
               ) : (
                 <>
@@ -153,19 +159,14 @@ export default function TripDetailsCard({
                       : step.instruction}
                   </Text>
 
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
                     <StepMetrics step={step} isTrain={isTrain} />
-                    {isTrain && step.mode === "train" && (
-                      <View style={[styles.farePill, { alignSelf: "auto" }]}>
-                        <Text style={styles.fareText}>
-                          {Number.isFinite(
-                            TRAIN_RIDE_FARES[farePairKey(...(step.stationIds ?? []))]?.[ticketType],
-                          )
-                            ? `₱${TRAIN_RIDE_FARES[farePairKey(...(step.stationIds ?? []))][ticketType].toFixed(2)}`
-                            : "Confirm fare"}
-                        </Text>
-                      </View>
-                    )}
                   </View>
                 </View>
               </View>
@@ -184,17 +185,27 @@ export default function TripDetailsCard({
                   : "Walking times are estimates. Keep Location turned on during your trip."}
               </Text>
               {(isTrain
-                ? (route.warnings ?? []).filter((note) => /walking leg|offline|unavailable/i.test(note))
+                ? (route.warnings ?? []).filter((note) =>
+                    /walking leg|offline|unavailable/i.test(note),
+                  )
                 : (route.warnings ?? [])
               ).map((warning, index) => (
-                <Text key={index} style={styles.searchHint}>{warning}</Text>
-              ))}
-              {[...new Set(route.steps.map((step) => step.sourceUrl).filter(Boolean))].map((url) => (
-                <Text key={url} style={styles.searchHint} accessibilityRole="link"
-                  onPress={() => Linking.openURL(url).catch(() => {})}>
-                  Transport route source
+                <Text key={index} style={styles.searchHint}>
+                  {warning}
                 </Text>
               ))}
+              {[...new Set(route.steps.map((step) => step.sourceUrl).filter(Boolean))].map(
+                (url) => (
+                  <Text
+                    key={url}
+                    style={styles.searchHint}
+                    accessibilityRole="link"
+                    onPress={() => Linking.openURL(url).catch(() => {})}
+                  >
+                    Transport route source
+                  </Text>
+                ),
+              )}
             </>
           )}
           <ProviderAttribution />

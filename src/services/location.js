@@ -58,7 +58,9 @@ export function distanceMeters(a, b) {
 
   const h =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * Math.sin(dLon / 2) ** 2;
+    Math.cos(toRad(a.latitude)) *
+      Math.cos(toRad(b.latitude)) *
+      Math.sin(dLon / 2) ** 2;
 
   return 2 * earthRadius * Math.asin(Math.min(1, Math.sqrt(h)));
 }
@@ -145,7 +147,12 @@ function makeSnapshot(status, position, label, inServiceArea) {
 }
 
 export function createInitialSnapshot() {
-  return makeSnapshot(LOCATION_STATUS.IDLE, null, LOCATION_LABELS.finding, null);
+  return makeSnapshot(
+    LOCATION_STATUS.IDLE,
+    null,
+    LOCATION_LABELS.finding,
+    null,
+  );
 }
 
 function unavailableSnapshot(label) {
@@ -158,7 +165,12 @@ function unavailableSnapshot(label) {
 }
 
 function deniedSnapshot() {
-  return makeSnapshot(LOCATION_STATUS.DENIED, null, LOCATION_LABELS.denied, null);
+  return makeSnapshot(
+    LOCATION_STATUS.DENIED,
+    null,
+    LOCATION_LABELS.denied,
+    null,
+  );
 }
 
 function toIsoTimestamp(value) {
@@ -176,7 +188,10 @@ function readFix(fix) {
 
   const accuracy = Number.isFinite(coords.accuracy) ? coords.accuracy : null;
 
-  const heading = Number.isFinite(coords.heading) && coords.heading >= 0 ? coords.heading : null;
+  const heading =
+    Number.isFinite(coords.heading) && coords.heading >= 0
+      ? coords.heading
+      : null;
 
   return {
     position: {
@@ -206,7 +221,10 @@ function withTimeout(promise, ms) {
   let timer;
 
   const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error("Location request timed out.")), ms);
+    timer = setTimeout(
+      () => reject(new Error("Location request timed out.")),
+      ms,
+    );
   });
 
   return Promise.race([promise, timeout]).finally(() => {
@@ -214,7 +232,9 @@ function withTimeout(promise, ms) {
   });
 }
 
-export async function requestForegroundLocation({ requestPermission = true } = {}) {
+export async function requestForegroundLocation({
+  requestPermission = true,
+} = {}) {
   const native = getNativeLocation();
 
   if (!native) return unavailableSnapshot();
@@ -311,6 +331,11 @@ export async function watchForegroundLocation(onUpdate, onError) {
         }
       }
     },
+    (message) => {
+      if (!removed && typeof onError === "function") {
+        onError(new Error(message || "Location unavailable"));
+      }
+    },
   );
 
   return {
@@ -330,8 +355,9 @@ export function createLocationTracker(onSnapshot) {
   let snapshot = createInitialSnapshot();
   let disposed = false;
   let handle = null;
-  let starting = false;
-  let wantsTracking = false;
+  let starting = null;
+  const owners = new Set();
+  const defaultOwner = {};
   let watchToken = 0;
   let refreshToken = 0;
 
@@ -344,7 +370,7 @@ export function createLocationTracker(onSnapshot) {
 
   function stopWatching() {
     watchToken += 1;
-    starting = false;
+    starting = null;
 
     const current = handle;
     handle = null;
@@ -391,7 +417,8 @@ export function createLocationTracker(onSnapshot) {
 
     if (
       next.status === LOCATION_STATUS.DENIED ||
-      (next.status === LOCATION_STATUS.UNAVAILABLE && next.label === LOCATION_LABELS.servicesOff)
+      (next.status === LOCATION_STATUS.UNAVAILABLE &&
+        next.label === LOCATION_LABELS.servicesOff)
     ) {
       stopWatching();
     }
@@ -400,62 +427,67 @@ export function createLocationTracker(onSnapshot) {
   }
 
   async function start(options) {
-    if (disposed) return;
-
-    wantsTracking = true;
-
-    if (handle || starting) return;
-
-    starting = true;
+    if (disposed) return false;
+    owners.add(options?.owner ?? defaultOwner);
+    if (handle) return true;
+    if (starting) return starting;
     const token = ++watchToken;
+    const task = (async () => {
+      await refresh(options);
+      if (disposed || token !== watchToken || !owners.size) return false;
 
-    await refresh(options);
-
-    if (disposed || token !== watchToken) return;
-
-    if (
-      ![LOCATION_STATUS.READY, LOCATION_STATUS.OUTSIDE_AREA].includes(snapshot.status) ||
-      !snapshot.position
-    ) {
-      starting = false;
-      return;
-    }
-
-    const onUpdate = (next) => {
-      if (disposed || token !== watchToken) return;
-      emit(next);
-    };
-
-    const onError = () => {
-      if (disposed || token !== watchToken) return;
-      emit(unavailableSnapshot());
-    };
-
-    let created;
-
-    try {
-      created = await watchForegroundLocation(onUpdate, onError);
-    } catch {
-      if (!disposed && token === watchToken) {
-        starting = false;
-        emit(unavailableSnapshot());
+      if (
+        ![LOCATION_STATUS.READY, LOCATION_STATUS.OUTSIDE_AREA].includes(
+          snapshot.status,
+        ) ||
+        !snapshot.position
+      ) {
+        return false;
       }
 
-      return;
-    }
+      const onUpdate = (next) => {
+        if (disposed || token !== watchToken) return;
+        emit(next);
+      };
 
-    if (disposed || token !== watchToken) {
-      created.remove();
-      return;
-    }
+      const onError = () => {
+        if (disposed || token !== watchToken) return;
+        stopWatching();
+        emit(unavailableSnapshot());
+      };
 
-    handle = created;
-    starting = false;
+      let created;
+
+      try {
+        created = await watchForegroundLocation(onUpdate, onError);
+      } catch {
+        if (!disposed && token === watchToken) {
+          emit(unavailableSnapshot());
+        }
+
+        return false;
+      }
+
+      if (disposed || token !== watchToken) {
+        created.remove();
+        return false;
+      }
+
+      handle = created;
+      return true;
+    })();
+    starting = task;
+    try {
+      return await task;
+    } finally {
+      if (starting === task) starting = null;
+    }
   }
 
-  function stop() {
-    wantsTracking = false;
-    stopWatching();
+  function stop(owner) {
+    if (owner === undefined) owners.clear();
+    else owners.delete(owner);
+    if (!owners.size) stopWatching();
   }
 
   function suspend() {
@@ -468,8 +500,8 @@ export function createLocationTracker(onSnapshot) {
 
     const options = { requestPermission: false };
 
-    if (wantsTracking) {
-      await start(options);
+    if (owners.size) {
+      await start({ ...options, owner: owners.values().next().value });
       return snapshot;
     }
 
@@ -485,7 +517,7 @@ export function createLocationTracker(onSnapshot) {
   function dispose() {
     disposed = true;
     refreshToken += 1;
-    wantsTracking = false;
+    owners.clear();
     stopWatching();
   }
 
@@ -497,7 +529,8 @@ export function createLocationTracker(onSnapshot) {
     resume,
     reset,
     dispose,
-    isTracking: () => Boolean(handle) || starting,
+    isTracking: () => Boolean(handle || starting),
+    hasOwners: () => owners.size > 0,
     getSnapshot: () => snapshot,
   };
 }

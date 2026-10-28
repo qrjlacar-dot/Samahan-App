@@ -4,25 +4,32 @@ import { styles } from "../../styles/walking-navigation.styles";
 
 export default function FareSummary({ route, ticketType }) {
   const result = useFareQuote(route, ticketType);
-  // Train fares are displayed beside the selected train ride in Trip Details.
-  // The complete fare matrix stays in src/data/trainFares.js for offline use.
-  if (!route || route.preferredMode === "walk" || route.preferredMode === "train") return null;
+  if (!route || route.preferredMode === "walk") return null;
   const quote = result?.quote;
   return (
     <View style={styles.fareSummary}>
       <Text style={styles.fareTitle}>
-        {ticketType === "discounted" ? "Discounted fare estimate" : "Regular fare estimate"}
+        {ticketType === "discounted"
+          ? "Discounted fare estimate"
+          : "Regular fare estimate"}
       </Text>
       <Text style={styles.instruction}>
         {!result
           ? "Checking fare…"
           : result.error ||
-            (quote.complete ? `₱${quote.selectedTotal.toFixed(2)}` : "Fare not fully verified")}
+            (quote.complete
+              ? `₱${quote.selectedTotal.toFixed(2)}`
+              : "Fare not fully verified")}
       </Text>
       {quote?.items
-        .filter((item) => route.steps.find((step) => step.id === item.stepId)?.mode !== "walk")
+        .filter(
+          (item) =>
+            route.steps.find((step) => step.id === item.stepId)?.mode !==
+            "walk",
+        )
         .map((item) => (
           <View key={item.stepId} style={styles.fareItem}>
+            {!!item.note && <Text style={styles.label}>{item.note}</Text>}
             {item.sourceUrl && (
               <Text
                 accessibilityRole="link"

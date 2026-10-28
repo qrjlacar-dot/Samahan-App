@@ -1,7 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { scale } from "../../constants/scale";
@@ -14,6 +21,8 @@ import {
   removeNotification,
 } from "../../services/notifications";
 import { styles } from "../../styles/notifications.styles";
+import { getPhonePermission } from "../../services/phoneNotifications";
+import { AppState } from "react-native";
 
 const FILTERS = [
   { label: "All", category: null },
@@ -35,7 +44,11 @@ function iconFor(item) {
 }
 
 function startOfDay(date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  ).getTime();
 }
 
 function formatTime(iso) {
@@ -62,9 +75,13 @@ function formatTime(iso) {
 function groupByDay(items) {
   const today = startOfDay(new Date());
 
-  const todayItems = items.filter((item) => startOfDay(new Date(item.createdAt)) >= today);
+  const todayItems = items.filter(
+    (item) => startOfDay(new Date(item.createdAt)) >= today,
+  );
 
-  const earlierItems = items.filter((item) => startOfDay(new Date(item.createdAt)) < today);
+  const earlierItems = items.filter(
+    (item) => startOfDay(new Date(item.createdAt)) < today,
+  );
 
   return [
     {
@@ -106,15 +123,16 @@ export default function NotificationsScreen() {
     setStatus("loading");
 
     try {
-      const [items, preferences] = await Promise.all([
+      const [items, preferences, permission] = await Promise.all([
         loadNotifications(uid),
         getNotificationPreferences(uid),
+        getPhonePermission(),
       ]);
 
       if (id !== requestId.current) return;
 
       setNotifications(items);
-      setEnabled(preferences.enabled);
+      setEnabled(preferences.enabled && permission === "granted");
       setStatus("ready");
     } catch {
       if (id !== requestId.current) return;
@@ -125,9 +143,13 @@ export default function NotificationsScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
+      const subscription = AppState?.addEventListener?.("change", (state) => {
+        if (state === "active") void load();
+      });
 
       return () => {
         requestId.current += 1;
+        subscription?.remove();
       };
     }, [load]),
   );
@@ -138,7 +160,8 @@ export default function NotificationsScreen() {
     () =>
       notifications.filter(
         (item) =>
-          item.category === "trips" && (!filter.category || item.category === filter.category),
+          item.category === "trips" &&
+          (!filter.category || item.category === filter.category),
       ),
     [notifications, filter],
   );
@@ -153,7 +176,9 @@ export default function NotificationsScreen() {
       const readAt = new Date().toISOString();
 
       setNotifications((current) =>
-        current.map((entry) => (entry.id === item.id ? { ...entry, readAt } : entry)),
+        current.map((entry) =>
+          entry.id === item.id ? { ...entry, readAt } : entry,
+        ),
       );
 
       try {
@@ -181,7 +206,9 @@ export default function NotificationsScreen() {
     try {
       await removeNotification(uid, item.id);
 
-      setNotifications((current) => current.filter((entry) => entry.id !== item.id));
+      setNotifications((current) =>
+        current.filter((entry) => entry.id !== item.id),
+      );
     } catch {
       Alert.alert("Could not delete", "Please try again.");
     } finally {
@@ -196,7 +223,9 @@ export default function NotificationsScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Notifications</Text>
 
-        <Text style={styles.subtitle}>Keep track of your completed and cancelled trips.</Text>
+        <Text style={styles.subtitle}>
+          Keep track of your completed and cancelled trips.
+        </Text>
       </View>
 
       <ScrollView
@@ -219,7 +248,9 @@ export default function NotificationsScreen() {
                 selected: active,
               }}
             >
-              <Text style={[styles.pillText, !active && styles.pillTextInactive]}>
+              <Text
+                style={[styles.pillText, !active && styles.pillTextInactive]}
+              >
                 {item.label}
               </Text>
             </TouchableOpacity>
@@ -234,8 +265,8 @@ export default function NotificationsScreen() {
       >
         {status === "ready" && !enabled && (
           <Text style={styles.offNotice}>
-            Phone notifications are off. Trip updates are still saved here. Turn them on in Profile
-            to also get them on your phone.
+            Phone notifications are off. Trip updates are still saved here. Turn
+            them on in Profile to also get them on your phone.
           </Text>
         )}
 
@@ -247,9 +278,15 @@ export default function NotificationsScreen() {
 
         {status === "error" && (
           <View style={styles.stateBox}>
-            <Text style={styles.stateText}>We could not load your notifications.</Text>
+            <Text style={styles.stateText}>
+              We could not load your notifications.
+            </Text>
 
-            <PrimaryButton title="Try again" onPress={load} style={styles.retryButton} />
+            <PrimaryButton
+              title="Try again"
+              onPress={load}
+              style={styles.retryButton}
+            />
           </View>
         )}
 
@@ -275,12 +312,19 @@ export default function NotificationsScreen() {
                   accessibilityHint={item.readAt ? undefined : "Unread"}
                 >
                   <View style={styles.rowIcon}>
-                    <Ionicons name={iconFor(item)} size={scale(20)} color={COLORS.pink} />
+                    <Ionicons
+                      name={iconFor(item)}
+                      size={scale(20)}
+                      color={COLORS.pink}
+                    />
                   </View>
 
                   <View style={styles.rowText}>
                     <Text
-                      style={[styles.rowTitle, !item.readAt && styles.rowTitleUnread]}
+                      style={[
+                        styles.rowTitle,
+                        !item.readAt && styles.rowTitleUnread,
+                      ]}
                       numberOfLines={1}
                     >
                       {item.title}
@@ -290,7 +334,9 @@ export default function NotificationsScreen() {
                       {item.body}
                     </Text>
 
-                    <Text style={styles.rowTime}>{formatTime(item.createdAt)}</Text>
+                    <Text style={styles.rowTime}>
+                      {formatTime(item.createdAt)}
+                    </Text>
                   </View>
 
                   {!item.readAt && <View style={styles.unreadDot} />}
@@ -302,7 +348,11 @@ export default function NotificationsScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Delete notification"
                   >
-                    <Ionicons name="trash-outline" size={scale(20)} color={COLORS.textLight} />
+                    <Ionicons
+                      name="trash-outline"
+                      size={scale(20)}
+                      color={COLORS.textLight}
+                    />
                   </TouchableOpacity>
                 </TouchableOpacity>
               ))}

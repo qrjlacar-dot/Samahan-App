@@ -72,14 +72,24 @@ export function useNotificationPrompt() {
         const save = (enabled) => {
           if (!active) return;
           setNotificationPreferences(uid, { enabled }).catch(() => {
-            Alert.alert("Could not save", "You can change this anytime in Profile.");
+            Alert.alert(
+              "Could not save",
+              "You can change this anytime in Profile.",
+            );
           });
         };
 
         const allow = async () => {
           if (!active) return;
           const permission = await requestPhonePermission();
-          save(permission !== "denied");
+          if (permission === "unavailable") {
+            Alert.alert(
+              "Could not enable notifications",
+              "Phone notifications are unavailable right now. Check that you are using the updated app build, then try again.",
+            );
+            return;
+          }
+          save(permission === "granted");
         };
 
         Alert.alert(

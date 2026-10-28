@@ -1,4 +1,9 @@
-import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import {
+  Stack,
+  useFocusEffect,
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -45,24 +50,36 @@ export default function Directions() {
   const { user } = useAuth();
 
   // Saved selections and screen state.
-  const journeyParam = Array.isArray(params.journey) ? params.journey[0] : params.journey;
+  const journeyParam = Array.isArray(params.journey)
+    ? params.journey[0]
+    : params.journey;
 
-  const incoming = useMemo(() => parseJourneyParam(journeyParam), [journeyParam]);
+  const incoming = useMemo(
+    () => parseJourneyParam(journeyParam),
+    [journeyParam],
+  );
 
-  const [selectedMode, setSelectedMode] = useState(incoming?.preferredMode || "walk");
+  const [selectedMode, setSelectedMode] = useState(
+    incoming?.preferredMode || "walk",
+  );
 
-  const { snapshot, refreshLocation, startTracking, stopTracking } = useMapLocation({
-    trackWhenFocused: selectedMode !== "train",
-  });
+  const { snapshot, refreshLocation, startTracking, stopTracking } =
+    useMapLocation();
 
-  const [jeepType, setJeepType] = useState(incoming?.operatorId || "jeep-traditional");
+  const [jeepType, setJeepType] = useState(
+    incoming?.operatorId || "jeep-traditional",
+  );
   const jeepTypeRef = useRef(jeepType);
   jeepTypeRef.current = jeepType;
-  const [ticketType, setTicketType] = useState(incoming?.ticketType || "discounted");
+  const [ticketType, setTicketType] = useState(
+    incoming?.ticketType || "discounted",
+  );
   const [origin, setOrigin] = useState(incoming?.origin || null);
   const [destination, setDestination] = useState(incoming?.destination || null);
   const [locationText, setLocationText] = useState(incoming?.origin.name || "");
-  const [destinationText, setDestinationText] = useState(incoming?.destination.name || "");
+  const [destinationText, setDestinationText] = useState(
+    incoming?.destination.name || "",
+  );
 
   const [route, setRoute] = useState(null);
   useFocusEffect(
@@ -81,11 +98,17 @@ export default function Directions() {
 
   const request = useRef(null);
   const hideMapControls = useCallback(() => setMapControlsOpen(false), []);
-  const { translateY, isExpanded, snapTo, panHandlers, collapsedOffset, sheetHeight } =
-    useDirectionsSheet({
-      initiallyCollapsed: params.collapsed === "true",
-      onInteract: hideMapControls,
-    });
+  const {
+    translateY,
+    isExpanded,
+    snapTo,
+    panHandlers,
+    collapsedOffset,
+    sheetHeight,
+  } = useDirectionsSheet({
+    initiallyCollapsed: params.collapsed === "true",
+    onInteract: hideMapControls,
+  });
 
   const journey = useMemo(
     () =>
@@ -138,7 +161,12 @@ export default function Directions() {
     stopTracking,
     onRouteChange: setRoute,
   });
-  const tripsByMode = { walk: walkingTrip, bus: busTrip, train: trainTrip, jeep: jeepTrip };
+  const tripsByMode = {
+    walk: walkingTrip,
+    bus: busTrip,
+    train: trainTrip,
+    jeep: jeepTrip,
+  };
   const trip = tripsByMode[route?.preferredMode] || walkingTrip;
   const endTrips = useCallback(() => {
     walkingTrip.end();
@@ -182,7 +210,9 @@ export default function Directions() {
     jeepTrip.open ||
     jeepTrip.busy;
 
-  const showNavigation = Boolean(trip.progress && (trip.open || trip.state === "arrived"));
+  const showNavigation = Boolean(
+    trip.progress && (trip.open || trip.state === "arrived"),
+  );
 
   // Confirm explicit cancellation before stopping navigation or leaving.
   const confirmEndTrip = useCallback(
@@ -217,15 +247,18 @@ export default function Directions() {
     useCallback(() => {
       if (!trip.open && !mapControlsOpen) return;
 
-      const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-        if (mapControlsOpen) {
-          setMapControlsOpen(false);
-        } else {
-          confirmEndTrip(true);
-        }
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => {
+          if (mapControlsOpen) {
+            setMapControlsOpen(false);
+          } else {
+            confirmEndTrip(true);
+          }
 
-        return true;
-      });
+          return true;
+        },
+      );
 
       return () => subscription.remove();
     }, [trip.open, mapControlsOpen, confirmEndTrip]),
@@ -312,7 +345,9 @@ export default function Directions() {
     if (!journeyParam) return;
 
     if (!incoming) {
-      setError("This saved journey could not be opened. Select your places again.");
+      setError(
+        "This saved journey could not be opened. Select your places again.",
+      );
       return;
     }
 
@@ -394,6 +429,7 @@ export default function Directions() {
   // Compose the map, draggable sheet, reusable controls and trip details.
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ gestureEnabled: !locked }} />
       <View style={styles.mapContainer}>
         <CommuteMap
           style={styles.map}
@@ -527,18 +563,28 @@ export default function Directions() {
                 setDestinationText={editDestination}
                 onSwapLocations={swapLocations}
                 onSelectPlace={selectPlace}
-                searchPlacesFn={selectedMode === "train" ? searchTrainAndWalkingPlaces : undefined}
+                searchPlacesFn={
+                  selectedMode === "train"
+                    ? searchTrainAndWalkingPlaces
+                    : undefined
+                }
                 minQueryLength={selectedMode === "train" ? 0 : 2}
               />
             </View>
 
             <TripActionButton
-              title={selectedMode === "walk" ? "Find walking route" : "Find transport route"}
+              title={
+                selectedMode === "walk"
+                  ? "Find walking route"
+                  : "Find transport route"
+              }
               style={!canSearch && styles.disabledButton}
               disabled={!canSearch}
               loading={loading}
               accessibilityLabel={
-                selectedMode === "walk" ? "Find walking route" : "Find transport route"
+                selectedMode === "walk"
+                  ? "Find walking route"
+                  : "Find transport route"
               }
               onPress={() => calculateRoute(journey)}
             />
@@ -568,6 +614,10 @@ export default function Directions() {
                 trip={trainTrip}
                 onStart={startTrip}
                 onEnd={() => confirmEndTrip()}
+                onPlanAnother={() => {
+                  invalidateRoute();
+                  snapTo(0);
+                }}
               />
             )}
 
@@ -577,6 +627,10 @@ export default function Directions() {
                 trip={jeepTrip}
                 onStart={startTrip}
                 onEnd={() => confirmEndTrip()}
+                onPlanAnother={() => {
+                  invalidateRoute();
+                  snapTo(0);
+                }}
               />
             )}
 
@@ -594,7 +648,11 @@ export default function Directions() {
             )}
 
             {route && route.preferredMode !== "walk" && (
-              <TicketToggle ticketType={ticketType} onSelectTicketType={setTicketType} />
+              <TicketToggle
+                ticketType={ticketType}
+                onSelectTicketType={setTicketType}
+                disabled={locked}
+              />
             )}
 
             <TripDetailsCard

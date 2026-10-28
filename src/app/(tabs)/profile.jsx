@@ -1,3 +1,4 @@
+import { LegalLinks } from "../../components/LegalLinks";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
@@ -252,6 +253,9 @@ export default function Profile() {
 
           <Text style={styles.signOutText}>Sign out</Text>
         </TouchableOpacity>
+        <View style={styles.legalLinks}>
+          <LegalLinks disabled={signingOut} />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

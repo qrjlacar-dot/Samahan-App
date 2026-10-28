@@ -1,3 +1,4 @@
+import { useTripNotificationRouting } from "../hooks/useTripNotificationRouting";
 import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
@@ -10,6 +11,7 @@ SplashScreen.preventAutoHideAsync().catch(console.warn);
 function AppNavigator() {
   const { user, initializing } = useAuth();
   const pathname = usePathname();
+  useTripNotificationRouting(user?.uid);
 
   useEffect(() => {
     if (pathname !== "/") {

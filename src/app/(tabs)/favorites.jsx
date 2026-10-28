@@ -128,7 +128,7 @@ export default function FavoritesScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
         <Text style={styles.title}>Your Favorite Routes!</Text>
 
-        <Text style={styles.subtitle}>Commute tayo, ano tara?!</Text>
+        <Text style={styles.subtitle}>Your saved places, all in one spot.</Text>
 
         {status === "loading" && (
           <View style={styles.routeList}>

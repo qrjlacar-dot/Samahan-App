@@ -1,6 +1,15 @@
+import { callPhoneNumber } from "../../services/phoneCalls";
+import { useHomeGreeting } from "../../hooks/useHomeGreeting";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Alert, Image, Linking, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  Image,
+  Linking,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CommuteMap } from "../../components/maps/CommuteMap";
 import { LOCATION_STATUS } from "../../constants/commute";
@@ -11,14 +20,17 @@ import { styles } from "../../styles/home.styles";
 
 export default function Home() {
   const router = useRouter();
+  const greeting = useHomeGreeting();
 
   const { snapshot, refreshLocation, requestEnableLocation } = useMapLocation();
 
   const hasFix =
-    snapshot.status === LOCATION_STATUS.READY || snapshot.status === LOCATION_STATUS.OUTSIDE_AREA;
+    snapshot.status === LOCATION_STATUS.READY ||
+    snapshot.status === LOCATION_STATUS.OUTSIDE_AREA;
 
   const canRetryLocation =
-    snapshot.status === LOCATION_STATUS.DENIED || snapshot.status === LOCATION_STATUS.UNAVAILABLE;
+    snapshot.status === LOCATION_STATUS.DENIED ||
+    snapshot.status === LOCATION_STATUS.UNAVAILABLE;
 
   const LocationPill = canRetryLocation ? TouchableOpacity : View;
 
@@ -59,19 +71,22 @@ export default function Home() {
     refreshLocation();
   };
 
-  const handleEmergencyCall = async (title, number) => {
-    try {
-      await Linking.openURL(`tel:${number}`);
-    } catch {
-      Alert.alert("Unable to call", `Your device could not open the phone app for ${title}.`);
-    }
-  };
+  const handleEmergencyCall = (_title, number) =>
+    callPhoneNumber(number, { emergency: true });
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.scrollContent}>
         <View style={styles.headerContainer}>
-          <Text style={styles.greetingTitle}>Magandang Umaga!</Text>
+          <Text
+            style={styles.greetingTitle}
+            accessibilityRole="header"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >
+            {greeting}
+          </Text>
 
           <Text style={styles.subTitle}>Commute tayo, ano tara?!</Text>
         </View>
@@ -103,7 +118,9 @@ export default function Home() {
                 }
               : {})}
           >
-            <View style={[styles.locationDot, !hasFix && styles.locationDotMuted]} />
+            <View
+              style={[styles.locationDot, !hasFix && styles.locationDotMuted]}
+            />
 
             <Text style={styles.locationText}>{snapshot.label}</Text>
           </LocationPill>
@@ -112,7 +129,11 @@ export default function Home() {
         <View style={styles.emergencyCard}>
           <View style={styles.emergencyHeader}>
             <View style={styles.sirenBadge}>
-              <Image source={IMAGES.emergency} style={styles.sirenIcon} resizeMode="contain" />
+              <Image
+                source={IMAGES.emergency}
+                style={styles.sirenIcon}
+                resizeMode="contain"
+              />
             </View>
 
             <Text style={styles.emergencyTitle}>Emergency Contacts</Text>

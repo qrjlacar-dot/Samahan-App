@@ -80,7 +80,11 @@ function fixture({ noWalk = false, refresh, selectedRoute } = {}) {
   const fix = (coordinate, accuracyMeters = 10) => ({
     status: "ready",
     inServiceArea: true,
-    position: { ...coordinate, accuracyMeters, timestamp: new Clock().toISOString() },
+    position: {
+      ...coordinate,
+      accuracyMeters,
+      timestamp: new Clock().toISOString(),
+    },
   });
   const selected =
     selectedRoute ??
@@ -98,11 +102,13 @@ function fixture({ noWalk = false, refresh, selectedRoute } = {}) {
     route: selected,
     journey: { ...selected, ticketType: "regular" },
     snapshot: fix(selected.origin.coordinate),
-    refreshLocation: () => (refresh ? refresh() : Promise.resolve(h.props.snapshot)),
+    refreshLocation: () =>
+      refresh ? refresh() : Promise.resolve(h.props.snapshot),
   });
   const advance = (ms, coordinate, accuracy = 10) => {
     clock += ms;
-    if (coordinate) h.props = { ...h.props, snapshot: fix(coordinate, accuracy) };
+    if (coordinate)
+      h.props = { ...h.props, snapshot: fix(coordinate, accuracy) };
     for (const fn of [...timers.values()]) fn();
     h.flush();
   };
@@ -128,7 +134,9 @@ test("bus trip walks to boarding, waits for confirmation, tracks ride, alights, 
     longitude: (b.longitude + c.longitude) / 2,
   });
   assert.equal(f.h.result.progress.stepIndex, 1);
-  assert.ok(f.h.result.progress.fraction > 0.3 && f.h.result.progress.fraction < 0.7);
+  assert.ok(
+    f.h.result.progress.fraction > 0.3 && f.h.result.progress.fraction < 0.7,
+  );
   f.advance(5000, c);
   assert.match(f.h.result.instruction, /approaching/);
   assert.equal(f.h.result.state, "active");
@@ -300,6 +308,7 @@ test("Directions opens a saved bus journey with Start trip, and changing modes d
     react,
     "react/jsx-runtime": runtime,
     "expo-router": {
+      Stack: { Screen: "StackScreen" },
       useRouter: () => ({ back: noop }),
       useLocalSearchParams: () => ({
         journey: JSON.stringify({
@@ -326,7 +335,9 @@ test("Directions opens a saved bus journey with Start trip, and changing modes d
     },
     "react-native-safe-area-context": { SafeAreaView: "SafeArea" },
     "../context/AuthContext": { useAuth: () => ({ user: { uid: "account" } }) },
-    "../hooks/useMapLocation": { useMapLocation: () => ({ snapshot: {}, refreshLocation: noop }) },
+    "../hooks/useMapLocation": {
+      useMapLocation: () => ({ snapshot: {}, refreshLocation: noop }),
+    },
     "../hooks/useWalkingTrip": { useWalkingTrip: () => idle },
     "../services/phoneNotifications": { holdTripNotifications: () => () => {} },
     "../hooks/useTrainTrip": { useTrainTrip: () => idle },
@@ -367,16 +378,24 @@ test("Directions opens a saved bus journey with Start trip, and changing modes d
     Array.isArray(tree)
       ? tree.flatMap((t) => nodes(t, type))
       : tree && typeof tree === "object"
-        ? [...(tree.type === type ? [tree] : []), ...nodes(tree.props?.children, type)]
+        ? [
+            ...(tree.type === type ? [tree] : []),
+            ...nodes(tree.props?.children, type),
+          ]
         : [];
   const Screen = load(path.join(root, "src/app/directions.jsx")).default;
   const h = render(Screen);
   await new Promise((resolve) => setImmediate(resolve));
   h.flush();
   assert.equal(requests.length, 1);
-  assert.equal(nodes(expandPresentation(h.result), "Map")[0].props.route.preferredMode, "bus");
+  assert.equal(
+    nodes(expandPresentation(h.result), "Map")[0].props.route.preferredMode,
+    "bus",
+  );
   assert.ok(
-    nodes(expandPresentation(h.result), "Text").some((n) => n.props.children === "Start trip"),
+    nodes(expandPresentation(h.result), "Text").some(
+      (n) => n.props.children === "Start trip",
+    ),
   );
   assert.ok(
     nodes(expandPresentation(h.result), "Text").some(
@@ -397,11 +416,16 @@ test("Directions opens a saved bus journey with Start trip, and changing modes d
         n.props.children.includes("Return route not verified"),
     ),
   );
-  nodes(expandPresentation(h.result), "ModeSelector")[0].props.onSelectMode("walk");
+  nodes(expandPresentation(h.result), "ModeSelector")[0].props.onSelectMode(
+    "walk",
+  );
   h.flush();
   await new Promise((resolve) => setImmediate(resolve));
   h.flush();
-  assert.equal(nodes(expandPresentation(h.result), "ModeSelector")[0].props.selectedMode, "walk");
+  assert.equal(
+    nodes(expandPresentation(h.result), "ModeSelector")[0].props.selectedMode,
+    "walk",
+  );
   assert.equal(nodes(expandPresentation(h.result), "Map")[0].props.route, null);
   assert.equal(requests.length, 1);
   h.dispose();
@@ -409,7 +433,9 @@ test("Directions opens a saved bus journey with Start trip, and changing modes d
 
 test("Anonas-bound GPS guidance waits for boarding and alighting before completing once", async () => {
   const load = createLoader();
-  const { getBusRoutes } = load(path.join(root, "src/services/routing/busRoutes.js"));
+  const { getBusRoutes } = load(
+    path.join(root, "src/services/routing/busRoutes.js"),
+  );
   const { BUS_LINES } = load(path.join(root, "src/data/busCatalog.js"));
   const line = BUS_LINES.find((item) => item.id === "bus-gateway-anonas");
   const [returnRoute] = await getBusRoutes({

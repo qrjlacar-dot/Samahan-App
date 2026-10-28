@@ -1,6 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { NOTIFICATION_CATEGORIES, TICKET_TYPES, TRAVEL_MODES } from "../constants/commute";
-import { showPhoneNotification } from "./phoneNotifications";
+import {
+  NOTIFICATION_CATEGORIES,
+  TICKET_TYPES,
+  TRAVEL_MODES,
+} from "../constants/commute";
+import {
+  cancelPhoneNotifications,
+  showPhoneNotification,
+} from "./phoneNotifications";
 
 const NOTIFICATIONS_PREFIX = "samahan:notifications:v1:";
 const PREFERENCES_PREFIX = "samahan:notification-preferences:v1:";
@@ -79,7 +86,8 @@ function isStoredNotification(item) {
     typeof item.createdAt === "string" &&
     !Number.isNaN(Date.parse(item.createdAt)) &&
     (item.readAt === null ||
-      (typeof item.readAt === "string" && !Number.isNaN(Date.parse(item.readAt))))
+      (typeof item.readAt === "string" &&
+        !Number.isNaN(Date.parse(item.readAt))))
   );
 }
 
@@ -161,7 +169,9 @@ async function readPreferences(uid) {
  */
 export async function loadNotifications(uid) {
   const items = await readAll(uid);
-  return items.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  return items.sort(
+    (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+  );
 }
 
 // Saves one notification. Trip updates are ALWAYS saved here, whether or not
@@ -176,7 +186,9 @@ function storeNotification(uid, notification) {
 
   return enqueue(`items:${uid}`, async () => {
     const items = await readAll(uid);
-    const existing = items.find((item) => item.eventId === notification.eventId);
+    const existing = items.find(
+      (item) => item.eventId === notification.eventId,
+    );
     if (existing) return { notification: existing, created: false };
 
     const created = {
@@ -253,11 +265,14 @@ export async function getNotificationPreferences(uid) {
 export async function setNotificationPreferences(uid, preferences) {
   requireUid(uid);
   if (!preferences || typeof preferences.enabled !== "boolean") {
-    throw new Error("Notification preferences need an enabled true/false value.");
+    throw new Error(
+      "Notification preferences need an enabled true/false value.",
+    );
   }
   return enqueue(`prefs:${uid}`, async () => {
     const saved = { enabled: preferences.enabled };
     await AsyncStorage.setItem(preferencesKey(uid), JSON.stringify(saved));
+    if (!saved.enabled) await cancelPhoneNotifications(uid);
     return saved;
   });
 }

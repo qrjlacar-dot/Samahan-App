@@ -34,7 +34,8 @@ function fromGeoJSON(pair) {
   return point;
 }
 
-const measurement = (value) => (Number.isFinite(value) && value >= 0 ? value : null);
+const measurement = (value) =>
+  Number.isFinite(value) && value >= 0 ? value : null;
 
 // Search: reuse recent provider results while the latest request is running.
 const placeSearchCache = new Map();
@@ -42,13 +43,17 @@ const SEARCH_CACHE_MS = 120000;
 
 export async function searchPlaces(query, { signal, onResults } = {}) {
   const text = String(query ?? "").trim();
-  const cancelled = () => Object.assign(new Error("Request cancelled."), { name: "AbortError" });
+  const cancelled = () =>
+    Object.assign(new Error("Request cancelled."), { name: "AbortError" });
   if (signal?.aborted) throw cancelled();
   if (text.length < 2) return [];
   const key = normalizePlaceText(text);
   const exact = placeSearchCache.get(key);
   if (exact && Date.now() - exact.at < SEARCH_CACHE_MS) {
-    const cached = exact.places.map((place) => ({ ...place, coordinate: { ...place.coordinate } }));
+    const cached = exact.places.map((place) => ({
+      ...place,
+      coordinate: { ...place.coordinate },
+    }));
     onResults?.(cached);
     return cached;
   }
@@ -59,7 +64,9 @@ export async function searchPlaces(query, { signal, onResults } = {}) {
     .flatMap((value) => value.places)
     .filter((place) => placeMatchScore(place.name, text) < 9);
   if (nearbyCached.length) {
-    const unique = [...new Map(nearbyCached.map((place) => [place.id, place])).values()];
+    const unique = [
+      ...new Map(nearbyCached.map((place) => [place.id, place])).values(),
+    ];
     onResults?.(unique.slice(0, 15));
   }
 
@@ -82,7 +89,9 @@ export async function searchPlaces(query, { signal, onResults } = {}) {
   const seen = new Set();
   const ranked = () =>
     [...results]
-      .sort((a, b) => placeMatchScore(a.name, text) - placeMatchScore(b.name, text))
+      .sort(
+        (a, b) => placeMatchScore(a.name, text) - placeMatchScore(b.name, text),
+      )
       .slice(0, 15);
   const merge = (data) => {
     if (signal?.aborted) return;
@@ -92,8 +101,11 @@ export async function searchPlaces(query, { signal, onResults } = {}) {
         latitude: p.lat ?? feature?.geometry?.coordinates?.[1],
         longitude: p.lon ?? feature?.geometry?.coordinates?.[0],
       };
-      if (!isCoordinate(coordinate) || !isWithinServiceArea(coordinate)) continue;
-      const id = String(p.place_id ?? `${coordinate.latitude},${coordinate.longitude}`);
+      if (!isCoordinate(coordinate) || !isWithinServiceArea(coordinate))
+        continue;
+      const id = String(
+        p.place_id ?? `${coordinate.latitude},${coordinate.longitude}`,
+      );
       const name = p.name || p.address_line1 || p.formatted;
       if (!name) continue;
       const duplicate = `${normalizePlaceText(name)}|${coordinate.latitude}|${coordinate.longitude}`;
@@ -135,7 +147,9 @@ export async function searchPlaces(query, { signal, onResults } = {}) {
     }),
   );
   if (signal?.aborted) throw cancelled();
-  let failure = responses.find((response) => response.status === "rejected")?.reason;
+  let failure = responses.find(
+    (response) => response.status === "rejected",
+  )?.reason;
   if (!results.length && text.length >= 3 && !failure) {
     try {
       merge(
@@ -153,7 +167,8 @@ export async function searchPlaces(query, { signal, onResults } = {}) {
   if (!results.length && failure) throw failure;
   const places = ranked();
   if (places.length) {
-    if (placeSearchCache.size >= 30) placeSearchCache.delete(placeSearchCache.keys().next().value);
+    if (placeSearchCache.size >= 30)
+      placeSearchCache.delete(placeSearchCache.keys().next().value);
     placeSearchCache.set(key, { at: Date.now(), places });
   }
   return places;
@@ -170,8 +185,14 @@ export async function getWalkingRoutes(request, { signal } = {}) {
     );
   }
 
-  if (!isCoordinate(origin?.coordinate) || !isCoordinate(destination?.coordinate)) {
-    throw routeError("invalid-places", "Select both places from the search suggestions first.");
+  if (
+    !isCoordinate(origin?.coordinate) ||
+    !isCoordinate(destination?.coordinate)
+  ) {
+    throw routeError(
+      "invalid-places",
+      "Select both places from the search suggestions first.",
+    );
   }
 
   const a = origin.coordinate;
@@ -185,13 +206,17 @@ export async function getWalkingRoutes(request, { signal } = {}) {
   }
 
   if (a.latitude === b.latitude && a.longitude === b.longitude) {
-    throw routeError("same-place", "Choose a destination different from your starting point.");
+    throw routeError(
+      "same-place",
+      "Choose a destination different from your starting point.",
+    );
   }
 
   const data = await requestGeoapify(
     "routing",
     {
-      waypoints: `${a.latitude},${a.longitude}|` + `${b.latitude},${b.longitude}`,
+      waypoints:
+        `${a.latitude},${a.longitude}|` + `${b.latitude},${b.longitude}`,
       mode: "walk",
       units: "metric",
       lang: "en",
@@ -234,7 +259,10 @@ export async function getWalkingRoutes(request, { signal } = {}) {
     const polyline = lines.flat();
 
     if (polyline.length < 2) {
-      throw routeError("no-route", "No walking route was found. Try another nearby place.");
+      throw routeError(
+        "no-route",
+        "No walking route was found. Try another nearby place.",
+      );
     }
 
     if (polyline.some((point) => !isWithinServiceArea(point))) {
@@ -246,7 +274,8 @@ export async function getWalkingRoutes(request, { signal } = {}) {
 
     const properties = feature.properties ?? {};
 
-    const id = `geoapify:${origin.id}:${destination.id}` + `:walk:${routeIndex}`;
+    const id =
+      `geoapify:${origin.id}:${destination.id}` + `:walk:${routeIndex}`;
 
     const steps = (properties.legs ?? []).flatMap((leg, legIndex) => {
       const line = lines[legIndex];
@@ -326,7 +355,10 @@ export async function getWalkingRoutes(request, { signal } = {}) {
 const busGeometryCache = new Map();
 export async function getBusGeometry(line, { signal } = {}) {
   const key = JSON.stringify([line.id, line.path]);
-  if (signal?.aborted) throw Object.assign(new Error("Request cancelled."), { name: "AbortError" });
+  if (signal?.aborted)
+    throw Object.assign(new Error("Request cancelled."), {
+      name: "AbortError",
+    });
   const cached = busGeometryCache.get(key);
   if (cached && Date.now() - cached.at < 300000) return cached.value;
   const data = await requestGeoapify(
@@ -359,13 +391,17 @@ export async function getBusGeometry(line, { signal } = {}) {
     return backwards;
   });
   const length = (points) =>
-    points.slice(1).reduce((sum, p, i) => sum + distanceMeters(points[i], p), 0);
+    points
+      .slice(1)
+      .reduce((sum, p, i) => sum + distanceMeters(points[i], p), 0);
   // Reject shortcuts, large detours, and geometry outside the authored corridor.
   if (
     polyline.length < 2 ||
     doublesBack ||
     polyline.some(
-      (p) => !isWithinServiceArea(p) || projectBusPoint(p, line.path)?.distance > 120,
+      (p) =>
+        !isWithinServiceArea(p) ||
+        projectBusPoint(p, line.path)?.distance > 120,
     ) ||
     distanceMeters(polyline[0], line.path[0]) > 100 ||
     distanceMeters(polyline.at(-1), line.path.at(-1)) > 100 ||
@@ -374,11 +410,12 @@ export async function getBusGeometry(line, { signal } = {}) {
   ) {
     throw routeError(
       "no-route",
-      "A road route within the supported bus corridor could not be found. Try Walk or another nearby place.",
+      `A road route within the supported ${line.mode === "jeep" ? "jeepney" : "bus"} corridor could not be found. Try Walk or another nearby place.`,
     );
   }
   const value = { polyline };
-  if (busGeometryCache.size >= 4) busGeometryCache.delete(busGeometryCache.keys().next().value);
+  if (busGeometryCache.size >= 4)
+    busGeometryCache.delete(busGeometryCache.keys().next().value);
   busGeometryCache.set(key, { at: Date.now(), value });
   return value;
 }
@@ -391,9 +428,13 @@ export async function getRoutes(request, options = {}) {
 
   if (request?.preferredMode === "train") {
     if (options.signal?.aborted) {
-      throw Object.assign(new Error("Request cancelled."), { name: "AbortError" });
+      throw Object.assign(new Error("Request cancelled."), {
+        name: "AbortError",
+      });
     }
-    return [await getMultimodalTrainGuide(request, { ...options, getWalkingRoutes })];
+    return [
+      await getMultimodalTrainGuide(request, { ...options, getWalkingRoutes }),
+    ];
   }
 
   return getTransitRoutes(request, {
@@ -407,7 +448,9 @@ export async function getRoutes(request, options = {}) {
 // places, so Train mode accepts the very same walking-service boundary.
 export async function searchTrainAndWalkingPlaces(query, options = {}) {
   if (options.signal?.aborted)
-    throw Object.assign(new Error("Request cancelled."), { name: "AbortError" });
+    throw Object.assign(new Error("Request cancelled."), {
+      name: "AbortError",
+    });
   const stations = await searchTrainPlaces(query);
   const combine = (places) => {
     const known = new Set(stations.map((item) => item.id));

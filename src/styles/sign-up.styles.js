@@ -1,53 +1,15 @@
 import { StyleSheet } from "react-native";
 import { scale, scaleFont } from "../constants/scale";
-import { COLORS, RADIUS } from "../constants/theme";
+import { COLORS } from "../constants/theme";
 
 export const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.pageBg,
-  },
-  keyboardContainer: {
-    flex: 1,
-  },
-  pageScroll: {
-    flex: 1,
-  },
-  pageScrollContent: {
-    flexGrow: 1,
-  },
-  page: {
-    flex: 1,
-    backgroundColor: COLORS.pageBg,
-    paddingHorizontal: "6%",
-    paddingVertical: "2.5%",
-    justifyContent: "center",
-  },
-  card: {
-    height: "82%",
-    width: "100%",
-    alignSelf: "center",
-    backgroundColor: COLORS.cardBg,
-    borderRadius: RADIUS.card,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    paddingHorizontal: "7%",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 3,
-    justifyContent: "center",
-  },
+  form: { width: "100%" },
   content: {
     width: "100%",
     alignSelf: "center",
   },
   headerRow: {
-    marginBottom: scale(22),
+    marginBottom: scale(20),
   },
   title: {
     fontSize: scaleFont(28),
@@ -64,13 +26,16 @@ export const styles = StyleSheet.create({
     marginBottom: scale(24),
   },
   avatarCircle: {
-    width: scale(110),
-    height: scale(110),
-    borderRadius: scale(55),
+    width: scale(88),
+    height: scale(88),
+    borderRadius: scale(44),
     backgroundColor: "#F3D9E6",
     alignItems: "center",
     justifyContent: "center",
   },
+  compactAvatarWrapper: { marginBottom: scale(20) },
+  compactAvatarCircle: { width: scale(80), height: scale(80), borderRadius: scale(40) },
+  compactLoginRow: { marginTop: scale(20) },
   cameraBadge: {
     position: "absolute",
     bottom: 0,
@@ -97,7 +62,7 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: scale(36),
+    marginTop: scale(24),
   },
   loginText: {
     color: COLORS.textMuted,

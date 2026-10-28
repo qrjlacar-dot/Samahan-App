@@ -30,7 +30,8 @@ function loadSource(file, mocks) {
 
 // The app code runs in a separate vm context, so compare plain copies of its
 // objects and arrays (a direct deepEqual would fail on different prototypes).
-const same = (actual, expected) => assert.deepEqual(JSON.parse(JSON.stringify(actual)), expected);
+const same = (actual, expected) =>
+  assert.deepEqual(JSON.parse(JSON.stringify(actual)), expected);
 
 // Uses the real shared constants so category/mode names always match the app.
 const commute = loadSource("src/constants/commute.js", {});
@@ -52,9 +53,13 @@ function storageMock(storage, overrides = {}) {
 function loadApi(storage, overrides, phone = {}) {
   phone.calls ??= [];
   return loadSource("src/services/notifications.js", {
-    "@react-native-async-storage/async-storage": storageMock(storage, overrides),
+    "@react-native-async-storage/async-storage": storageMock(
+      storage,
+      overrides,
+    ),
     "../constants/commute": commute,
     "./phoneNotifications": {
+      cancelPhoneNotifications: async () => {},
       showPhoneNotification: async (notification) => {
         if (phone.fail) throw new Error("phone failed");
         phone.calls.push(notification);
@@ -92,14 +97,18 @@ const event = (overrides = {}) => ({
 test("preferences default to on, then save and reload", async () => {
   const api = loadApi(new Map());
   same(await api.getNotificationPreferences("account-a"), { enabled: true });
-  const saved = await api.setNotificationPreferences("account-a", { enabled: false });
+  const saved = await api.setNotificationPreferences("account-a", {
+    enabled: false,
+  });
   same(saved, { enabled: false });
   same(await api.getNotificationPreferences("account-a"), { enabled: false });
 });
 
 test("the saved preference survives an app restart", async () => {
   const storage = new Map();
-  await loadApi(storage).setNotificationPreferences("account-a", { enabled: false });
+  await loadApi(storage).setNotificationPreferences("account-a", {
+    enabled: false,
+  });
   const restarted = loadApi(storage); // new module instance, same device storage
   same(await restarted.getNotificationPreferences("account-a"), {
     enabled: false,
@@ -109,22 +118,35 @@ test("the saved preference survives an app restart", async () => {
 test("preferences stay separate across accounts", async () => {
   const api = loadApi(new Map());
   await api.setNotificationPreferences("account-a", { enabled: false });
-  assert.equal((await api.getNotificationPreferences("account-b")).enabled, true);
+  assert.equal(
+    (await api.getNotificationPreferences("account-b")).enabled,
+    true,
+  );
   await api.setNotificationPreferences("account-b", { enabled: true });
-  assert.equal((await api.getNotificationPreferences("account-a")).enabled, false);
+  assert.equal(
+    (await api.getNotificationPreferences("account-a")).enabled,
+    false,
+  );
 });
 
 test("a preference must be a true/false value", async () => {
   const api = loadApi(new Map());
   await assert.rejects(() => api.setNotificationPreferences("account-a", {}));
-  await assert.rejects(() => api.setNotificationPreferences("account-a", { enabled: "yes" }));
+  await assert.rejects(() =>
+    api.setNotificationPreferences("account-a", { enabled: "yes" }),
+  );
   await assert.rejects(() => api.setNotificationPreferences("account-a", null));
 });
 
 test("a corrupt saved preference falls back to on", async () => {
-  const storage = new Map([["samahan:notification-preferences:v1:account-a", "{oops"]]);
+  const storage = new Map([
+    ["samahan:notification-preferences:v1:account-a", "{oops"],
+  ]);
   const api = loadApi(storage);
-  assert.equal((await api.getNotificationPreferences("account-a")).enabled, true);
+  assert.equal(
+    (await api.getNotificationPreferences("account-a")).enabled,
+    true,
+  );
 });
 
 test("a notification is stored with id, time, unread status, and target", async () => {
@@ -143,8 +165,14 @@ test("a notification is stored with id, time, unread status, and target", async 
 test("notifications load newest first", async () => {
   const storage = new Map();
   const api = loadApi(storage);
-  await api.addNotification("account-a", event({ eventId: "e1", title: "First" }));
-  await api.addNotification("account-a", event({ eventId: "e2", title: "Second" }));
+  await api.addNotification(
+    "account-a",
+    event({ eventId: "e1", title: "First" }),
+  );
+  await api.addNotification(
+    "account-a",
+    event({ eventId: "e2", title: "Second" }),
+  );
   const stored = JSON.parse(storage.get("samahan:notifications:v1:account-a"));
   stored[0].createdAt = "2026-10-19T10:00:00.000Z"; // e2
   stored[1].createdAt = "2026-10-19T09:00:00.000Z"; // e1
@@ -244,16 +272,24 @@ test("a directions target keeps the full journey choices", async () => {
 
 test("invalid notifications and missing accounts are rejected", async () => {
   const api = loadApi(new Map());
-  await assert.rejects(() => api.addNotification("account-a", event({ eventId: "" })));
-  await assert.rejects(() => api.addNotification("account-a", event({ category: "weather" })));
-  await assert.rejects(() => api.addNotification("account-a", event({ title: "  " })));
+  await assert.rejects(() =>
+    api.addNotification("account-a", event({ eventId: "" })),
+  );
+  await assert.rejects(() =>
+    api.addNotification("account-a", event({ category: "weather" })),
+  );
+  await assert.rejects(() =>
+    api.addNotification("account-a", event({ title: "  " })),
+  );
   await assert.rejects(() =>
     api.addNotification("account-a", event({ target: { screen: "home" } })),
   );
   await assert.rejects(() =>
     api.addNotification(
       "account-a",
-      event({ target: { screen: "directions", journey: { origin: place("x") } } }),
+      event({
+        target: { screen: "directions", journey: { origin: place("x") } },
+      }),
     ),
   );
   await assert.rejects(() => api.addNotification("account-a", null));
@@ -265,7 +301,10 @@ test("invalid notifications and missing accounts are rejected", async () => {
 
 test("a null target is allowed", async () => {
   const api = loadApi(new Map());
-  const created = await api.addNotification("account-a", event({ target: null }));
+  const created = await api.addNotification(
+    "account-a",
+    event({ target: null }),
+  );
   assert.equal(created.target, null);
 });
 
@@ -273,7 +312,10 @@ test("corrupt or invalid saved data is ignored", async () => {
   const storage = new Map([["samahan:notifications:v1:account-a", "{oops"]]);
   const api = loadApi(storage);
   same(await api.loadNotifications("account-a"), []);
-  storage.set("samahan:notifications:v1:account-a", JSON.stringify([{ id: "bad" }, null, "text"]));
+  storage.set(
+    "samahan:notifications:v1:account-a",
+    JSON.stringify([{ id: "bad" }, null, "text"]),
+  );
   same(await api.loadNotifications("account-a"), []);
   const created = await api.addNotification("account-a", event());
   assert.equal((await api.loadNotifications("account-a"))[0].id, created.id);
@@ -282,7 +324,10 @@ test("corrupt or invalid saved data is ignored", async () => {
 test("only the newest 100 notifications are kept", async () => {
   const api = loadApi(new Map());
   for (let i = 1; i <= 105; i += 1) {
-    await api.addNotification("account-a", event({ eventId: `e${i}`, title: `Event ${i}` }));
+    await api.addNotification(
+      "account-a",
+      event({ eventId: `e${i}`, title: `Event ${i}` }),
+    );
   }
   const list = await api.loadNotifications("account-a");
   assert.equal(list.length, 100);
@@ -305,7 +350,10 @@ test("a failed save is reported and later saves still work", async () => {
       storage.set(key, value);
     },
   });
-  await assert.rejects(() => api.addNotification("account-a", event()), /disk full/);
+  await assert.rejects(
+    () => api.addNotification("account-a", event()),
+    /disk full/,
+  );
   assert.equal((await api.loadNotifications("account-a")).length, 0);
   fail = false;
   assert.notEqual(await api.addNotification("account-a", event()), null);
@@ -316,7 +364,10 @@ test("a notification is saved even when phone notifications are switched off", a
   const phone = {};
   const api = loadApi(new Map(), undefined, phone);
   await api.setNotificationPreferences("account-a", { enabled: false });
-  const created = await api.addNotification("account-a", event({ eventId: "while-off" }));
+  const created = await api.addNotification(
+    "account-a",
+    event({ eventId: "while-off" }),
+  );
   assert.equal(created.eventId, "while-off");
   assert.equal((await api.loadNotifications("account-a")).length, 1);
 });
@@ -324,7 +375,10 @@ test("a notification is saved even when phone notifications are switched off", a
 test("trip completed: saved with title, trip text and a Directions target, newest first", async () => {
   const phone = {};
   const api = loadApi(new Map(), undefined, phone);
-  const saved = await api.notifyTripCompleted("account-a", { tripId: "t1", journey: journey() });
+  const saved = await api.notifyTripCompleted("account-a", {
+    tripId: "t1",
+    journey: journey(),
+  });
   assert.equal(saved.title, "Trip completed");
   assert.equal(saved.category, "trips");
   assert.equal(saved.eventId, "trip-completed:t1");
@@ -364,7 +418,10 @@ test("a phone notification is shown once per new trip update", async () => {
   assert.equal(phone.calls.length, 1);
   assert.equal(phone.calls[0].title, "Trip completed");
   assert.equal(phone.calls[0].body, first.body);
-  await api.notifyTripCancelled("account-a", { tripId: "t2", journey: update.journey });
+  await api.notifyTripCancelled("account-a", {
+    tripId: "t2",
+    journey: update.journey,
+  });
   assert.equal(phone.calls.length, 2);
   assert.equal(phone.calls[1].title, "Trip cancelled");
 });
@@ -386,7 +443,10 @@ test("trip updates are still saved, but no phone notification, when the switch i
   const phone = {};
   const api = loadApi(new Map(), undefined, phone);
   await api.setNotificationPreferences("account-a", { enabled: false });
-  const saved = await api.notifyTripCompleted("account-a", { tripId: "t1", journey: journey() });
+  const saved = await api.notifyTripCompleted("account-a", {
+    tripId: "t1",
+    journey: journey(),
+  });
   const cancelled = await api.notifyTripCancelled("account-a", {
     tripId: "t2",
     journey: journey(),
@@ -396,7 +456,10 @@ test("trip updates are still saved, but no phone notification, when the switch i
   assert.equal((await api.loadNotifications("account-a")).length, 2);
   assert.equal(phone.calls.length, 0);
   await api.setNotificationPreferences("account-a", { enabled: true });
-  await api.notifyTripCompleted("account-a", { tripId: "t3", journey: journey() });
+  await api.notifyTripCompleted("account-a", {
+    tripId: "t3",
+    journey: journey(),
+  });
   assert.equal(phone.calls.length, 1);
 });
 
@@ -404,8 +467,14 @@ test("the switch of one account does not affect another account's phone notifica
   const phone = {};
   const api = loadApi(new Map(), undefined, phone);
   await api.setNotificationPreferences("account-a", { enabled: false });
-  await api.notifyTripCompleted("account-a", { tripId: "t1", journey: journey() });
-  await api.notifyTripCompleted("account-b", { tripId: "t1", journey: journey() });
+  await api.notifyTripCompleted("account-a", {
+    tripId: "t1",
+    journey: journey(),
+  });
+  await api.notifyTripCompleted("account-b", {
+    tripId: "t1",
+    journey: journey(),
+  });
   assert.equal(phone.calls.length, 1);
   assert.equal((await api.loadNotifications("account-a")).length, 1);
   assert.equal((await api.loadNotifications("account-b")).length, 1);
@@ -414,14 +483,20 @@ test("the switch of one account does not affect another account's phone notifica
 test("a failing phone notification never stops the update from being saved", async () => {
   const phone = { fail: true };
   const api = loadApi(new Map(), undefined, phone);
-  const saved = await api.notifyTripCancelled("account-a", { tripId: "t1", journey: journey() });
+  const saved = await api.notifyTripCancelled("account-a", {
+    tripId: "t1",
+    journey: journey(),
+  });
   assert.notEqual(saved, null);
   assert.equal((await api.loadNotifications("account-a")).length, 1);
 });
 
 test("a trip update with an unusable journey is still saved, without a target", async () => {
   const api = loadApi(new Map());
-  const saved = await api.notifyTripCompleted("account-a", { tripId: "t1", journey: null });
+  const saved = await api.notifyTripCompleted("account-a", {
+    tripId: "t1",
+    journey: null,
+  });
   assert.equal(saved.target, null);
   assert.equal(saved.body, "Your trip to your destination is complete.");
 });
@@ -433,16 +508,28 @@ test("trip update helpers never throw, even when saving fails or input is missin
     },
   });
   assert.equal(
-    await api.notifyTripCompleted("account-a", { tripId: "t1", journey: journey() }),
+    await api.notifyTripCompleted("account-a", {
+      tripId: "t1",
+      journey: journey(),
+    }),
     null,
   );
   assert.equal(
-    await api.notifyTripCancelled("account-a", { tripId: "t1", journey: journey() }),
+    await api.notifyTripCancelled("account-a", {
+      tripId: "t1",
+      journey: journey(),
+    }),
     null,
   );
-  assert.equal(await api.notifyTripCompleted("", { tripId: "t1", journey: journey() }), null);
+  assert.equal(
+    await api.notifyTripCompleted("", { tripId: "t1", journey: journey() }),
+    null,
+  );
   assert.equal(await api.notifyTripCompleted("account-a", null), null);
-  assert.equal(await api.notifyTripCancelled("account-a", { journey: journey() }), null);
+  assert.equal(
+    await api.notifyTripCancelled("account-a", { journey: journey() }),
+    null,
+  );
 });
 
 test("Favorite saved is no longer a notification", async () => {
@@ -464,7 +551,10 @@ test("a new account should be asked once; a saved choice or being asked stops it
 test("the question is remembered after an app restart", async () => {
   const storage = new Map();
   await loadApi(storage).markNotificationPermissionAsked("account-a");
-  assert.equal(await loadApi(storage).shouldAskNotificationPermission("account-a"), false);
+  assert.equal(
+    await loadApi(storage).shouldAskNotificationPermission("account-a"),
+    false,
+  );
 });
 
 test("the question needs a signed-in account", async () => {

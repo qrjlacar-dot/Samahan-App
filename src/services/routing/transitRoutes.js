@@ -1,3 +1,4 @@
+import { getJeepRoutes } from "./jeepRoutes";
 import { TRANSIT_LINES } from "../../data/transitCatalog";
 import { getBusRoutes } from "./busRoutes";
 import { distanceMeters, isWithinServiceArea } from "../location";
@@ -12,6 +13,8 @@ export async function getTransitRoutes(
 ) {
   if (request?.preferredMode === "bus")
     return getBusRoutes(request, { signal, getWalkingRoutes, getBusGeometry });
+  if (request?.preferredMode === "jeep")
+    return getJeepRoutes(request, { signal, getWalkingRoutes, getBusGeometry, lines });
   const { origin, destination, preferredMode, operatorId } = request ?? {};
   const available = lines.filter(
     (line) =>
@@ -40,9 +43,13 @@ export async function getTransitRoutes(
   const direct = distanceMeters(origin.coordinate, destination.coordinate);
   const candidates = [];
   for (const line of available) {
-    const directions = [{ stops: line.stops, headsign: line.headsign }];
+    const directions = [{ stops: line.stops, headsign: line.headsign, path: line.path }];
     if (line.bidirectional)
-      directions.push({ stops: [...line.stops].reverse(), headsign: line.reverseHeadsign });
+      directions.push({
+        stops: [...line.stops].reverse(),
+        headsign: line.reverseHeadsign,
+        path: line.reversePath,
+      });
     for (const direction of directions) {
       for (let from = 0; from < direction.stops.length - 1; from += 1) {
         for (let to = from + 1; to < direction.stops.length; to += 1) {
@@ -83,25 +90,48 @@ export async function getTransitRoutes(
     walking(origin, boarding),
     walking(alighting, destination),
   ]);
-  if (signal?.aborted) throw Object.assign(new Error("Request cancelled."), { name: "AbortError" });
+  if (signal?.aborted)
+    throw Object.assign(new Error("Request cancelled."), {
+      name: "AbortError",
+    });
   const id = `local:${line.id}:${boarding.id}:${alighting.id}:${origin.id}:${destination.id}`;
+  let ridePolyline =
+    direction.path ?? direction.stops.slice(from, to + 1).map((item) => item.coordinate);
+  let geometryVerified = false;
+  if (preferredMode === "jeep" && getBusGeometry && direction.path) {
+    const road = await getBusGeometry(
+      { ...line, id: `${line.id}:${boarding.id}`, path: direction.path },
+      { signal },
+    );
+    if (
+      road?.polyline?.length < 2 ||
+      !road?.polyline ||
+      road.polyline.some((point) => !isWithinServiceArea(point))
+    )
+      throw failure("no-route", "No route was found for these places.");
+    ridePolyline = road.polyline;
+    geometryVerified = true;
+  }
+  const rideDistance = ridePolyline
+    .slice(1)
+    .reduce((sum, p, i) => sum + distanceMeters(ridePolyline[i], p), 0);
   const ride = {
     id: `${id}:ride`,
     mode: line.mode,
     kind: "ride",
-    withinMinimumFare: line.withinMinimumFare === true,
+    withinMinimumFare: geometryVerified ? rideDistance <= 4000 : line.withinMinimumFare === true,
     instruction: `Board ${line.name} marked ${direction.headsign}.`,
     start: boarding.coordinate,
     end: alighting.coordinate,
-    polyline: direction.stops.slice(from, to + 1).map((item) => item.coordinate),
-    distanceMeters: null,
+    polyline: ridePolyline,
+    distanceMeters: geometryVerified ? Math.round(rideDistance) : null,
     durationSeconds: null,
     lineName: line.name,
     boardingStop: boarding.name,
     alightingStop: alighting.name,
     stopCount: to - from,
     operatorId: line.operatorId,
-    schematic: true,
+    schematic: !geometryVerified,
     sourceUrl: line.sourceUrl,
   };
   const steps = [
@@ -129,7 +159,9 @@ export async function getTransitRoutes(
       preferredMode,
       operatorId: line.operatorId,
       actualModes: [...new Set(steps.map((step) => step.mode))],
-      distanceMeters: null,
+      distanceMeters: geometryVerified
+        ? Math.round(steps.reduce((sum, step) => sum + (step.distanceMeters ?? 0), 0))
+        : null,
       durationSeconds: null,
       polyline: steps.flatMap((step) => step.polyline),
       steps,

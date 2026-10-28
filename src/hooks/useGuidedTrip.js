@@ -1,59 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
-import { LOCATION_STATUS } from "../constants/commute";
 import { distanceMeters } from "../services/location";
-import { notifyTripCancelled, notifyTripCompleted } from "../services/notifications";
+import {
+  notifyTripCancelled,
+  notifyTripCompleted,
+} from "../services/notifications";
 import { getRoutes } from "../services/routes";
-import { distanceToRouteMeters } from "../services/trips";
+import { distanceToRouteMeters, getTripIssue } from "../services/trips";
+import { updateArrival, updateOffRoute } from "../services/tripArrival";
+import { getGuidedProgress } from "../services/guidedProgress";
 
-const FIX_MAX_AGE_MS = 30000;
-const FIX_MAX_ACCURACY_METERS = 70;
-const WALK_ARRIVAL_METERS = 65;
-const TRAIN_ARRIVAL_METERS = 115;
-const OFF_ROUTE_METERS = 160;
-
-function validPosition(snapshot) {
-  const p = snapshot?.position;
-  const age = Date.now() - Date.parse(p?.timestamp);
-  return (
-    snapshot?.status === LOCATION_STATUS.READY &&
-    snapshot.inServiceArea === true &&
-    p &&
-    Number.isFinite(p.accuracyMeters) &&
-    p.accuracyMeters >= 0 &&
-    p.accuracyMeters <= FIX_MAX_ACCURACY_METERS &&
-    Number.isFinite(age) &&
-    age >= -5000 &&
-    age <= FIX_MAX_AGE_MS
-  );
-}
-
-function stepDistance(step) {
-  if (Number.isFinite(step?.distanceMeters)) return step.distanceMeters;
-  const points = step?.polyline ?? [];
-  return points
-    .slice(1)
-    .reduce((sum, point, index) => sum + distanceMeters(points[index], point), 0);
-}
-
-// Use the schematic length when a jeep ride has no surveyed distance.
-// When navigation is active, adjust the current leg from the latest good fix.
-function remainingDistance(route, stepIndex, position) {
-  const steps = route?.steps ?? [];
-  const current = steps[stepIndex];
-  if (!current) return 0;
-  const futureMeters = steps
-    .slice(stepIndex + 1)
-    .reduce((sum, item) => sum + stepDistance(item), 0);
-  const legMeters = Math.max(0, stepDistance(current));
-  if (!position) return Math.round(futureMeters + legMeters);
-  const directMeters = distanceMeters(position, current.end);
-  if (!Number.isFinite(directMeters)) return Math.round(futureMeters + legMeters);
-  // Entering a station can include a real walk from the nearby GPS position.
-  const currentMeters =
-    current.kind === "platform" ? Math.min(directMeters, 450) : Math.min(directMeters, legMeters);
-  return Math.round(futureMeters + currentMeters);
-}
+const RUNNING = ["active", "paused", "off-route", "rerouting"];
 
 export function useGuidedTrip({
   uid,
@@ -66,212 +23,301 @@ export function useGuidedTrip({
   onRouteChange,
   mode = "train",
 }) {
-  // Session state is shared by train and jeepney guidance.
   const [state, setState] = useState("idle");
   const [message, setMessage] = useState("");
   const [stepIndex, setStepIndex] = useState(0);
   const [following, setFollowing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [recenterRequest, setRecenterRequest] = useState(0);
-  const lastFix = useRef(null);
-  const arrivalHits = useRef(0);
-  const offRouteHits = useRef(0);
-  const alertedFor = useRef(null);
-  const watchOwned = useRef(false);
-  const internalReroute = useRef(false);
-  const startPending = useRef(false);
-  const reroutePending = useRef(false);
-  const rerouteRequest = useRef(null);
+  const [now, setNow] = useState(Date.now);
+  const [rideStage, setRideStage] = useState("boarding");
+  const [progress, setProgress] = useState(null);
   const generation = useRef(0);
+  const pending = useRef(false);
+  const request = useRef(null);
   const session = useRef(null);
+  const owner = useRef({});
+  const watchOwned = useRef(false);
+  const internalReroute = useRef(null);
+  const arrival = useRef(null);
+  const stepArrival = useRef(null);
+  const offRoute = useRef(null);
+  const lastFix = useRef(null);
+  const alertedFor = useRef(null);
+  const savedFollowing = useRef(true);
+  const live = useRef(null);
+  live.current = { state, snapshot, route, stepIndex, rideStage };
 
-  // Cleanup: invalidate pending work and release this trip's GPS watcher.
-  const end = useCallback(() => {
-    generation.current += 1;
-    session.current = null;
-    startPending.current = false;
-    reroutePending.current = false;
-    rerouteRequest.current?.abort();
-    rerouteRequest.current = null;
-    internalReroute.current = false;
+  const releaseWatch = useCallback(() => {
     if (watchOwned.current) {
       watchOwned.current = false;
-      stopTracking();
+      stopTracking(owner.current);
     }
+  }, [stopTracking]);
+  const end = useCallback(() => {
+    generation.current += 1;
+    request.current?.abort();
+    request.current = null;
+    pending.current = false;
+    session.current = null;
+    internalReroute.current = null;
+    arrival.current = null;
+    stepArrival.current = null;
+    offRoute.current = null;
+    lastFix.current = null;
+    alertedFor.current = null;
+    releaseWatch();
     setState("idle");
     setMessage("");
     setStepIndex(0);
     setFollowing(false);
     setBusy(false);
-    lastFix.current = null;
-    arrivalHits.current = 0;
-    offRouteHits.current = 0;
-    alertedFor.current = null;
-  }, [stopTracking]);
-
+    setRideStage("boarding");
+    setProgress(null);
+  }, [releaseWatch]);
   useEffect(() => {
-    if (internalReroute.current) {
-      internalReroute.current = false;
-      setStepIndex(0);
-      arrivalHits.current = 0;
-      offRouteHits.current = 0;
+    if (
+      internalReroute.current &&
+      internalReroute.current === route &&
+      session.current?.uid === uid
+    ) {
+      internalReroute.current = null;
       return;
     }
     end();
-  }, [uid, route?.id, end]);
-
+  }, [uid, route, end]);
   useEffect(
     () => () => {
       generation.current += 1;
-      startPending.current = false;
-      reroutePending.current = false;
-      rerouteRequest.current?.abort();
-      rerouteRequest.current = null;
-      if (watchOwned.current) {
-        watchOwned.current = false;
-        stopTracking();
-      }
+      request.current?.abort();
+      session.current = null;
+      releaseWatch();
     },
-    [stopTracking],
+    [releaseWatch],
   );
-
   useEffect(() => {
-    if (state === "arrived" && watchOwned.current) {
-      watchOwned.current = false;
-      stopTracking();
-    }
-  }, [state, stopTracking]);
+    if (!RUNNING.includes(state)) return;
+    const timer = setInterval(() => setNow(Date.now()), 2000);
+    return () => clearInterval(timer);
+  }, [state]);
+  useEffect(() => {
+    if (state === "arrived") releaseWatch();
+  }, [state, releaseWatch]);
 
-  // Start: require a fresh, accurate fix near the selected origin.
   const start = useCallback(async () => {
     if (
       !route?.steps?.length ||
       route.preferredMode !== mode ||
-      startPending.current ||
-      reroutePending.current
+      pending.current
     )
       return false;
-    startPending.current = true;
+    pending.current = true;
     const token = ++generation.current;
     setBusy(true);
+    setMessage("");
     try {
-      const fresh = await refreshLocation(); // existing permission request
+      const fresh = await refreshLocation();
       if (token !== generation.current) return false;
-      if (!validPosition(fresh)) {
-        setMessage(
-          "Live guidance needs foreground location permission and a fresh GPS fix accurate to about 70 m. You can still read the offline route.",
-        );
-        return false;
-      }
-      if (distanceMeters(fresh.position, route.origin.coordinate) > 450) {
-        setMessage("Start closer to your selected origin (within 450 m).");
+      const issue = getTripIssue(route, fresh, {
+        requireOrigin: !session.current,
+      });
+      if (issue) {
+        setMessage(issue.message);
         return false;
       }
       if (!watchOwned.current) {
         watchOwned.current = true;
-        await startTracking({ requestPermission: false });
+        const started = await startTracking({
+          requestPermission: false,
+          owner: owner.current,
+        });
+        if (started === false) throw new Error("GPS tracking unavailable");
       }
       if (token !== generation.current) return false;
-      arrivalHits.current = 0;
-      offRouteHits.current = 0;
+      if (!session.current) {
+        session.current = {
+          tripId: `trip_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          uid,
+          journey,
+          finished: false,
+          startedPosition: { ...fresh.position },
+        };
+        setStepIndex(0);
+        setRideStage("boarding");
+      }
+      arrival.current = null;
+      stepArrival.current = null;
+      offRoute.current = null;
       lastFix.current = null;
-      alertedFor.current = null;
-      session.current = {
-        tripId: `trip_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        uid,
-        journey,
-        finished: false,
-      };
-      setStepIndex(0);
+      setNow(Date.now());
       setState("active");
       setFollowing(true);
-      setMessage(
-        mode === "jeep"
-          ? "This is a schematic jeepney guide. Confirm the placard and permitted stops with the driver. Use Next step when GPS is unavailable."
-          : "Navigation uses foreground GPS. Train/platform and indoor mall position can be inaccurate; use Next step when needed.",
-      );
-      setRecenterRequest((value) => value + 1);
+      savedFollowing.current = true;
+      setRecenterRequest((v) => v + 1);
       return true;
     } catch {
       if (token === generation.current) {
-        setMessage("Could not start GPS tracking. Check Location permissions and try again.");
-        if (watchOwned.current) {
-          watchOwned.current = false;
-          stopTracking();
-        }
+        setMessage(
+          "Could not start GPS tracking. Check Location permissions and try again.",
+        );
+        releaseWatch();
       }
       return false;
     } finally {
       if (token === generation.current) {
-        startPending.current = false;
+        pending.current = false;
         setBusy(false);
       }
     }
-  }, [uid, journey, route, refreshLocation, startTracking, stopTracking, mode]);
+  }, [route, mode, refreshLocation, startTracking, releaseWatch, uid, journey]);
 
-  // Progress: support manual steps when indoor GPS cannot identify a stop.
-  const advance = useCallback(() => {
-    if (!route?.steps?.length || reroutePending.current || !["active", "off-route"].includes(state))
-      return;
-    const current = route.steps[stepIndex];
-    const next = route.steps[stepIndex + 1];
-    if (
-      current?.kind === "ride" &&
-      next?.mode === "walk" &&
-      next.instruction.includes("Farmers Plaza")
-    ) {
-      Alert.alert(
-        "Transfer to MRT-3",
-        "Exit LRT-2 Cubao, then follow signs through Gateway Mall and Farmers Plaza to MRT-3 Cubao.",
-      );
-    }
-    arrivalHits.current = 0;
+  const nextStep = useCallback(() => {
+    if (!session.current || !route?.steps?.[stepIndex + 1]) return false;
+    stepArrival.current = null;
+    arrival.current = null;
+    offRoute.current = null;
     alertedFor.current = null;
-    if (state === "off-route") {
-      setState("active");
-      setMessage("Manually advanced. Continue checking your route and stopping point.");
-    }
-    setStepIndex((i) => {
-      if (i >= route.steps.length - 1) {
-        setState("arrived");
-        setFollowing(false);
-        setMessage("You have arrived. End trip when ready.");
-        return i;
-      }
-      return i + 1;
-    });
-  }, [route, state, stepIndex]);
+    setRideStage("boarding");
+    setStepIndex((i) => i + 1);
+    return true;
+  }, [route, stepIndex]);
 
-  // Replanning: abort old searches before replacing the current itinerary.
-  const reroute = useCallback(async () => {
+  // Boarding/alighting is the same explicit action used by Bus. GPS alone
+  // cannot tell whether someone entered a vehicle or passed a station.
+  const confirmStage = useCallback(async () => {
+    if (pending.current || !session.current || !RUNNING.includes(state))
+      return false;
+    const step = route?.steps?.[stepIndex];
+    const ride = step?.kind === "platform" ? route.steps[stepIndex + 1] : step;
+    if (ride?.kind !== "ride") return false;
+    pending.current = true;
+    const token = generation.current;
+    setBusy(true);
+    try {
+      const fresh = await refreshLocation();
+      if (token !== generation.current) return false;
+      const issue = getTripIssue(route, fresh, { requireOrigin: false });
+      if (issue) {
+        setState("paused");
+        setFollowing(false);
+        setMessage(issue.message);
+        return false;
+      }
+      const boarding = step.kind === "platform" || rideStage === "boarding";
+      if (
+        distanceMeters(fresh.position, boarding ? ride.start : ride.end) >
+        (boarding ? 100 : 150)
+      ) {
+        setMessage(
+          boarding
+            ? "Move to the marked boarding area before confirming that you are aboard."
+            : "You are not near the planned drop-off yet. If you got off elsewhere, end this trip and plan a walking route from your current location.",
+        );
+        return false;
+      }
+      arrival.current = null;
+      stepArrival.current = null;
+      if (boarding) {
+        if (step.kind === "platform") setStepIndex((i) => i + 1);
+        setRideStage("riding");
+      } else if (stepIndex < route.steps.length - 1) {
+        nextStep();
+      } else {
+        setRideStage("finishing");
+      }
+      setState("active");
+      setMessage("");
+      setNow(Date.now());
+      return true;
+    } catch {
+      if (token === generation.current)
+        setMessage("Could not check your location. Please try again.");
+      return false;
+    } finally {
+      if (token === generation.current) {
+        pending.current = false;
+        setBusy(false);
+      }
+    }
+  }, [state, route, stepIndex, rideStage, refreshLocation, nextStep]);
+
+  // Manual progression is only a fallback for an intermediate instruction.
+  // It never confirms final arrival, boarding, or alighting.
+  const advance = useCallback(() => {
+    const current = live.current;
+    if (!session.current || pending.current || !RUNNING.includes(current.state))
+      return false;
+    const step = current.route?.steps?.[current.stepIndex];
+    if (!step) return false;
+    if (step.kind === "ride" || step.kind === "platform") return confirmStage();
+    if (current.stepIndex >= current.route.steps.length - 1) {
+      setMessage(
+        "Walk safely to your destination. Waiting for GPS to confirm arrival.",
+      );
+      return false;
+    }
+    const issue = getTripIssue(current.route, current.snapshot, {
+      requireOrigin: false,
+    });
     if (
-      !route ||
-      route.preferredMode !== mode ||
-      reroutePending.current ||
-      startPending.current ||
-      !["active", "off-route"].includes(state)
+      !issue ||
+      !["weak-signal", "old-location", "location-unavailable"].includes(
+        issue.code,
+      )
     )
       return false;
-    if (!validPosition(snapshot)) {
-      setMessage("Wait for a more accurate location fix before recalculating.");
+    const token = generation.current;
+    const index = current.stepIndex;
+    Alert.alert(
+      "Confirm current step",
+      "Only continue if you have reached the place described in this step. GPS will still be required to confirm arrival.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Next step (manual)",
+          onPress: () => {
+            if (
+              token === generation.current &&
+              live.current.stepIndex === index
+            )
+              nextStep();
+          },
+        },
+      ],
+    );
+    return true;
+  }, [confirmStage, nextStep]);
+
+  const reroute = useCallback(async () => {
+    if (
+      !session.current ||
+      pending.current ||
+      !route ||
+      !RUNNING.includes(state)
+    )
       return false;
-    }
-    if (distanceMeters(snapshot.position, route.destination.coordinate) < 65) {
-      setState("arrived");
-      setFollowing(false);
-      setMessage("You have reached your destination.");
-      return true;
-    }
+    if (route.steps[stepIndex]?.kind === "ride" && rideStage !== "boarding")
+      return false;
+    pending.current = true;
     const token = ++generation.current;
     const controller = new AbortController();
-    rerouteRequest.current = controller;
-    reroutePending.current = true;
+    request.current = controller;
+    setBusy(true);
+    setState("rerouting");
+    setFollowing(false);
     try {
-      setBusy(true);
+      const fresh = await refreshLocation();
+      if (token !== generation.current) return false;
+      const issue = getTripIssue(route, fresh, { requireOrigin: false });
+      if (issue) throw new Error(issue.message);
       const liveOrigin = {
-        id: `device:${snapshot.position.latitude},${snapshot.position.longitude}`,
+        id: `device:${fresh.position.latitude},${fresh.position.longitude}`,
         name: "Current location",
-        coordinate: snapshot.position,
+        address: "Cubao",
+        coordinate: {
+          latitude: fresh.position.latitude,
+          longitude: fresh.position.longitude,
+        },
         source: "device",
       };
       const [next] = await getRoutes(
@@ -283,112 +329,202 @@ export function useGuidedTrip({
         },
         { signal: controller.signal },
       );
-      if (token !== generation.current || controller.signal.aborted) return false;
-      if (!next?.steps?.length) throw new Error("No train or walking route was found. Try again.");
-      internalReroute.current = next.id !== route.id;
+      if (token !== generation.current || controller.signal.aborted)
+        return false;
+      if (!next?.steps?.length)
+        throw new Error("No train or walking route was found. Try again.");
+      internalReroute.current = next;
       onRouteChange(next);
       setStepIndex(0);
+      setRideStage("boarding");
+      arrival.current = null;
+      stepArrival.current = null;
+      offRoute.current = null;
+      lastFix.current = null;
       setState("active");
       setFollowing(true);
       setMessage("Route recalculated from your current location.");
-      setRecenterRequest((value) => value + 1);
+      setRecenterRequest((v) => v + 1);
       return true;
     } catch (error) {
-      if (token !== generation.current || controller.signal.aborted) return false;
-      internalReroute.current = false;
-      setMessage(error.message);
+      if (token === generation.current) {
+        setState("paused");
+        setMessage(error.message);
+      }
       return false;
     } finally {
       if (token === generation.current) {
-        reroutePending.current = false;
-        rerouteRequest.current = null;
+        pending.current = false;
+        request.current = null;
         setBusy(false);
       }
     }
-  }, [snapshot, route, state, onRouteChange, mode]);
+  }, [
+    route,
+    mode,
+    state,
+    stepIndex,
+    rideStage,
+    refreshLocation,
+    onRouteChange,
+  ]);
 
   useEffect(() => {
-    if (state !== "active" || !route?.steps?.[stepIndex]) return;
-    const p = snapshot?.position;
-    if (!p || lastFix.current === p.timestamp) return;
-    lastFix.current = p.timestamp;
-
-    if (!validPosition(snapshot)) {
-      setMessage(
-        "GPS signal is weak, denied or outdated. Check your surroundings and continue manually if necessary.",
-      );
+    if (
+      !["active", "paused", "off-route"].includes(state) ||
+      !session.current ||
+      !route?.steps?.[stepIndex] ||
+      pending.current
+    )
+      return;
+    const issue = getTripIssue(route, snapshot, { requireOrigin: false, now });
+    if (issue) {
+      arrival.current = null;
+      stepArrival.current = null;
+      if (state === "active") savedFollowing.current = following;
+      setState("paused");
+      setFollowing(false);
+      setMessage(issue.message);
       return;
     }
+    if (state === "paused") {
+      setState("active");
+      setFollowing(savedFollowing.current);
+      setMessage("");
+      if (savedFollowing.current) setRecenterRequest((v) => v + 1);
+    }
+    const p = snapshot.position;
     const step = route.steps[stepIndex];
-
-    // GPS along a railway can deviate from the schematic straight line;
-    // only off-route-check outdoor walking sections, never indoor transfers.
-    if (step.kind === "walk" && !step.instruction.includes("via Gateway Mall")) {
-      const deviation = distanceToRouteMeters(p, step.polyline);
-      offRouteHits.current = deviation > OFF_ROUTE_METERS ? offRouteHits.current + 1 : 0;
-      if (offRouteHits.current >= 3) {
+    if (lastFix.current === `${step.id}:${p.timestamp}`) return;
+    lastFix.current = `${step.id}:${p.timestamp}`;
+    const realWalk = step.kind === "walk" && !step.schematic;
+    const deviation = realWalk ? distanceToRouteMeters(p, step.polyline) : 0;
+    if (realWalk && deviation > 75) {
+      arrival.current = null;
+      stepArrival.current = null;
+      offRoute.current = updateOffRoute(offRoute.current, p);
+      if (offRoute.current?.reroute) {
         setState("off-route");
         setFollowing(false);
         setMessage(
           "You may be off the walking route. Check the map and tap Recalculate to update the route.",
         );
-        return;
       }
-    } else {
-      offRouteHits.current = 0;
+      return;
     }
-
-    const remaining = distanceMeters(p, step.end);
-    if (step.kind === "ride" && remaining < 250 && alertedFor.current !== step.id) {
+    offRoute.current = null;
+    if (state === "off-route") {
+      setState("active");
+      setFollowing(savedFollowing.current);
+    }
+    setMessage((value) => (value.startsWith("You may be off") ? "" : value));
+    const nextProgress = getGuidedProgress(
+      route,
+      stepIndex,
+      snapshot,
+      progress,
+      now,
+    );
+    setProgress(nextProgress);
+    if (
+      step.kind === "ride" &&
+      rideStage === "riding" &&
+      distanceMeters(p, step.end) < 250 &&
+      alertedFor.current !== step.id
+    ) {
       alertedFor.current = step.id;
       Alert.alert(
         "Prepare to alight",
         `Your stop is ${step.alightingStop}. ${mode === "jeep" ? "Confirm a permitted drop-off with the driver." : "Check the train's station signs."}`,
       );
     }
-    const threshold = step.kind === "ride" ? TRAIN_ARRIVAL_METERS : WALK_ARRIVAL_METERS;
-    arrivalHits.current = remaining <= threshold ? arrivalHits.current + 1 : 0;
-    if (arrivalHits.current >= 2) {
-      advance();
+    if (
+      step.kind === "platform" ||
+      (step.kind === "ride" && rideStage !== "finishing")
+    )
+      return;
+    if (stepIndex === route.steps.length - 1) {
+      arrival.current = updateArrival(
+        route,
+        snapshot,
+        nextProgress,
+        arrival.current,
+        session.current.startedPosition,
+        now,
+      );
+      if (arrival.current?.arrived) {
+        setState("arrived");
+        setFollowing(false);
+        setMessage("You have arrived at your destination.");
+      }
+      return;
     }
-  }, [snapshot, state, stepIndex, route, advance, mode]);
+    if (
+      step.kind !== "walk" ||
+      p.accuracyMeters > 25 ||
+      distanceMeters(p, step.end) > 25
+    ) {
+      stepArrival.current = null;
+      return;
+    }
+    const timestamp = Date.parse(p.timestamp);
+    if (!stepArrival.current)
+      stepArrival.current = { first: timestamp, last: timestamp };
+    else if (timestamp > stepArrival.current.last) {
+      stepArrival.current.last = timestamp;
+      if (timestamp - stepArrival.current.first >= 2000) nextStep();
+    }
+  }, [
+    state,
+    snapshot,
+    route,
+    stepIndex,
+    rideStage,
+    now,
+    nextStep,
+    following,
+    mode,
+    progress,
+  ]);
 
-  // Completed only when the whole trip is finished (state "arrived").
   useEffect(() => {
     const current = session.current;
     if (state !== "arrived" || !current || current.finished) return;
     current.finished = true;
-    if (current.uid) {
+    if (current.uid)
       void notifyTripCompleted(current.uid, {
         tripId: current.tripId,
         journey: current.journey,
       });
-    }
   }, [state]);
-
-  // Cancelled only after the user confirmed they want to stop.
   const cancel = useCallback(() => {
     const current = session.current;
     if (current && !current.finished) {
       current.finished = true;
-      if (current.uid) {
+      if (current.uid)
         void notifyTripCancelled(current.uid, {
           tripId: current.tripId,
           journey: current.journey,
         });
-      }
     }
     end();
   }, [end]);
-
-  // Presentation: expose the same progress contract to both transport controls.
-  const step = route?.steps?.[stepIndex];
-  const goodFix = validPosition(snapshot) && (state === "active" || state === "off-route");
-  const position = goodFix ? snapshot.position : null;
-  const remaining =
-    step?.end && position ? Math.round(distanceMeters(position, step.end)) : stepDistance(step);
-  const totalRemaining = state === "arrived" ? 0 : remainingDistance(route, stepIndex, position);
-
+  const currentStep = route?.steps?.[stepIndex];
+  const isBoarding =
+    currentStep?.kind === "platform" ||
+    (currentStep?.kind === "ride" && rideStage === "boarding");
+  const actionLabel =
+    state === "active"
+      ? isBoarding
+        ? "I've boarded"
+        : currentStep?.kind === "ride" && rideStage === "riding"
+          ? "I've got off"
+          : null
+      : null;
+  const locationIssue = getTripIssue(route, snapshot, {
+    requireOrigin: false,
+    now,
+  });
   return {
     state,
     message,
@@ -398,23 +534,37 @@ export function useGuidedTrip({
     cancel,
     advance,
     reroute,
-    open: state === "active" || state === "off-route",
+    actionLabel,
+    confirmStage,
+    canReroute: currentStep?.kind !== "ride" || rideStage === "boarding",
+    manualAvailable:
+      state === "paused" &&
+      ["weak-signal", "old-location", "location-unavailable"].includes(
+        locationIssue?.code,
+      ) &&
+      currentStep?.kind === "walk" &&
+      stepIndex < (route?.steps?.length ?? 0) - 1,
+    open: RUNNING.includes(state),
     following: state === "active" && following,
     recenterRequest,
     recenter: () => {
-      setFollowing(true);
+      savedFollowing.current = true;
+      setFollowing(state === "active");
       setRecenterRequest((v) => v + 1);
     },
-    stopFollowing: () => setFollowing(false),
+    stopFollowing: () => {
+      savedFollowing.current = false;
+      setFollowing(false);
+    },
     progress:
-      route?.preferredMode === mode && route.steps.length
-        ? {
-            stepIndex,
-            stepCount: route.steps.length,
-            stepRemainingDistanceMeters: remaining,
-            remainingDistanceMeters: totalRemaining,
-            remainingDurationSeconds: null,
-          }
+      RUNNING.includes(state) || state === "arrived"
+        ? state === "arrived" && progress
+          ? {
+              ...progress,
+              remainingDistanceMeters: 0,
+              stepRemainingDistanceMeters: 0,
+            }
+          : (progress ?? getGuidedProgress(route, stepIndex, null))
         : null,
   };
 }

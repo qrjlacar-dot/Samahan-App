@@ -6,7 +6,9 @@ const createLoader = require("./helpers/source-loader.cjs");
 const hookHarness = require("./helpers/hook-harness.cjs");
 const root = path.resolve(__dirname, "..");
 const load = createLoader();
-const { getBusRoutes } = load(path.join(root, "src/services/routing/busRoutes.js"));
+const { getBusRoutes } = load(
+  path.join(root, "src/services/routing/busRoutes.js"),
+);
 const {
   prepareBusWalkSteps,
   busLegs,
@@ -26,7 +28,11 @@ const mall = {
   address: "Cubao",
   source: "geoapify",
 };
-const request = (origin, destination) => ({ origin, destination, preferredMode: "bus" });
+const request = (origin, destination) => ({
+  origin,
+  destination,
+  preferredMode: "bus",
+});
 const arrival = "You have arrived at your destination.";
 function walking({ origin, destination }) {
   return Promise.resolve([
@@ -78,9 +84,13 @@ test("provider arrival sentences become leg-specific instructions while their ge
 });
 
 test("the composed itinerary never claims arrival before boarding or during the final walk", async () => {
-  const [route] = await getBusRoutes(request(anonas, mall), { getWalkingRoutes: walking });
+  const [route] = await getBusRoutes(request(anonas, mall), {
+    getWalkingRoutes: walking,
+  });
   assert.equal(
-    route.steps.some((step) => /arrived|your destination is/i.test(step.instruction)),
+    route.steps.some((step) =>
+      /arrived|your destination is/i.test(step.instruction),
+    ),
     false,
   );
   const ride = route.steps.find((step) => step.mode === "bus");
@@ -90,7 +100,9 @@ test("the composed itinerary never claims arrival before boarding or during the 
     Array.from(busLegs(route), (part) => part.id),
     ["ride", "egress"],
   );
-  const [fromCampus] = await getBusRoutes(request(tip, mall), { getWalkingRoutes: walking });
+  const [fromCampus] = await getBusRoutes(request(tip, mall), {
+    getWalkingRoutes: walking,
+  });
   assert.deepEqual(
     Array.from(busLegs(fromCampus), (part) => part.id),
     ["access", "ride", "egress"],
@@ -98,7 +110,9 @@ test("the composed itinerary never claims arrival before boarding or during the 
 });
 
 test("close places produce a walking-only recommendation with no bus step or premature arrival sentence", async () => {
-  const [route] = await getBusRoutes(request(anonas, tip), { getWalkingRoutes: walking });
+  const [route] = await getBusRoutes(request(anonas, tip), {
+    getWalkingRoutes: walking,
+  });
   assert.equal(route.requestedMode, "bus");
   assert.equal(route.preferredMode, "walk");
   assert.equal(route.actualModes.join(), "walk");
@@ -118,7 +132,10 @@ test("a short straight-line distance never overrides a long actual walking route
       return [
         {
           ...value,
-          steps: value.steps.map((step, i) => ({ ...step, distanceMeters: i ? 0 : 700 })),
+          steps: value.steps.map((step, i) => ({
+            ...step,
+            distanceMeters: i ? 0 : 700,
+          })),
         },
       ];
     },
@@ -127,7 +144,9 @@ test("a short straight-line distance never overrides a long actual walking route
 });
 
 test("a return bus journey uses Anonas-bound instructions", async () => {
-  const [route] = await getBusRoutes(request(BUS_GATEWAY, anonas), { getWalkingRoutes: walking });
+  const [route] = await getBusRoutes(request(BUS_GATEWAY, anonas), {
+    getWalkingRoutes: walking,
+  });
   assert.equal(route.preferredMode, "bus");
   assert.equal(
     route.steps.find((step) => step.mode === "bus").instruction,
@@ -138,7 +157,10 @@ test("a return bus journey uses Anonas-bound instructions", async () => {
 function nodes(tree, type) {
   if (Array.isArray(tree)) return tree.flatMap((item) => nodes(item, type));
   return tree && typeof tree === "object"
-    ? [...(tree.type === type ? [tree] : []), ...nodes(tree.props?.children, type)]
+    ? [
+        ...(tree.type === type ? [tree] : []),
+        ...nodes(tree.props?.children, type),
+      ]
     : [];
 }
 function text(tree) {
@@ -154,8 +176,12 @@ test("bus and walking fallback show the full timeline with one final arrival row
     "react/jsx-runtime": runtime,
     "react-native": { View: "View", Text: "Text", TouchableOpacity: "Button" },
     "@expo/vector-icons": { Ionicons: "Icon" },
-    "../../styles/directions.styles": { styles: { solidDot: "solid", hollowCircle: "hollow" } },
-    "../../../styles/directions.styles": { styles: { solidDot: "solid", hollowCircle: "hollow" } },
+    "../../styles/directions.styles": {
+      styles: { solidDot: "solid", hollowCircle: "hollow" },
+    },
+    "../../../styles/directions.styles": {
+      styles: { solidDot: "solid", hollowCircle: "hollow" },
+    },
     "./TripSummaryBadge": {
       __esModule: true,
       default: "Badge",
@@ -174,9 +200,15 @@ test("bus and walking fallback show the full timeline with one final arrival row
     [anonas, tip],
     [BUS_GATEWAY, anonas],
   ]) {
-    const [route] = await getBusRoutes(request(origin, destination), { getWalkingRoutes: walking });
+    const [route] = await getBusRoutes(request(origin, destination), {
+      getWalkingRoutes: walking,
+    });
     const before = JSON.stringify(route);
-    const h = render(Component, { route, tripState: "idle", ticketType: "discounted" });
+    const h = render(Component, {
+      route,
+      tripState: "idle",
+      ticketType: "discounted",
+    });
     const instructions = nodes(expandPresentation(h.result), "Text").map(text);
     assert.doesNotMatch(
       text(h.result),
@@ -190,7 +222,10 @@ test("bus and walking fallback show the full timeline with one final arrival row
       /Time unavailable|demo|draft|preview|Show walking directions/i,
     );
     assert.equal(instructions.filter((value) => value === arrival).length, 1);
-    assert.equal(nodes(expandPresentation(h.result), "Fare")[0].props.compact, undefined);
+    assert.equal(
+      nodes(expandPresentation(h.result), "Fare")[0].props.compact,
+      undefined,
+    );
     const dots = () =>
       nodes(expandPresentation(h.result), "View").filter((node) =>
         ["solid", "hollow"].includes(node.props.style),
@@ -198,7 +233,10 @@ test("bus and walking fallback show the full timeline with one final arrival row
     h.props = {
       ...h.props,
       tripState: "active",
-      progress: { stepIndex: route.steps.length - 1, stepCount: route.steps.length },
+      progress: {
+        stepIndex: route.steps.length - 1,
+        stepCount: route.steps.length,
+      },
     };
     h.flush();
     assert.equal(dots().at(-1).props.style, "hollow");
@@ -206,15 +244,21 @@ test("bus and walking fallback show the full timeline with one final arrival row
     h.flush();
     assert.equal(dots().at(-1).props.style, "solid");
     assert.equal(
-      nodes(expandPresentation(h.result), "Text").filter((node) => text(node) === arrival).length,
+      nodes(expandPresentation(h.result), "Text").filter(
+        (node) => text(node) === arrival,
+      ).length,
       1,
     );
-    assert.equal(JSON.stringify(route), before, "display must not change GPS navigation data");
+    assert.equal(
+      JSON.stringify(route),
+      before,
+      "display must not change GPS navigation data",
+    );
     h.dispose();
   }
 });
 
-test("bus fare shows the amount, source and payment reminder without extra explanations", async () => {
+test("shared fare shows the amount, source, rule details and payment reminder", async () => {
   const { runtime } = hookHarness();
   const opened = [];
   const loader = createLoader({
@@ -242,7 +286,9 @@ test("bus fare shows the amount, source and payment reminder without extra expla
     "../../styles/walking-navigation.styles": { styles: {} },
     "../../../styles/walking-navigation.styles": { styles: {} },
   });
-  const Fare = loader(path.join(root, "src/components/directions/FareSummary.jsx")).default;
+  const Fare = loader(
+    path.join(root, "src/components/directions/FareSummary.jsx"),
+  ).default;
   for (const [ticketType, label, amount] of [
     ["regular", "Regular", "15.00"],
     ["discounted", "Discounted", "12.00"],
@@ -253,8 +299,11 @@ test("bus fare shows the amount, source and payment reminder without extra expla
     });
     assert.match(text(tree), new RegExp(`${label} fare estimate`));
     assert.ok(text(tree).includes(`₱${amount}`));
-    assert.doesNotMatch(text(tree), /first 5 km/);
-    assert.match(text(tree), /Confirm the fare with the operator before paying/);
+    assert.match(text(tree), /first 5 km/);
+    assert.match(
+      text(tree),
+      /Confirm the fare with the operator before paying/,
+    );
     nodes(tree, "Text")
       .find((node) => node.props.accessibilityRole === "link")
       .props.onPress();
@@ -264,7 +313,9 @@ test("bus fare shows the amount, source and payment reminder without extra expla
 });
 
 test("a walking-only recommendation in the Bus tab starts the walking navigator", async () => {
-  const [walkRoute] = await getBusRoutes(request(anonas, tip), { getWalkingRoutes: walking });
+  const [walkRoute] = await getBusRoutes(request(anonas, tip), {
+    getWalkingRoutes: walking,
+  });
   const { react, runtime, render } = hookHarness();
   const noop = () => {};
   let walkingRoute,
@@ -305,6 +356,7 @@ test("a walking-only recommendation in the Bus tab starts the walking navigator"
     react,
     "react/jsx-runtime": runtime,
     "expo-router": {
+      Stack: { Screen: "StackScreen" },
       useRouter: () => ({ back: noop }),
       useLocalSearchParams: () => ({
         journey: JSON.stringify({
@@ -331,7 +383,9 @@ test("a walking-only recommendation in the Bus tab starts the walking navigator"
     },
     "react-native-safe-area-context": { SafeAreaView: "SafeArea" },
     "../context/AuthContext": { useAuth: () => ({ user: { uid: "account" } }) },
-    "../hooks/useMapLocation": { useMapLocation: () => ({ snapshot: {}, refreshLocation: noop }) },
+    "../hooks/useMapLocation": {
+      useMapLocation: () => ({ snapshot: {}, refreshLocation: noop }),
+    },
     "../hooks/useWalkingTrip": {
       useWalkingTrip: ({ route }) => {
         walkingRoute = route;
@@ -393,8 +447,11 @@ test("a walking-only recommendation in the Bus tab starts the walking navigator"
 
 test("an unsupported bus journey with no available walking path shows an honest route error", async () => {
   await assert.rejects(
-    getBusRoutes(request(BUS_GATEWAY, anonas), { getWalkingRoutes: async () => [] }),
-    (error) => error.code === "commute/no-route" && /walking route/.test(error.message),
+    getBusRoutes(request(BUS_GATEWAY, anonas), {
+      getWalkingRoutes: async () => [],
+    }),
+    (error) =>
+      error.code === "commute/no-route" && /walking route/.test(error.message),
   );
 });
 
@@ -424,7 +481,9 @@ test("bus geometry unavailable for a supported corridor falls back to real walki
   const calls = [];
   const [route] = await getBusRoutes(request(tip, mall), {
     getBusGeometry: async () => {
-      throw Object.assign(new Error("No road geometry"), { code: "commute/no-route" });
+      throw Object.assign(new Error("No road geometry"), {
+        code: "commute/no-route",
+      });
     },
     getWalkingRoutes: (args) => {
       calls.push(args);
@@ -452,13 +511,17 @@ test("cancelling during a walking fallback never returns a late journey", async 
 });
 
 test("both return branches show a destination-specific conductor notice; forward and walking trips do not", async () => {
-  const { busInstruction } = load(path.join(root, "src/services/routing/busNavigation.js"));
+  const { busInstruction } = load(
+    path.join(root, "src/services/routing/busNavigation.js"),
+  );
   for (const [origin, destination] of [
     [BUS_GATEWAY, anonas],
     [mall, anonas],
     [BUS_GATEWAY, tip],
   ]) {
-    const [route] = await getBusRoutes(request(origin, destination), { getWalkingRoutes: walking });
+    const [route] = await getBusRoutes(request(origin, destination), {
+      getWalkingRoutes: walking,
+    });
     const before = JSON.stringify(route);
     const notice = busReturnNotice(route);
     assert.match(notice, /Return route not verified/);
@@ -478,13 +541,17 @@ test("both return branches show a destination-specific conductor notice; forward
     [anonas, tip],
     [tip, anonas],
   ]) {
-    const [route] = await getBusRoutes(request(origin, destination), { getWalkingRoutes: walking });
+    const [route] = await getBusRoutes(request(origin, destination), {
+      getWalkingRoutes: walking,
+    });
     assert.equal(busReturnNotice(route), "");
   }
 });
 
 test("the collapsed active-trip banner keeps the return warning visible and hides it after arrival", async () => {
-  const [route] = await getBusRoutes(request(BUS_GATEWAY, anonas), { getWalkingRoutes: walking });
+  const [route] = await getBusRoutes(request(BUS_GATEWAY, anonas), {
+    getWalkingRoutes: walking,
+  });
   const { runtime } = hookHarness();
   const loader = createLoader({
     "react/jsx-runtime": runtime,
@@ -510,18 +577,30 @@ test("the collapsed active-trip banner keeps the return warning visible and hide
 test("walking wording preserves slight turns, left/right choices, road names, and other instructions", () => {
   for (const [original, expected] of [
     ["Bear left.", "Turn slightly left."],
-    ["Bear right onto Aurora Boulevard/59.", "Turn slightly right onto Aurora Boulevard/59."],
-    ["Turn slight left onto the walkway.", "Turn slightly left onto the walkway."],
+    [
+      "Bear right onto Aurora Boulevard/59.",
+      "Turn slightly right onto Aurora Boulevard/59.",
+    ],
+    [
+      "Turn slight left onto the walkway.",
+      "Turn slightly left onto the walkway.",
+    ],
     ["Slight right at the fork.", "Turn slightly right at the fork."],
     [
       "Keep left to stay on General Aguinaldo Avenue.",
       "Keep to the left to stay on General Aguinaldo Avenue.",
     ],
-    ["Head northeast on Times Square Avenue.", "Walk northeast on Times Square Avenue."],
+    [
+      "Head northeast on Times Square Avenue.",
+      "Walk northeast on Times Square Avenue.",
+    ],
     ["Turn right onto Bear Left Road.", "Turn right onto Bear Left Road."],
     ["Make a sharp left turn.", "Make a sharp left turn."],
     ["Take the stairs.", "Take the stairs."],
-    ["You have arrived at your destination.", "You have arrived at your destination."],
+    [
+      "You have arrived at your destination.",
+      "You have arrived at your destination.",
+    ],
   ])
     assert.equal(simplifyWalkingInstruction(original), expected);
 });
@@ -565,13 +644,18 @@ test("provider walking instructions use the same plain wording without changing 
       }),
     },
   );
-  const { getWalkingRoutes } = loader(path.join(root, "src/services/routes.js"));
+  const { getWalkingRoutes } = loader(
+    path.join(root, "src/services/routes.js"),
+  );
   const [route] = await getWalkingRoutes({
     origin: tip,
     destination: anonas,
     preferredMode: "walk",
   });
-  assert.equal(route.steps[0].instruction, "Turn slightly left onto the walkway.");
+  assert.equal(
+    route.steps[0].instruction,
+    "Turn slightly left onto the walkway.",
+  );
   assert.equal(route.distanceMeters, 533);
   assert.equal(route.durationSeconds, 420);
   assert.equal(route.steps[0].distanceMeters, 533);
@@ -608,11 +692,17 @@ test("the current and next live walking instructions match the itinerary wording
   assert.match(output, /Turn slightly left/);
   assert.match(output, /Turn slightly right onto Aurora Boulevard/);
   assert.doesNotMatch(output, /Bear left|Bear right/);
-  const { busInstruction } = load(path.join(root, "src/services/routing/busNavigation.js"));
+  const { busInstruction } = load(
+    path.join(root, "src/services/routing/busNavigation.js"),
+  );
   assert.equal(
-    busInstruction({ preferredMode: "bus", steps: [route.steps[0], { mode: "bus" }] }, "access", {
-      stepIndex: 0,
-    }),
+    busInstruction(
+      { preferredMode: "bus", steps: [route.steps[0], { mode: "bus" }] },
+      "access",
+      {
+        stepIndex: 0,
+      },
+    ),
     "Turn slightly left.",
   );
 });

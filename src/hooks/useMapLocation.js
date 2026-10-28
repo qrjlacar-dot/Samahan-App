@@ -1,42 +1,39 @@
 import { useFocusEffect } from "expo-router";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { LOCATION_STATUS } from "../constants/commute";
 import { useLocation } from "../context/LocationContext";
 
-const trackingOwners = new WeakMap();
-
 export function useMapLocation({ trackWhenFocused = true } = {}) {
   const location = useLocation();
-
   const { snapshot, startTracking, stopTracking } = location;
-
+  const owner = useRef({});
+  const focused = useRef(false);
+  const requested = useRef(false);
   const canTrack =
-    [LOCATION_STATUS.READY, LOCATION_STATUS.OUTSIDE_AREA].includes(snapshot.status) &&
-    snapshot.position != null;
-
+    [LOCATION_STATUS.READY, LOCATION_STATUS.OUTSIDE_AREA].includes(
+      snapshot.status,
+    ) && snapshot.position != null;
+  const eligible = useRef(false);
+  eligible.current = canTrack && trackWhenFocused;
   useFocusEffect(
     useCallback(() => {
-      if (!canTrack || !trackWhenFocused) return;
-
-      let owners = trackingOwners.get(stopTracking);
-
-      if (!owners) {
-        owners = new Set();
-        trackingOwners.set(stopTracking, owners);
+      focused.current = true;
+      if (eligible.current) {
+        requested.current = true;
+        void startTracking({ requestPermission: false, owner: owner.current });
       }
-
-      const owner = {};
-      owners.add(owner);
-
-      startTracking({ requestPermission: false });
-
       return () => {
-        if (owners.delete(owner) && owners.size === 0) {
-          stopTracking();
-        }
+        focused.current = false;
+        requested.current = false;
+        stopTracking(owner.current);
       };
-    }, [canTrack, trackWhenFocused, startTracking, stopTracking]),
+    }, [startTracking, stopTracking]),
   );
-
+  useEffect(() => {
+    if (focused.current && canTrack && trackWhenFocused && !requested.current) {
+      requested.current = true;
+      void startTracking({ requestPermission: false, owner: owner.current });
+    }
+  }, [canTrack, trackWhenFocused, startTracking, snapshot.position?.timestamp]);
   return location;
 }

@@ -58,7 +58,9 @@ function loadPhone(state, { missing = false, os = "android", appState } = {}) {
       default: missing ? null : fakeExpoNotifications(state),
     },
   };
-  return createLoader(mocks)(path.join(root, "src/services/phoneNotifications.js"));
+  return createLoader(mocks)(
+    path.join(root, "src/services/phoneNotifications.js"),
+  );
 }
 
 const phoneState = (overrides = {}) => ({
@@ -74,7 +76,10 @@ test("an app build without the notification module keeps working (module wired a
   assert.equal(phone.phoneNotificationsAvailable(), false);
   assert.equal(await phone.getPhonePermission(), "unavailable");
   assert.equal(await phone.requestPhonePermission(), "unavailable");
-  assert.equal(await phone.showPhoneNotification({ title: "x", body: "y" }), false);
+  assert.equal(
+    await phone.showPhoneNotification({ title: "x", body: "y" }),
+    false,
+  );
 });
 
 test("phone permission is reported as granted, denied, or not asked yet", async () => {
@@ -122,12 +127,18 @@ test("a phone notification is shown only when permission is granted", async () =
   assert.equal(shown, true);
   assert.equal(granted.scheduled.length, 1);
   assert.equal(granted.scheduled[0].content.title, "Trip completed");
-  assert.equal(granted.scheduled[0].content.body, "Your walking trip to B is complete.");
+  assert.equal(
+    granted.scheduled[0].content.body,
+    "Your walking trip to B is complete.",
+  );
   assert.equal(granted.scheduled[0].trigger, null); // now, not later
 
   for (const status of ["denied", "undetermined"]) {
     const blocked = phoneState({ status });
-    assert.equal(await loadPhone(blocked).showPhoneNotification({ title: "x", body: "y" }), false);
+    assert.equal(
+      await loadPhone(blocked).showPhoneNotification({ title: "x", body: "y" }),
+      false,
+    );
     assert.equal(blocked.scheduled.length, 0);
   }
 });
@@ -142,7 +153,10 @@ test("notifications are allowed to appear while the app is open", async () => {
 
 test("a phone notification that fails to send returns false and never throws", async () => {
   const state = phoneState({ status: "granted", failSchedule: true });
-  assert.equal(await loadPhone(state).showPhoneNotification({ title: "x", body: "y" }), false);
+  assert.equal(
+    await loadPhone(state).showPhoneNotification({ title: "x", body: "y" }),
+    false,
+  );
 });
 
 // ---------- walking trip: completed and cancelled ----------
@@ -207,7 +221,9 @@ function walkingFixture() {
       },
     },
   );
-  const { useWalkingTrip } = load(path.join(root, "src/hooks/useWalkingTrip.js"));
+  const { useWalkingTrip } = load(
+    path.join(root, "src/hooks/useWalkingTrip.js"),
+  );
   const fix = (coordinate, accuracyMeters = 10) => ({
     status: "ready",
     inServiceArea: true,
@@ -291,70 +307,43 @@ test("walking: completion is recorded once, and ending afterwards is not a cance
 
 // ---------- train trip: completed and cancelled ----------
 
+const guidedFixture = require("./helpers/guided-fixture.cjs");
 function trainFixture(props = {}) {
-  const { react, render } = hookHarness();
-  const completed = [];
-  const cancelled = [];
-  const load = createLoader({
-    react,
-    "react-native": { Alert: { alert() {} } },
-    "../services/notifications": {
-      notifyTripCompleted: async (...args) => {
-        completed.push(args);
-        return {};
-      },
-      notifyTripCancelled: async (...args) => {
-        cancelled.push(args);
-        return {};
-      },
-    },
-  });
-  const { useTrainTrip } = load(path.join(root, "src/hooks/useTrainTrip.js"));
   const route = {
     id: "train-route",
     preferredMode: "train",
     origin: point("A", a),
     destination: point("B", b),
-    distanceMeters: 200,
+    polyline: [a, b],
+    distanceMeters: 100,
     steps: [
       {
-        id: "walk-1",
-        kind: "walk",
+        id: "platform",
+        kind: "platform",
         mode: "walk",
         instruction: "Walk to the station",
-        polyline: [a, a],
-        distanceMeters: 100,
+        start: a,
         end: a,
+        polyline: [a],
+        distanceMeters: 0,
       },
       {
-        id: "ride-1",
+        id: "ride",
         kind: "ride",
         mode: "train",
         instruction: "Ride the train",
+        start: a,
+        end: b,
         alightingStop: "B Station",
         polyline: [a, b],
         distanceMeters: 100,
-        end: b,
       },
     ],
   };
-  const fix = {
-    status: "ready",
-    inServiceArea: true,
-    position: { ...a, accuracyMeters: 15, timestamp: new Date().toISOString() },
-  };
-  const h = render(useTrainTrip, {
-    uid: "account-a",
-    journey: journeyFor("train"),
-    route,
-    snapshot: fix,
-    refreshLocation: async () => fix,
-    startTracking: async () => {},
-    stopTracking: () => {},
-    onRouteChange: () => {},
-    ...props,
-  });
-  return { h, route, completed, cancelled };
+  const f = guidedFixture("train", route);
+  Object.assign(f.h.props, props);
+  f.h.flush();
+  return { ...f, route };
 }
 
 test("train: completion is recorded only after the last step, and only once", async () => {
@@ -362,12 +351,15 @@ test("train: completion is recorded only after the last step, and only once", as
   assert.equal(await f.h.result.start(), true);
   f.h.flush();
   assert.equal(f.h.result.state, "active");
-  f.h.result.advance(); // first of two steps
+  await f.h.result.confirmStage();
   f.h.flush();
   assert.equal(f.h.result.state, "active");
   assert.equal(f.completed.length, 0);
-  f.h.result.advance(); // last step
+  f.move(6000, b);
+  await f.h.result.confirmStage();
   f.h.flush();
+  f.move(6000, b);
+  f.move(6000, b);
   assert.equal(f.h.result.state, "arrived");
   assert.equal(f.completed.length, 1);
   assert.equal(f.completed[0][0], "account-a");
@@ -415,9 +407,13 @@ test("train: without a signed-in account nothing is recorded", async () => {
   const f = trainFixture({ uid: undefined });
   await f.h.result.start();
   f.h.flush();
-  f.h.result.advance();
-  f.h.result.advance();
+  await f.h.result.confirmStage();
   f.h.flush();
+  f.move(6000, b);
+  await f.h.result.confirmStage();
+  f.h.flush();
+  f.move(6000, b);
+  f.move(6000, b);
   assert.equal(f.h.result.state, "arrived");
   assert.equal(f.completed.length, 0);
   f.h.result.cancel();
@@ -550,7 +546,7 @@ test("Android requests banners and system sound without a custom sound asset", a
   assert.equal(notification.trigger.channelId, "trip-updates");
 });
 
-test("iOS keeps banner delivery without Android sound or priority options", async () => {
+test("iOS requests banner and system sound without Android channel or priority options", async () => {
   const state = phoneState({ status: "granted" });
   const phone = loadPhone(state, { os: "ios" });
   assert.equal(
@@ -565,8 +561,11 @@ test("iOS keeps banner delivery without Android sound or priority options", asyn
     state.calls.some((call) => call[0] === "channel"),
     false,
   );
-  assert.equal((await state.handler.handleNotification()).shouldPlaySound, false);
-  assert.equal(Object.hasOwn(state.scheduled[0].content, "sound"), false);
+  assert.equal(
+    (await state.handler.handleNotification()).shouldPlaySound,
+    true,
+  );
+  assert.equal(state.scheduled[0].content.sound, true);
   assert.equal(Object.hasOwn(state.scheduled[0].content, "priority"), false);
   assert.equal(Object.hasOwn(state.scheduled[0].trigger, "channelId"), false);
 });

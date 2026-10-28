@@ -6,6 +6,17 @@ const TICKET_OPTIONS = [
 ];
 
 // Keep the screen's ticket API while sharing selection-button markup.
-export default function TicketToggle({ ticketType, onSelectTicketType }) {
-  return <OptionToggle options={TICKET_OPTIONS} value={ticketType} onChange={onSelectTicketType} />;
+export default function TicketToggle({
+  ticketType,
+  onSelectTicketType,
+  disabled = false,
+}) {
+  return (
+    <OptionToggle
+      options={TICKET_OPTIONS}
+      value={ticketType}
+      onChange={onSelectTicketType}
+      disabled={disabled}
+    />
+  );
 }
