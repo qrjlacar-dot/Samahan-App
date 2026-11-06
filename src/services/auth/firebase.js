@@ -5,13 +5,17 @@ import { getFirestore } from "firebase/firestore";
 import { Platform } from "react-native";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCK0oD7eThkMP2OS2J6V7I6OtPPQvzcRxQ",
-  authDomain: "samahan-504f1.firebaseapp.com",
-  projectId: "samahan-504f1",
-  storageBucket: "samahan-504f1.firebasestorage.app",
-  messagingSenderId: "795425333694",
-  appId: "1:795425333694:web:f3da0310ae0abcb2e199ef",
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
+
+if (!firebaseConfig.apiKey) {
+  throw new Error("Missing Firebase config. Add the EXPO_PUBLIC_FIREBASE_* values to .env.local, then restart Expo.");
+}
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 

@@ -45,3 +45,5 @@ example
 # Native module build caches
 modules/**/.gradle/
 modules/**/build/
+
+google-services.json
